@@ -3,8 +3,8 @@
 # and the Open3D-ML http://www.open3d.org/docs/latest/introduction.html#open3d-ml
 # pip install open3d
 import open3d as o3d
-import numpy as np
 
+# Set the sample path HERE:
 POINT_CLOUD_DATA_PATH = "/Users/jgalera/datasets/S3DIS"
 TEST_PC = "/Area_1/office_1/office_1.txt"
 
@@ -48,12 +48,14 @@ if __name__ == "__main__":
     o3d.visualization.draw(pcd)
     """
 
-    # Supported file name extensions
-    # http://www.open3d.org/docs/latest/tutorial/Basic/file_io.html
-    # TXT are not supported
-    # xyzrgb
-    # Each line contains [x, y, z, r, g, b], where r, g, b are in floats of range [0, 1]
-    # So we need RGB normalization
+    # Two minor issues when working with S3DIS dataset:
+    # - Open3D does NOT support TXT file extension, so we have to specify 
+    #   the xyzrgb format (check supported file extensions here: 
+    #   http://www.open3d.org/docs/latest/tutorial/Basic/file_io.html) 
+    # - When working with xyzrgb format, each line contains [x, y, z, r, g, b], 
+    #   where r, g, b are in floats of range [0, 1]
+    #   So we need to normalize the RGB values from the S3DIS dataset in order 
+    #   to allow Open3D to display them
 
     pcd_RGB_normalized = RGB_normalization(POINT_CLOUD_DATA_PATH + TEST_PC)
     pcd = o3d.io.read_point_cloud(pcd_RGB_normalized, format='xyzrgb')

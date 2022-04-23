@@ -42,12 +42,7 @@ def RGB_normalization(f):
 
 # To quickly test o3d
 if __name__ == "__main__":
-    """
-    dataset = o3d.data.EaglePointCloud()
-    pcd = o3d.io.read_point_cloud(dataset.path)
-    o3d.visualization.draw(pcd)
-    """
-
+    
     # Two minor issues when working with S3DIS dataset:
     # - Open3D does NOT support TXT file extension, so we have to specify 
     #   the xyzrgb format (check supported file extensions here: 
@@ -60,5 +55,4 @@ if __name__ == "__main__":
     pcd_RGB_normalized = RGB_normalization(POINT_CLOUD_DATA_PATH + TEST_PC)
     pcd = o3d.io.read_point_cloud(pcd_RGB_normalized, format='xyzrgb')
     print(pcd)
-    print(np.asarray(pcd.points))
     o3d.visualization.draw_geometries([pcd])

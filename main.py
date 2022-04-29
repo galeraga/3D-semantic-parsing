@@ -7,25 +7,35 @@ from multiprocessing.sharedctypes import Value
 import open3d as o3d
 import torch
 import os
+import sys
 import logging
 
 # Set the sample path HERE:
 POINT_CLOUD_DATA_PATH = "/Users/jgalera/datasets/S3DIS"
-TEST_PC = "/Area_1/office_1/office_1.txt"
+TEST_PC = "Area_1/office_1/office_1"
 PC_FILE_EXTENSION = ".txt"
 PC_FILE_EXTENSION_RGB_NORM = "_rgb_norm.txt"
 LOG_FILE = "conversion.log"
 
 # Define the logging settings
+# Logging is Python-version sensitive
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
-logging.basicConfig(filename = os.path.join(POINT_CLOUD_DATA_PATH, LOG_FILE),
-     encoding='utf-8', 
-     level=logging.WARNING,
-     format='%(asctime)s %(message)s')
+# For Python < 3.9 (minor version: 9) 
+# encoding argument can't be used
+if sys.version_info[1] < 9:
+    logging.basicConfig(filename = os.path.join(POINT_CLOUD_DATA_PATH, LOG_FILE),
+        level=logging.WARNING,
+        format='%(asctime)s %(message)s')
+else:
+    logging.basicConfig(filename = os.path.join(POINT_CLOUD_DATA_PATH, LOG_FILE),
+        encoding='utf-8', 
+        level=logging.WARNING,
+        format='%(asctime)s %(message)s')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+
 
 def normalize_RGB_single_file(f):
     """
@@ -40,10 +50,9 @@ def normalize_RGB_single_file(f):
 
     # Skip the process if the file has been already normalized
     if tgt_file in os.listdir(file_path):
-        print("Skipping RGB normalization of file ", f)
+        print("...skipped (already normalized)")
         return
     else:
-        print("RGB normalization of file ", f)
         tgt_file = os.path.join(file_path, tgt_file)
 
     normalized = ''
@@ -67,21 +76,32 @@ def normalize_RGB_single_file(f):
                 tgt.write(normalized)
 
             except ValueError:
-                msg = "Unable to procees file " + f
+                msg = " -> unable to procees file (check log at %s)" % os.path.join(POINT_CLOUD_DATA_PATH, LOG_FILE)
                 print(msg)
                 logging.warning(msg)
-                
-    
-    return tgt_file
+            
+            else:
+                print("...done")
 
 
 def normalize_RGB(spaces):
     """
     Normalize RGB in all disjoint spaces in order to let o3d display them
     """
+    # Let's gather the total number of files to process    
+    total_areas = len(spaces)
+    total_rooms = 0
+    for e in spaces:
+        total_rooms += len(spaces[e])
 
-    for area in spaces:
-        for folder in spaces[area]:        
+    # Let's process each file
+    total_processed = 0
+    for idx, area in enumerate(sorted(spaces)):
+        for folder in sorted(spaces[area]):    
+            total_processed += 1         
+            print("Processing {} ({}/{})| file {} ({}/{})".format(
+                area, (idx+1), total_areas, folder, total_processed, total_rooms), 
+                end = " ")
             normalize_RGB_single_file(os.path.join(POINT_CLOUD_DATA_PATH, area, folder, folder) + PC_FILE_EXTENSION)
 
 
@@ -131,7 +151,9 @@ if __name__ == "__main__":
     normalize_RGB(avaialable_spaces)
 
     # To quickly test o3d
-    pcd_RGB_normalized = normalize_RGB_single_file(POINT_CLOUD_DATA_PATH + TEST_PC)
-    pcd = o3d.io.read_point_cloud(pcd_RGB_normalized, format='xyzrgb')
+    pcd = o3d.io.read_point_cloud(
+        os.path.join(POINT_CLOUD_DATA_PATH, TEST_PC + PC_FILE_EXTENSION_RGB_NORM),
+        format='xyzrgb')
     print(pcd)
     o3d.visualization.draw_geometries([pcd])
+    

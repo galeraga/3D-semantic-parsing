@@ -47,9 +47,6 @@ test_dataset = S3DIS(
 
 
 if __name__ == "__main__":
-    # To avoid the following error when importing torch_geometric
-    # OMP: Error #15: Initializing libiomp5.dylib, but found libomp.dylib already initialized.
-    # os.environ['KMP_DUPLICATE_LIB_OK']='True'
     
     print(train_dataset)
     print(test_dataset)

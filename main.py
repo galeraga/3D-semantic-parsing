@@ -1,159 +1,55 @@
-# http://www.open3d.org/docs/latest/introduction.html
-# Pay attention to Open3D-Viewer App http://www.open3d.org/docs/latest/introduction.html#open3d-viewer-app
-# and the Open3D-ML http://www.open3d.org/docs/latest/introduction.html#open3d-ml
-# pip install open3d
-from fileinput import filename
-from multiprocessing.sharedctypes import Value
-import open3d as o3d
+"""
+3D parsing and classification based on S3DIS dataset
+"""
+
+# import matplotlib.pyplot as plt
+import numpy as np
 import torch
-import os
-import sys
-import logging
+import torch.nn as nn
+import torch.nn.functional as F
+import torch.optim as optim
 
-# Set the sample path HERE:
-POINT_CLOUD_DATA_PATH = "/Users/jgalera/datasets/S3DIS"
-TEST_PC = "Area_1/office_1/office_1"
-PC_FILE_EXTENSION = ".txt"
-PC_FILE_EXTENSION_RGB_NORM = "_rgb_norm.txt"
-LOG_FILE = "conversion.log"
-
-# Define the logging settings
-# Logging is Python-version sensitive
-for handler in logging.root.handlers[:]:
-    logging.root.removeHandler(handler)
-
-# For Python < 3.9 (minor version: 9) 
-# encoding argument can't be used
-if sys.version_info[1] < 9:
-    logging.basicConfig(filename = os.path.join(POINT_CLOUD_DATA_PATH, LOG_FILE),
-        level=logging.WARNING,
-        format='%(asctime)s %(message)s')
-else:
-    logging.basicConfig(filename = os.path.join(POINT_CLOUD_DATA_PATH, LOG_FILE),
-        encoding='utf-8', 
-        level=logging.WARNING,
-        format='%(asctime)s %(message)s')
-
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
+# conda install pyg -c pyg
+from torch_geometric.datasets import S3DIS
+# from PIL import Image
 
 
-def normalize_RGB_single_file(f):
-    """
-    Takes the input file and calculates the RGB normalization
-    for a single point cloud file
-    """
+S3DIS_DATA_PATH = "/Users/jgalera/datasets/S3DIS"
 
-    # Keep the original dataset file intact and create 
-    # a new file with normalized RGB values 
-    file_path, file_name = os.path.split(f)   
-    tgt_file = file_name.split('.')[0] + PC_FILE_EXTENSION_RGB_NORM
+# Params from previous labs. TBD
+hparams = {
+    'batch_size': 64,
+    'num_workers': 0,
+    'num_classes': 100,
+    'learning_rate': 0.001,
+    'num_epochs': 1
+}
+hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-    # Skip the process if the file has been already normalized
-    if tgt_file in os.listdir(file_path):
-        print("...skipped (already normalized)")
-        return
-    else:
-        tgt_file = os.path.join(file_path, tgt_file)
+# Defining the data sets and data loaders
+# https://pytorch-geometric.readthedocs.io/en/latest/modules/datasets.html#torch_geometric.datasets.S3DIS
 
-    normalized = ''
-    with open(f) as src:
-        with open(tgt_file, "w") as tgt:
-            try:
-                for l in src:
-                    # Convert the str to list for easier manipulation
-                    x, y, z, r, g, b = l.split()
-                    r = float(r)/255
-                    g = float(g)/255
-                    b = float(b)/255
-
-                    # Back to str again
-                    normalized += ' '.join([str(x), str(y), str(z), 
-                        '{:.8s}'.format(str(r)), 
-                        '{:.8s}'.format(str(g)), 
-                        '{:.8s}'.format(str(b)), 
-                        '\n'])        
-                
-                tgt.write(normalized)
-
-            except ValueError:
-                msg = " -> unable to procees file (check log at %s)" % os.path.join(POINT_CLOUD_DATA_PATH, LOG_FILE)
-                print(msg)
-                logging.warning(msg)
-            
-            else:
-                print("...done")
+train_dataset = S3DIS(
+    root = S3DIS_DATA_PATH,
+    train = True,
+    transform = None,
+    pre_transform = None,
+    pre_filter = None)
 
 
-def normalize_RGB(spaces):
-    """
-    Normalize RGB in all disjoint spaces in order to let o3d display them
-    """
-    # Let's gather the total number of files to process    
-    total_areas = len(spaces)
-    total_rooms = 0
-    for e in spaces:
-        total_rooms += len(spaces[e])
+test_dataset = S3DIS(
+    root = S3DIS_DATA_PATH,
+    train = False,
+    test_area = 6,
+    transform = None,
+    pre_transform = None,
+    pre_filter = None)
 
-    # Let's process each file
-    total_processed = 0
-    for idx, area in enumerate(sorted(spaces)):
-        for folder in sorted(spaces[area]):    
-            total_processed += 1         
-            print("Processing {} ({}/{})| file {} ({}/{})".format(
-                area, (idx+1), total_areas, folder, total_processed, total_rooms), 
-                end = " ")
-            normalize_RGB_single_file(os.path.join(POINT_CLOUD_DATA_PATH, area, folder, folder) + PC_FILE_EXTENSION)
-
-
-def get_spaces(path_to_data):
-    """
-    Inspect the dataset location to determine the amount of available 
-    areas and spaces (offices, hallways, etc) 
-
-    Path_to_data\Area_N\office_X
-                       \office_Y
-                       \office_Z
-
-    Input: Path to dataset
-    Output: A dict with 
-        - key: Area_N
-        - values: a list of included disjoint spaces per Area
-    """
-    
-    # Keep only folders starting with Area_XXX
-    areas = dict((folder, '') for folder in os.listdir(path_to_data) if folder.startswith('Area'))
-    
-    # For every area folder, get the disjoint spaces included within it
-    # Removing any file that contains '.' (e.g., .DStore, alignment.txt)
-    # os.path.join takes into account the concrete OS separator ("/", "\")
-    for area in areas:
-        areas[area] = sorted([subfolder for subfolder in os.listdir(os.path.join(path_to_data, area)) 
-            if not '.' in subfolder])
-
-    return areas
-    
 
 if __name__ == "__main__":
+    # To avoid the following error when importing torch_geometric
+    # OMP: Error #15: Initializing libiomp5.dylib, but found libomp.dylib already initialized.
+    # os.environ['KMP_DUPLICATE_LIB_OK']='True'
     
-    # Two minor issues when working with S3DIS dataset:
-    # - Open3D does NOT support TXT file extension, so we have to specify 
-    #   the xyzrgb format (check supported file extensions here: 
-    #   http://www.open3d.org/docs/latest/tutorial/Basic/file_io.html) 
-    # - When working with xyzrgb format, each line contains [x, y, z, r, g, b], 
-    #   where r, g, b are in floats of range [0, 1]
-    #   So we need to normalize the RGB values from the S3DIS dataset in order 
-    #   to allow Open3D to display them
-
-    # Get the areas and spaces to define datasets and dataloaders
-    avaialable_spaces = get_spaces(POINT_CLOUD_DATA_PATH)
-
-    # Normalize RGB in all spaces
-    normalize_RGB(avaialable_spaces)
-
-    # To quickly test o3d
-    pcd = o3d.io.read_point_cloud(
-        os.path.join(POINT_CLOUD_DATA_PATH, TEST_PC + PC_FILE_EXTENSION_RGB_NORM),
-        format='xyzrgb')
-    print(pcd)
-    o3d.visualization.draw_geometries([pcd])
-    
+    print(train_dataset)
+    print(test_dataset)

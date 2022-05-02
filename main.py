@@ -27,8 +27,6 @@ hparams = {
 }
 hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-# Defining the data sets and data loaders
-# https://pytorch-geometric.readthedocs.io/en/latest/modules/datasets.html#torch_geometric.datasets.S3DIS
 # The dataset in torch_geometric includes two folders:
 #   1.- raw/
 #           .h5 files
@@ -61,7 +59,8 @@ hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
 #           -rw-r--r--  1 jgalera  staff   3.4G Apr 30 18:33 train_6.pt
 
 
-# Splitting the dataset from room_files.txt
+# Defining the data sets and data loaders
+# https://pytorch-geometric.readthedocs.io/en/latest/modules/datasets.html#torch_geometric.datasets.S3DIS
 train_dataset = tg.datasets.S3DIS(
     root = S3DIS_DATA_PATH,
     train = True,
@@ -90,6 +89,84 @@ test_dataloader = tg.loader.DataLoader(dataset = test_dataset,
     batch_size = hparams['batch_size'],
     shuffle = False
     )
+
+
+def inspector_hdf5():
+    """
+    From https://docs.h5py.org/en/stable/
+
+    The h5py package is a Pythonic interface to the HDF5 binary data format.
+    HDF5 lets you store huge amounts of numerical data, and easily manipulate that data from NumPy. 
+
+    An HDF5 file is a CONTAINER for two kinds of objects: 
+    - DATASETS, which are array-like collections of data
+    - GROUPS, which are folder-like containers that hold datasets and other groups
+
+    The most fundamental thing to remember when using h5py is:
+    Groups work like dictionaries, and datasets work like NumPy arrays
+    """
+
+    import h5py
+    import os
+
+    total_labels = 0
+    total_data = 0
+
+    for f in sorted(os.listdir(os.path.join(S3DIS_DATA_PATH, "raw"))):
+        
+        if '.txt' not in f:
+            print("\nAnalyzing content from HDF5 file {} -->\t ".format(f), end = " ")
+
+            # (Almost) each HDF5 file constains a (1000, 4096, 9) tensor
+            # In other words, 1000 times a matrix with:
+            #    4096 point clouds with 9 features (xyzrgb + what else???)
+            # Why labels have shape (1000, 4096)?? Why dim=1 of labels is 4096??
+
+            with h5py.File(os.path.join(S3DIS_DATA_PATH, "raw", f), 'r') as f:
+                for i in f.keys():
+                    print("{} : {} {}\t".format(i, f[i].size, f[i].shape), end = " ")
+
+                total_data += f['data'].size
+                total_labels += f['label'].shape[0]
+
+    # All .h5 returns a total of:
+    # Points: 96604160  
+    # Labels: 23585 
+    print("\nTotal data: ", int(total_data/9))
+    print("Total labels: ", total_labels)
+
+
+def inspector_ds(ds):  
+    """
+    Utility to get a deeper knowledge of datasets
+    """
+
+    # Output (with test_area = 1) 
+    # Train dataset: S3DIS(20291)
+    # Test dataset: S3DIS(3687)
+    # So total dataset = 20291 + 3687 = 23978
+    # The most similar number is the amount of lines in room_filelist (23585)
+    print("ds: ", ds)
+
+    # Output (with test_area = 1) 
+    # Train dataset: 20291
+    # Test dataset: 3687
+    print("ds len:", len(ds))
+
+    # Ouput ((with test_area=1))
+    # Train dataset  
+    #       Data(x=[83111936, 6], y=[83111936], pos=[83111936, 3])
+    #       We have around 83M points in the train dataset point cloud with xyzrgb (6)
+    # Test dataset  
+    #       Data(x=[15101952, 6], y=[15101952], pos=[15101952, 3])
+    #       We have around 15M points in the train dataset point cloud with xyzrgb (6)
+    # So TOTAL CLOUD POINTS = 83111936 + 15101952 = 98213888
+    print("ds.data: ", ds.data)
+
+    # Output: 3 (x, y and pos)
+    # Data(x=[83111936, 6], y=[83111936], pos=[83111936, 3])
+    # Data(x=[15101952, 6], y=[15101952], pos=[15101952, 3])
+    print("len(ds.data): ", len(ds.data))
 
 
 def inspector_dl(dl):
@@ -133,47 +210,27 @@ def inspector_dl(dl):
         # <bound method BaseData.size of DataBatch(x=[262144, 6], y=[262144], pos=[262144, 3], batch=[262144], ptr=[65])>
         print("Dataloader size: ", e.size)
 
+        # 64 (bath_size)
+        print("Dataloader batch size (from num_graphs): ", e.num_graphs)
 
-def inspector_ds(ds):  
-    """
-    Utility to get a deeper knowledge of datasets
-    """
 
-    # Output (with test_area = 1) 
-    # Train dataset: S3DIS(20291)
-    # Test dataset: S3DIS(3687)
-    # So total dataset = 20291 + 3687 = 23978
-    # The most similar number is the amount of lines in room_filelist (23585)
-    print("ds: ", ds)
 
-    # Output (with test_area = 1) 
-    # Train dataset: 20291
-    # Test dataset: 3687
-    print("ds len:", len(ds))
-
-    # Ouput ((with test_area=1))
-    # Train dataset  
-    #       Data(x=[83111936, 6], y=[83111936], pos=[83111936, 3])
-    #       We have around 83M points in the train dataset point cloud with xyzrgb (6)
-    # Test dataset  
-    #       Data(x=[15101952, 6], y=[15101952], pos=[15101952, 3])
-    #       We have around 15M points in the train dataset point cloud with xyzrgb (6)
-    # So TOTAL CLOUD POINTS = 83111936 + 15101952 = 98213888
-    print("ds.data: ", ds.data)
-
-    # Output: 3 (x, y and pos)
-    # Data(x=[83111936, 6], y=[83111936], pos=[83111936, 3])
-    # Data(x=[15101952, 6], y=[15101952], pos=[15101952, 3])
-    print("len(ds.data): ", len(ds.data))
 
 
 if __name__ == "__main__":
     
     tg.seed_everything(1)
+    
+    # Let's check what data is inside the HDF5 files
+    inspector_hdf5()
 
+    # Let's check what info is inside the datsets
     for ds in [train_dataset, test_dataset]:
         inspector_ds(ds)
     
+    # Let's check what info is inside the dataloaders
     for dl in [train_dataloader, test_dataloader]:
         inspector_dl(dl)
 
+    
+    

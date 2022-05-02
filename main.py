@@ -214,9 +214,6 @@ def inspector_dl(dl):
         print("Dataloader batch size (from num_graphs): ", e.num_graphs)
 
 
-
-
-
 if __name__ == "__main__":
     
     tg.seed_everything(1)

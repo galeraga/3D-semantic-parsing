@@ -16,7 +16,7 @@ import pandas as pd
 
 
 # Set the sample path HERE:
-POINT_CLOUD_DATA_PATH = "/Users/jgalera/datasets/S3DIS/byhand"
+PC_DATA_PATH = "/Users/jgalera/datasets/S3DIS/byhand"
 # Select what do yo want to visualize: an space or and object
 # Uncomment the following line if yoy want to visualize an space
 #TEST_PC = "Area_1/office_1/office_1"
@@ -37,11 +37,11 @@ for handler in logging.root.handlers[:]:
 # For Python < 3.9 (minor version: 9) 
 # encoding argument can't be used
 if sys.version_info[1] < 9:
-    logging.basicConfig(filename = os.path.join(POINT_CLOUD_DATA_PATH, LOG_FILE),
+    logging.basicConfig(filename = os.path.join(PC_DATA_PATH, LOG_FILE),
         level=logging.WARNING,
         format='%(asctime)s %(message)s')
 else:
-    logging.basicConfig(filename = os.path.join(POINT_CLOUD_DATA_PATH, LOG_FILE),
+    logging.basicConfig(filename = os.path.join(PC_DATA_PATH, LOG_FILE),
         encoding='utf-8', 
         level=logging.WARNING,
         format='%(asctime)s %(message)s')
@@ -89,7 +89,7 @@ def normalize_RGB_single_file(f):
 
             except ValueError:
                 msg1 = " -> unable to procees file %s " % src.name
-                msg2 = msg1 + "(check log at %s)" % os.path.join(POINT_CLOUD_DATA_PATH, LOG_FILE)
+                msg2 = msg1 + "(check log at %s)" % os.path.join(PC_DATA_PATH, LOG_FILE)
                 print(msg2)
                 logging.warning(msg1)
             
@@ -115,7 +115,7 @@ def RGB_normalization(areas):
             print("Processing RGB normalization in {} ({}/{})| file {} ({}/{})".format(
                 area, (idx+1), total_areas, folder, total_processed, total_spaces), 
                 end = " ")
-            path_to_space = os.path.join(POINT_CLOUD_DATA_PATH, area, folder)
+            path_to_space = os.path.join(PC_DATA_PATH, area, folder)
             normalize_RGB_single_file(os.path.join(path_to_space, folder) + PC_FILE_EXTENSION)
 
             # Let's also process the annotations
@@ -184,7 +184,7 @@ def get_labels(areas):
 
             # Get object names
             path_to_objects = os.path.join(
-                POINT_CLOUD_DATA_PATH, 
+                PC_DATA_PATH, 
                 area, 
                 folder,
                 "Annotations"
@@ -207,53 +207,69 @@ def get_labels(areas):
 
 def get_points(areas):
     """
-    Points in a space =< sum(object points in that room)
+    Calculate the number of total points in every space (office_1, storage_1,...)
+    and every object (table, chair, ...)
+    
+    Input: 
+        A dict with 
+            - key: Area_N
+            - values: a list of included disjoint spaces per Area
+    Output:
+        - A CSV file containing the summary of total points per space
+        - A CSV file containing the summary of total points per object
     """
 
-    # TODO: Checking if the PC_OBJECT_SUMMARY_FILE and PC_SPACES_SUMMARY_FILE
-    # already exist to skip processing files again
+    skip_space_processing = False
+    skip_object_processing = False
 
+    if PC_SPACE_SUMMARY_FILE in os.listdir(PC_DATA_PATH):
+                print("Skipping point gathering for spaces. File {} already exists in {}".format(PC_SPACE_SUMMARY_FILE, PC_DATA_PATH))
+                skip_space_processing = True
+                
+    if PC_OBJECT_SUMMARY_FILE in os.listdir(PC_DATA_PATH):
+                print("Skipping point gathering for objects. File {} already exists in {}".format(PC_SPACE_SUMMARY_FILE, PC_DATA_PATH))
+                skip_object_processing = True
+            
     space_points = []
     object_points = []
     
     for area, folders in sorted(areas.items()):
-        for folder in folders:
-        
-            # Get the points in every space
+        for folder in folders:      
+            # Get the total points in every space
             path_to_space = os.path.join(
-                POINT_CLOUD_DATA_PATH, 
+                PC_DATA_PATH, 
                 area, 
                 folder, 
                 folder + PC_FILE_EXTENSION_RGB_NORM
             )
-            
-            with open(path_to_space) as f:
+            if not skip_space_processing:
                 print("Getting points from file (space) {}_{}".format(area, folder))
-                space_points.append((area, folder, len(list(f))))
-    
-            # Get the points in every object object within space
+                with open(path_to_space) as f:
+                    space_points.append((area, folder, len(list(f))))
+        
+            # Get the total points in every object object within space
             path_to_objects = os.path.join(
-                POINT_CLOUD_DATA_PATH, 
+                PC_DATA_PATH, 
                 area, 
                 folder,
                 "Annotations"
             )
-
-    
-            for file in os.listdir(path_to_objects):
-                # Let's process only the RGB normalized
-                if PC_FILE_EXTENSION_RGB_NORM in file:
-                    print("Getting points from file (object) {}_{}_{}".format(area, folder, file))
-                    with open(os.path.join(path_to_objects, file)) as f:
-                        object_points.append((area, folder, file, len(list(f))))
-    
+            
+            if not skip_object_processing:
+                for file in os.listdir(path_to_objects):
+                    # Let's process only the RGB normalized
+                    if PC_FILE_EXTENSION_RGB_NORM in file:
+                        print("Getting points from file (object) {}_{}_{}".format(area, folder, file))
+                        with open(os.path.join(path_to_objects, file)) as f:
+                            object_points.append((area, folder, file, len(list(f))))
+        
                     
     # Saving ther results into a CSV to avoid processing this data again
     spaces_df = pd.DataFrame(space_points)
-    spaces_df.to_csv(os.path.join(POINT_CLOUD_DATA_PATH, PC_SPACE_SUMMARY_FILE), index = False, sep = " ")
+    spaces_df.to_csv(os.path.join(PC_DATA_PATH, PC_SPACE_SUMMARY_FILE), index = False, sep = " ")
 
     objects_df = pd.DataFrame(object_points)
-    objects_df.to_csv(os.path.join(POINT_CLOUD_DATA_PATH, PC_OBJECT_SUMMARY_FILE), index = False, sep = " ")
+    objects_df.to_csv(os.path.join(PC_DATA_PATH, PC_OBJECT_SUMMARY_FILE), index = False, sep = " ")
 
 
 if __name__ == "__main__":
@@ -269,7 +285,7 @@ if __name__ == "__main__":
     #   to allow Open3D to display them
 
     # Get a dict of areas and spaces
-    areas_and_spaces = get_spaces(POINT_CLOUD_DATA_PATH)
+    areas_and_spaces = get_spaces(PC_DATA_PATH)
 
     # Normalize RGB in all spaces
     RGB_normalization(areas_and_spaces)
@@ -285,7 +301,7 @@ if __name__ == "__main__":
 
     # To quickly test o3d
     pcd = o3d.io.read_point_cloud(
-        os.path.join(POINT_CLOUD_DATA_PATH, TEST_PC + PC_FILE_EXTENSION_RGB_NORM),
+        os.path.join(PC_DATA_PATH, TEST_PC + PC_FILE_EXTENSION_RGB_NORM),
         format='xyzrgb')
     print(pcd)
     # o3d.visualization.draw_geometries([pcd])

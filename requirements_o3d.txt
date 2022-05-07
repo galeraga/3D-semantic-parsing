@@ -1,0 +1,10 @@
+matplotlib==3.3.3 
+numpy==1.19.4
+Pillow==8.0.1
+torch
+torchtext
+torchvision
+scikit-learn==1.0.2
+pandas==1.4.2
+PyYAML==6.0
+open3d

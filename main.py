@@ -292,7 +292,8 @@ if __name__ == "__main__":
 
 
 
-
+    # The following lines have to be removed. They're test with the datset 
+    # included in the o3d.ml library
     """"
     # http://www.open3d.org/docs/release/python_api/open3d.ml.torch.datasets.S3DIS.html
     ml3d_dataset = ml3d.datasets.S3DIS(

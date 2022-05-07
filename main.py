@@ -242,7 +242,7 @@ def get_points(areas):
                 folder, 
                 folder + PC_FILE_EXTENSION_RGB_NORM
             )
-            if not skip_space_processing:
+            if skip_space_processing == False:
                 print("Getting points from file (space) {}_{}".format(area, folder))
                 with open(path_to_space) as f:
                     space_points.append((area, folder, len(list(f))))
@@ -255,15 +255,14 @@ def get_points(areas):
                 "Annotations"
             )
             
-            if not skip_object_processing:
+            if skip_object_processing == False:
                 for file in os.listdir(path_to_objects):
                     # Let's process only the RGB normalized
                     if PC_FILE_EXTENSION_RGB_NORM in file:
                         print("Getting points from file (object) {}_{}_{}".format(area, folder, file))
                         with open(os.path.join(path_to_objects, file)) as f:
                             object_points.append((area, folder, file, len(list(f))))
-        
-                    
+                       
     # Saving ther results into a CSV to avoid processing this data again
     spaces_df = pd.DataFrame(space_points)
     spaces_df.to_csv(os.path.join(PC_DATA_PATH, PC_SPACE_SUMMARY_FILE), index = False, sep = " ")

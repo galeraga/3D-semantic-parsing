@@ -264,11 +264,13 @@ def get_points(areas):
                             object_points.append((area, folder, file, len(list(f))))
                        
     # Saving ther results into a CSV to avoid processing this data again
-    spaces_df = pd.DataFrame(space_points)
-    spaces_df.to_csv(os.path.join(PC_DATA_PATH, PC_SPACE_SUMMARY_FILE), index = False, sep = " ")
+    if skip_space_processing == False:
+        spaces_df = pd.DataFrame(space_points)
+        spaces_df.to_csv(os.path.join(PC_DATA_PATH, PC_SPACE_SUMMARY_FILE), index = False, sep = " ")
 
-    objects_df = pd.DataFrame(object_points)
-    objects_df.to_csv(os.path.join(PC_DATA_PATH, PC_OBJECT_SUMMARY_FILE), index = False, sep = " ")
+    if skip_object_processing == False:
+        objects_df = pd.DataFrame(object_points)
+        objects_df.to_csv(os.path.join(PC_DATA_PATH, PC_OBJECT_SUMMARY_FILE), index = False, sep = " ")
 
 
 if __name__ == "__main__":

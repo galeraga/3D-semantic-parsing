@@ -212,7 +212,7 @@ def get_points(areas):
 
     # TODO: Checking if the PC_OBJECT_SUMMARY_FILE and PC_SPACES_SUMMARY_FILE
     # already exist to skip processing files again
-    
+
     space_points = []
     object_points = []
     
@@ -255,7 +255,6 @@ def get_points(areas):
     objects_df = pd.DataFrame(object_points)
     objects_df.to_csv(os.path.join(POINT_CLOUD_DATA_PATH, PC_OBJECT_SUMMARY_FILE), index = False, sep = " ")
 
-    
 
 if __name__ == "__main__":
     

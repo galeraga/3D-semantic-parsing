@@ -5,6 +5,7 @@
 
 # If import is not set this way, accessing o3d.ml.torch will throw an error:
 # AttributeError: module 'open3d.ml' has no attribute 'torch'
+from pathlib import Path
 import open3d.ml.torch as ml3d
 
 import open3d as o3d
@@ -26,8 +27,7 @@ TEST_PC = "Area_1/office_1/Annotations/table_1"
 PC_FILE_EXTENSION = ".txt"
 PC_FILE_EXTENSION_RGB_NORM = "_rgb_norm.txt"
 LOG_FILE = "conversion.log"
-PC_SPACE_SUMMARY_FILE = "summary_pc_per_space.csv"
-PC_OBJECT_SUMMARY_FILE = "summary_pc_per_object.csv"
+S3DIS_SUMMARY_FILE = "s3dis_summary.csv"
 
 # Define the logging settings
 # Logging is Python-version sensitive
@@ -48,6 +48,234 @@ else:
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
 
+
+class S3DIS_Summarizer():
+    """
+    Class to get info from the S3DIS dataset
+    """
+
+    # Names of the cols are going to be saved in the CSV summary file
+    S3DIS_summary_cols = ["Area", "Space", "Object", "Object Points", "Space Label", "Object Label"]
+
+    def __init__(self, path_to_data, rebuild = False):
+        """
+        Inspect the dataset to get the following info:
+
+            - Areas
+            - Spaces
+            - Objects
+            - Points per object
+            - Labels (for both areas and spaces)
+        
+        S3DIS dataset structure:
+
+        Path_to_data\Area_N\space_X
+                        \space_Y
+                        \space_Z\Annotations\object_1
+                        \space_Z\Annotations\object_2
+
+        Input: 
+            - Path to dataset
+
+        Output: A CSV file containing the following columns:
+            - Area
+            - Space
+            - Object
+            - Points per object
+            - Space Label
+            - Object Label
+
+        If rebuild is set to True, the summary file is generated again
+        """
+        
+        self.path_to_data = path_to_data
+        self.rebuild = rebuild
+
+        # Do NOT process the info if the summary file already exists
+        if self.check_summary_file() and (self.rebuild == False):
+                msg = "Skipping summary file generation. The S3DIS summary file {} already exists in {}"
+                print(msg.format(S3DIS_SUMMARY_FILE, self.path_to_data))
+                return
+        
+        print("Generating summary file {} in {}".format(S3DIS_SUMMARY_FILE, self.path_to_data))
+
+        # Every line of the S3DIS summary file will contain:
+        # (area, space, object, points_per_object, space label, object label)
+        summary_line = []
+        
+        # Keep only folders starting with Area_XXX
+        areas = dict((folder, '') for folder in sorted(os.listdir(self.path_to_data)) if folder.startswith('Area'))
+
+        # For every area folder, get the disjoint spaces included within it
+        for area in areas:
+
+            # os.path.join takes into account the concrete OS separator ("/", "\")        
+            path_to_spaces = os.path.join(self.path_to_data, area)
+            
+            # Get spaces for each area, avoiding non disered files (".DStore", ...)
+            spaces = sorted([space for space in os.listdir(path_to_spaces) 
+                if not '.' in space])    
+            
+            # For every sapce, get the objects it contains
+            for space in spaces:
+                path_to_objects = os.path.join(path_to_spaces, space, "Annotations")
+                
+                # Get the space label
+                # From hallway_1, hallway_2, take only "hallway"
+                space_label = space.split("_")[0]
+                
+                # The file to be used will be the original of the S3DIS 
+                # (not the_rgb_norm.txt), since rgb normalization is 
+                # optional (only required to visualize data with Open3D)        
+                objects = sorted([object for object in os.listdir(path_to_objects) 
+                    if not PC_FILE_EXTENSION_RGB_NORM in object])    
+
+                for object in objects:
+                    # Get the object label
+                    # From chair_1, chair_2, take only "chair"
+                    object_label = object.split("_")[0]
+    
+                    # Avoid saving .DStore and other files
+                    if "." not in object_label:
+                        
+                        # Get the number of points in the object
+                        print("Getting points from file (object) {}_{}_{}".format(area, space, object))
+                        with open(os.path.join(path_to_objects, object)) as f:
+                            points_per_object = len(list(f))
+                        
+                        # Save all the traversal in the summary file:
+                        # (Area, space, object, points per object, space label, object label)
+                        summary_line.append((area, space, object, points_per_object, space_label, object_label))
+
+
+        # Save the data into a CSV file
+        summary_df = pd.DataFrame(summary_line)
+        summary_df.columns = self.S3DIS_summary_cols
+        summary_df.to_csv(os.path.join(PC_DATA_PATH, S3DIS_SUMMARY_FILE), index = False, sep = "\t")
+
+
+    def check_summary_file(self):
+        """
+        Checks whether the summary file already exists
+        """
+
+        summary_existence = True if S3DIS_SUMMARY_FILE in os.listdir(self.path_to_data) else False
+
+        return summary_existence
+    
+
+    def get_labels(self):
+        """
+        Get the labels from the S3DIS dataset folder structure
+
+        Create dicts with the different spaces (conf rooms, hall ways,...)
+        and objects (table, chairs,...) within an Area 
+        
+        Output:
+            space_labels: A dict containing {0: space_0, 1: space_1, ... }
+            object_labels: A dict containing {0: object_0, 1: object_1, ... }
+        """
+        
+        if self.check_summary_file() == False:
+            msg = "No S3DIS summary file {} found at {}."
+            msg += "Summary file is going to be automatically generated"
+            print(msg.format(S3DIS_SUMMARY_FILE, self.path_to_data))     
+            self.__init__(self.path_to_data, rebuild = True)
+        
+        # Define the sets and dicts to be used 
+        spaces_set = set()
+        objects_set = set()
+        space_labels = dict()
+        object_labels = dict()
+
+        # Open the CSV sumamry  file
+        summary = os.path.join(self.path_to_data, S3DIS_SUMMARY_FILE)
+                
+        # Process each line in the summary file
+        with open(summary) as f:
+            for idx,line in enumerate(f):
+                # Skip the first row (since it contain the header and no data)
+                if idx != 0:
+                    # Split the line, based on the tab separator
+                    line = line.split("\t")       
+                    # Add the space to the set             
+                    spaces_set.add(line[4])                    
+                    # Add the object to the set
+                    # Remove the new line char at the end of every line for objects
+                    objects_set.add(line[5].strip("\n"))
+
+        # Create the idx-to-label dicts
+        for idx, space in enumerate(spaces_set):
+            space_labels[idx] = space
+    
+        for idx, object in enumerate(objects_set):
+            object_labels[idx] = object
+
+        return space_labels, object_labels
+
+        
+    def get_stats(self):
+        """
+        Get several statistics about the dataset
+        """
+
+        if self.check_summary_file() == False:
+            msg = "No S3DIS summary file {} found at {}."
+            msg += "Summary file is going to be automatically generated"
+            print(msg.format(S3DIS_SUMMARY_FILE, self.path_to_data))     
+            self.__init__(self.path_to_data, rebuild = True)
+        
+        # Open the CSV summary  file
+        summary = os.path.join(self.path_to_data, S3DIS_SUMMARY_FILE)
+
+        # Get the whole summary
+        summary = pd.read_csv(summary, header =0, usecols = self.S3DIS_summary_cols, sep = "\t")
+        
+        # Get stat info about the Object Point col directly
+        print("Points information:", summary.describe())
+
+        # Total areas 
+        areas = sorted(set(summary['Area']))
+        print("Areas found:", areas)
+        
+        # Total spaces per area
+        total_spaces = []
+        for area in areas:
+            # Returns a new dataframe containing only the proper area
+            area_df = summary.loc[summary['Area'] == area]
+            
+            # For that area, get non-repeated spaces
+            spaces_per_area = len(sorted(set(area_df["Space"])))
+            print("Total spaces in area {}: {}".format(
+                area, spaces_per_area))
+            total_spaces.append(spaces_per_area)
+        print("Total spaces: ", sum(total_spaces))
+       
+        # Total objects
+        # Minus one to remove the header row
+        print("Total objects: ", len(summary.index)-1)
+
+        # Total points
+        # Minus one to remove the header row
+        object_points_df = summary["Object Points"]
+        print("Total points: ", object_points_df.sum())
+        print("Max points per object: ", object_points_df.max())
+        print("Min points per object: ", object_points_df.min())
+        #TODO: quantiles and percentiles of points
+
+        
+        # TODO: Total objects per space
+        ...
+
+        # TODO: Points per area
+        ...
+
+        # TODO: Points per space
+        ...
+
+        # TODO: Points per kind of object
+        ...
+        
 
 def normalize_RGB_single_file(f):
     """
@@ -126,7 +354,6 @@ def RGB_normalization(areas):
 
 
 
-
 def get_spaces(path_to_data):
     """
     Inspect the dataset location to determine the amount of available 
@@ -153,128 +380,9 @@ def get_spaces(path_to_data):
             if not '.' in subfolder])
 
     return areas
-    
-def get_labels(areas):
-    """
-    Create dicts with the different spaces ((conf rooms, hall ways,...)
-    and objects (table, chairs,...) within an Area 
-    
-    Needed to label obejcts and spaces
-
-    Input:
-        A dict with 
-            - key: Area_N
-            - values: a list of included disjoint spaces per Area
-    Output:
-        dict_spaces: A dict containing {0: space_0, 1: space_1, ... }
-        dict_objects: A dict containing {0: object_0, 1: object_1, ... }
-    """
-    
-    s3dis_spaces = set()
-    s3dis_objects = set()
-    dict_spaces = dict()
-    dict_objects = dict()
-
-    for area, folders in sorted(areas.items()):
-        for folder in folders:
-            # Get space names
-            # From hallway_1, hallway_2, take only "hallway"
-            space_name = folder.split("_")[0]
-            s3dis_spaces.add(space_name)
-
-            # Get object names
-            path_to_objects = os.path.join(
-                PC_DATA_PATH, 
-                area, 
-                folder,
-                "Annotations"
-            )
-
-            for file in os.listdir(path_to_objects):
-                object_name = file.split("_")[0]
-                # Avoid saving .DStore and other files
-                if "." not in object_name:
-                    s3dis_objects.add(object_name)
-
-    for idx, space in enumerate(s3dis_spaces):
-        dict_spaces[idx] = space
-    
-    for idx, object in enumerate(s3dis_objects):
-        dict_objects[idx] = object
-
-    return dict_spaces, dict_objects
-
-
-def get_points(areas):
-    """
-    Calculate the number of total points in every space (office_1, storage_1,...)
-    and every object (table, chair, ...)
-    
-    Input: 
-        A dict with 
-            - key: Area_N
-            - values: a list of included disjoint spaces per Area
-    Output:
-        - A CSV file containing the summary of total points per space
-        - A CSV file containing the summary of total points per object
-    """
-
-    skip_space_processing = False
-    skip_object_processing = False
-
-    if PC_SPACE_SUMMARY_FILE in os.listdir(PC_DATA_PATH):
-                print("Skipping point gathering for spaces. File {} already exists in {}".format(PC_SPACE_SUMMARY_FILE, PC_DATA_PATH))
-                skip_space_processing = True
-                
-    if PC_OBJECT_SUMMARY_FILE in os.listdir(PC_DATA_PATH):
-                print("Skipping point gathering for objects. File {} already exists in {}".format(PC_SPACE_SUMMARY_FILE, PC_DATA_PATH))
-                skip_object_processing = True
-            
-    space_points = []
-    object_points = []
-    
-    for area, folders in sorted(areas.items()):
-        for folder in folders:      
-            # Get the total points in every space
-            path_to_space = os.path.join(
-                PC_DATA_PATH, 
-                area, 
-                folder, 
-                folder + PC_FILE_EXTENSION_RGB_NORM
-            )
-            if skip_space_processing == False:
-                print("Getting points from file (space) {}_{}".format(area, folder))
-                with open(path_to_space) as f:
-                    space_points.append((area, folder, len(list(f))))
-        
-            # Get the total points in every object object within space
-            path_to_objects = os.path.join(
-                PC_DATA_PATH, 
-                area, 
-                folder,
-                "Annotations"
-            )
-            
-            if skip_object_processing == False:
-                for file in os.listdir(path_to_objects):
-                    # Let's process only the RGB normalized
-                    if PC_FILE_EXTENSION_RGB_NORM in file:
-                        print("Getting points from file (object) {}_{}_{}".format(area, folder, file))
-                        with open(os.path.join(path_to_objects, file)) as f:
-                            object_points.append((area, folder, file, len(list(f))))
-                       
-    # Saving ther results into a CSV to avoid processing this data again
-    if skip_space_processing == False:
-        spaces_df = pd.DataFrame(space_points)
-        spaces_df.to_csv(os.path.join(PC_DATA_PATH, PC_SPACE_SUMMARY_FILE), index = False, sep = " ")
-
-    if skip_object_processing == False:
-        objects_df = pd.DataFrame(object_points)
-        objects_df.to_csv(os.path.join(PC_DATA_PATH, PC_OBJECT_SUMMARY_FILE), index = False, sep = " ")
 
 
 if __name__ == "__main__":
-    
     
     # Two minor issues when working with S3DIS dataset:
     # - Open3D does NOT support TXT file extension, so we have to specify 
@@ -285,20 +393,23 @@ if __name__ == "__main__":
     #   So we need to normalize the RGB values from the S3DIS dataset in order 
     #   to allow Open3D to display them
 
+    # Create the summary file that will contain important info about the dataset
+    summary = S3DIS_Summarizer(PC_DATA_PATH)
+    
+    # Get the labels 
+    space_labels, object_labels = summary.get_labels()
+    
+    # Get statistical info
+    summary.get_stats()
+
+    # TODO: To be removed, since all data is based now in the summary file
     # Get a dict of areas and spaces
     areas_and_spaces = get_spaces(PC_DATA_PATH)
 
+    # TODO: Rebuild the normalization to be based on the sumamry file,
+    # not in the traversal of directories
     # Normalize RGB in all spaces
-    RGB_normalization(areas_and_spaces)
-
-    # Gather labels from folder traversal for both spaces and objects
-    spaces_dict, objects_dict = get_labels(areas_and_spaces)
-    print("Labels for spaces: ", spaces_dict)
-    print("Labels for objects: ", objects_dict)
-
-    # Get the points in both spaces and objects
-    get_points(areas_and_spaces)
-
+    # RGB_normalization(areas_and_spaces)
 
     # To quickly test o3d
     pcd = o3d.io.read_point_cloud(
@@ -306,76 +417,3 @@ if __name__ == "__main__":
         format='xyzrgb')
     print(pcd)
     # o3d.visualization.draw_geometries([pcd])
-
-
-
-    # The following lines have to be removed. They're test with the datset 
-    # included in the o3d.ml library
-    """"
-    # http://www.open3d.org/docs/release/python_api/open3d.ml.torch.datasets.S3DIS.html
-    ml3d_dataset = ml3d.datasets.S3DIS(
-        dataset_path = POINT_CLOUD_DATA_PATH,
-        name = "S3DIS",
-        # {segmentation, detection}
-        task = "segmentation",
-        test_area_idx = 2,
-        test_result_folder = os.path.join(POINT_CLOUD_DATA_PATH, "results")
-    )
-
-    
-    print("ml3d_dataset: ", ml3d_dataset)
-    print("Labels for classification: ", ml3d_dataset.get_label_to_names())
-
-    # get the 'all' split that combines training, validation and test set
-    ml3d_all = ml3d_dataset.get_split('all')
-    ml3d_training = ml3d_dataset.get_split('training')
-    ml3d_test = ml3d_dataset.get_split('test')
-    ml3d_val = ml3d_dataset.get_split('validation')
-    
-    my_dsets = [("all", ml3d_all), ("training", ml3d_training), 
-        ("test", ml3d_test), ("validation", ml3d_val)]
-
-    for dset in my_dsets:
-        print("{} dataset -> Lenght {} (id: {})".format(dset[0], len(dset[1]), dset))  
-    
-    # Attr:  {'idx': 1, 'name': 'Area_1_conferenceRoom_1', 'path': '/Users/jgalera/datasets/S3DIS/byhand/original_pkl/Area_1_conferenceRoom_1.pkl', 'split': 'all'}
-    for name, dset in my_dsets:
-        print("Processing ATTRIBUTES from dataset {}".format(name))
-        for i in range(len(dset)):
-            print("Attribute: ", dset.get_attr(i))
-
-
-    # https://github.com/isl-org/Open3D-ML/blob/master/ml3d/datasets/s3dis.py
-    # get_data -> data = {'point': points, 'feat': feat, 'label': labels, 'bounding_boxes': bboxes
-    for name, dset in my_dsets:
-        print("Processing DATA from dataset {}: ".format(name))
-        for i in range(len(dset)):
-            print("\tPoint shape: ", dset.get_data(i)['point'].shape)
-            print("\tFeature shape: ", dset.get_data(i)['feat'].shape)
-            print("\tLabel shape: ", dset.get_data(i)['label'].shape)
-            print("\tBounding Box: ", dset.get_data(i)['bounding_boxes'])
-
-
-
-    # show the first 100 frames using the visualizer
-    # vis = ml3d.vis.Visualizer()
-    # vis.visualize_dataset(ml3d_dataset, 'all', indices=range(3))
-
-    train_dataloader = ml3d.dataloaders.TorchDataloader(
-        dataset=ml3d_dataset.get_split('training'),
-        preprocess = None,
-        transform = None,
-        steps_per_epoch = 64)
-    
-    print("Train dataloader", train_dataloader)
-    # Returns the steps_per_epoch arg
-    #print("Len dataloader: ", len(train_dataloader))
-    #print(train_dataloader.__getitem__(64)['data'])
-    #print(train_dataloader.__getitem__(64)['attr'])
-
-        
-    #for step in range(len(ml3d_training)):  # one pointcloud per step
-    #    ml3d_training.get_data(step)['point']
-    #    ml3d_training.get_data(step)['point']
-    
-"""

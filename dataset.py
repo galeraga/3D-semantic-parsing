@@ -42,6 +42,7 @@ class S3DISDataset(torch.utils.data.Dataset):
         # print("Object shape {} (poins cloud from summary: {}) ({}_{}_Annotations_{}): ".format(obj.shape, total_obj_points, area, space, obj_file))
       
         # Torch Dataloaders expects each tensor to be equal size
+        # TODO: MAX_OBJ_POINTS has te be defined, based on point cloud analysis
         if(len(obj) > MAX_OBJ_POINTS):   
             # Sample points 
             # Shuffle the index (torch.randperm(4) -> tensor([2, 1, 0, 3]))

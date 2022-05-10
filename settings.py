@@ -15,7 +15,6 @@ import random
 # AttributeError: module 'open3d.ml' has no attribute 'torch'
 import open3d.ml.torch as ml3d
 
-
 # Set the sample path HERE:
 PC_DATA_PATH = "/Users/jgalera/datasets/S3DIS/byhand"
 # Select what do yo want to visualize: an space or and object

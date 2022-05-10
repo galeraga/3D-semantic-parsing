@@ -1,1 +1,5 @@
-kk.txt
+__pycache__/dataset.cpython-38.pyc
+.gitignore
+__pycache__/settings.cpython-38.pyc
+.gitignore
+__pycache__/summarizer.cpython-38.pyc

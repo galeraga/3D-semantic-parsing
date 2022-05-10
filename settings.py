@@ -29,3 +29,8 @@ LOG_FILE = "conversion.log"
 S3DIS_SUMMARY_FILE = "s3dis_summary.csv"
 # All point cloud objects must have the same number of points
 MAX_OBJ_POINTS = 4096
+BUILDING_DISTRIBUTION = {
+    'Building 1': ["Area_1", "Area_3", "Area_6"], 
+    'Building 2': ["Area_2", "Area_4"], 
+    'Building 3': ["Area_5"], 
+}

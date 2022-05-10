@@ -156,6 +156,7 @@ if __name__ == "__main__":
 
     # Create the S3DIS dataset
     ds = S3DISDataset(PC_DATA_PATH)
+    print(ds)
     
     for idx,i in enumerate(ds):
         obj, label = i

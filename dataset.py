@@ -15,7 +15,12 @@ class S3DISDataset(torch.utils.data.Dataset):
         """
         
         self.root_dir = root_dir
-        self.summary_df = pd.read_csv(os.path.join(self.root_dir, S3DIS_SUMMARY_FILE), header = None, skiprows=1)
+        self.summary_df = pd.read_csv(
+            os.path.join(self.root_dir, S3DIS_SUMMARY_FILE), 
+            header = None, 
+            skiprows=1,
+            sep = "\t"
+        )
         self.transform = transform
 
     def __len__(self):
@@ -27,12 +32,15 @@ class S3DISDataset(torch.utils.data.Dataset):
         if torch.is_tensor(idx):
             idx = idx.tolist()
 
-        # Get the summary line (by idx) which contains the object point cloud 
-        summary_line = self.summary_df.iloc[idx, 0]
-        
-        # From the sumamry line, extract the proper info
-        area, space, obj_file, total_obj_points, space_label, obj_label = summary_line.split("\t")        
-        
+        # Get the summary line (by idx) which contains the proper 
+        # object point cloud info
+        area = self.summary_df.iloc[idx, 0]
+        space = self.summary_df.iloc[idx, 1]
+        obj_file = self.summary_df.iloc[idx, 2]
+        total_obj_points = self.summary_df.iloc[idx, 3]
+        space_label = self.summary_df.iloc[idx, 4]
+        obj_label = self.summary_df.iloc[idx, 5]
+            
         # Fetch the object point cloud
         path_to_obj = os.path.join(self.root_dir, area, space, "Annotations", obj_file)
         obj_df = pd.read_csv(path_to_obj, sep = " ", dtype = np.float32)
@@ -61,3 +69,17 @@ class S3DISDataset(torch.utils.data.Dataset):
             obj = self.transform(obj)
 
         return obj, obj_label
+    
+    def __str__(self) -> str:
+        
+        msg_list = []
+        msg_list.append(80 * "-")
+        msg_list.append("S3DIS DATASET INFORMATION")
+        msg_list.append(80 * "-")
+        msg_list.append("Data source: " + self.root_dir)
+        msg_list.append("Summary file ({}) info: ".format(S3DIS_SUMMARY_FILE))
+        msg_list.append(str(self.summary_df))
+        
+        msg = '\n'.join(msg_list)
+        
+        return str(msg)

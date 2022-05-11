@@ -24,7 +24,8 @@ PC_DATA_PATH = "/Users/jgalera/datasets/S3DIS/byhand"
 TEST_PC = "Area_1/office_1/Annotations/table_1"
 
 PC_FILE_EXTENSION = ".txt"
-PC_FILE_EXTENSION_RGB_NORM = "_rgb_norm.txt"
+ALREADY_RGB_NORMALIZED_SUFFIX = "_rgb_norm"
+PC_FILE_EXTENSION_RGB_NORM = ALREADY_RGB_NORMALIZED_SUFFIX + PC_FILE_EXTENSION
 LOG_FILE = "conversion.log"
 S3DIS_SUMMARY_FILE = "s3dis_summary.csv"
 # All point cloud objects must have the same number of points

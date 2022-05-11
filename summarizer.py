@@ -81,24 +81,21 @@ class S3DIS_Summarizer():
                 # (not the_rgb_norm.txt), since rgb normalization is 
                 # optional (only required to visualize data with Open3D)        
                 objects = sorted([object for object in os.listdir(path_to_objects) 
-                    if not PC_FILE_EXTENSION_RGB_NORM in object])    
+                    if (PC_FILE_EXTENSION in object) and (ALREADY_RGB_NORMALIZED_SUFFIX not in object)])    
 
                 for object in objects:
                     # Get the object label
                     # From chair_1, chair_2, take only "chair"
                     object_label = object.split("_")[0]
-    
-                    # Avoid saving .DStore and other files
-                    if "." not in object_label:
-                        
-                        # Get the number of points in the object
-                        print("Getting points from file (object) {}_{}_{}".format(area, space, object))
-                        with open(os.path.join(path_to_objects, object)) as f:
-                            points_per_object = len(list(f))
-                        
-                        # Save all the traversal info in the summary file:
-                        # (Area, space, object, points per object, space label, object label)
-                        summary_line.append((area, space, object, points_per_object, space_label, object_label))
+        
+                    # Get the number of points in the object
+                    print("Getting points from file (object) {}_{}_{}".format(area, space, object))
+                    with open(os.path.join(path_to_objects, object)) as f:
+                        points_per_object = len(list(f))
+                    
+                    # Save all the traversal info in the summary file:
+                    # (Area, space, object, points per object, space label, object label)
+                    summary_line.append((area, space, object, points_per_object, space_label, object_label))
 
 
         # Save the data into the CSV summary file

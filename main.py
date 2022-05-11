@@ -25,8 +25,6 @@ else:
         format='%(asctime)s %(message)s')
 
 device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
         
 
 def normalize_RGB_single_file(f):

@@ -185,7 +185,7 @@ if __name__ == "__main__":
     num_batches = len(train_dataloader)
     for idx, dl in enumerate(train_dataloader):
         bobject, blabel = dl
-        msg = "Checkin dataloader {}/{} | "
+        msg = "Checking dataloader {}/{} | "
         msg += "Batch object shape {} | "
         msg += "Batch label lenght {}"
         print(msg.format(idx +1, num_batches, bobject.shape, len(blabel)))

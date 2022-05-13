@@ -10,6 +10,7 @@ import sys
 import logging
 import numpy as np
 import random
+from tqdm import tqdm
 
 # If import is not set this way, accessing o3d.ml.torch will throw an error:
 # AttributeError: module 'open3d.ml' has no attribute 'torch'

@@ -4,7 +4,9 @@ from settings import *
 
 class S3DIS_Summarizer():
     """
-    Class to get info from the S3DIS dataset
+    Class to generate the ground truth file.
+    It also gets additional info from the S3DIS dataset, such as 
+    the points per object or the data health status
     """
 
     # Names of the cols are going to be saved in the CSV summary file
@@ -21,6 +23,7 @@ class S3DIS_Summarizer():
             - Objects
             - Points per object
             - Labels (for both areas and spaces)
+            - Data health status
         
         S3DIS dataset structure:
 
@@ -39,8 +42,13 @@ class S3DIS_Summarizer():
             - Points per object
             - Space Label
             - Object Label
+            - Health Status
 
-        If rebuild is set to True, the summary file is generated again
+        Args:
+            - rebuild: If rebuild is set to True, the summary file is 
+                generated again
+            - check_consistency: perform a data consistency check in 
+                order to remove data with inconsistent format
         """
         
         self.path_to_data = path_to_data

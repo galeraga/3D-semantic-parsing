@@ -1,5 +1,5 @@
 """
-File use to storge global vars and required libraries among modules
+File use to store global vars and required libraries among modules
 """
 
 import os

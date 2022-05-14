@@ -164,9 +164,7 @@ if __name__ == "__main__":
 
     # Splitting the dataset (80% training, 10% validation, 10% test)
     # TODO: Modify the dataset to be split by building
-    # Building 1 (Area 1, Area 3, Area 6), Building 2 (Area 2, Area 4), Buidling 3 (Area 5)
-   
-    
+    # Building 1 (Area 1, Area 3, Area 6), Building 2 (Area 2, Area 4), Building 3 (Area 5)
     original_ds_length = len(ds)
     training_ds_length = round(0.8*original_ds_length)
     validation_ds_length = round(0.1*original_ds_length)

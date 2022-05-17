@@ -8,7 +8,7 @@ from summarizer import S3DIS_Summarizer
 from dataset import S3DISDataset
 
 # Define the logging settings
-# Logging is Python-version sensitive
+# Logging is Python-version sensitive
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
@@ -24,10 +24,6 @@ else:
         level=logging.WARNING,
         format='%(asctime)s %(message)s')
 
-device = torch.device("cuda" if torch.cuda.is_available() else "cpu")
-
-
-        
 
 def normalize_RGB_single_file(f):
     """
@@ -110,11 +106,9 @@ def get_spaces(path_to_data):
     """
     Inspect the dataset location to determine the amount of available 
     areas and spaces (offices, hallways, etc) 
-
     Path_to_data\Area_N\office_X
                        \office_Y
                        \office_Z
-
     Input: Path to dataset
     Output: A dict with 
         - key: Area_N
@@ -146,7 +140,7 @@ if __name__ == "__main__":
     #   to allow Open3D to display them
 
     # Create the summary file that will contain important info about the dataset
-    summary = S3DIS_Summarizer(PC_DATA_PATH)
+    summary = S3DIS_Summarizer(PC_DATA_PATH, check_consistency = False)
     
     # Get the labels 
     space_labels, object_labels = summary.get_labels()
@@ -157,22 +151,23 @@ if __name__ == "__main__":
     # Create the S3DIS dataset
     ds = S3DISDataset(PC_DATA_PATH)
     print(ds)
-
+    
+    """
     for idx,i in enumerate(ds):
         obj, label = i
-        print("{} - Object shape {} | Label: {} ".format(idx, obj.shape, label))
-        
+        print("{} - Object shape {} | Label: {} ".format(idx, obj.shape, label)) 
+    """
 
     # Splitting the dataset (80% training, 10% validation, 10% test)
-    # TODO: Modify the dataset to split by building
-    # Building 1 (Area 1, Area 3, Area 6), Building 2 (Area 2, Area 4), Buidling 3 (Area 5)
+    # TODO: Modify the dataset to be split by building
+    # Building 1 (Area 1, Area 3, Area 6), Building 2 (Area 2, Area 4), Building 3 (Area 5)
     original_ds_length = len(ds)
     training_ds_length = round(0.8*original_ds_length)
     validation_ds_length = round(0.1*original_ds_length)
     test_ds_length = round(0.1*original_ds_length)
 
     split_criteria = [training_ds_length, validation_ds_length, test_ds_length]
-
+    
     train_dataset, val_dataset, test_dataset = torch.utils.data.dataset.random_split(ds,
                                             split_criteria,
                                             generator=torch.Generator().manual_seed(1))
@@ -181,17 +176,19 @@ if __name__ == "__main__":
     val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=128, shuffle=True)
     test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=128, shuffle=False)
 
-    for dl in train_dataloader:
+    
+    num_batches = len(train_dataloader)
+    for idx, dl in enumerate(train_dataloader):
         bobject, blabel = dl
+        msg = "Checking dataloader {}/{} | "
+        msg += "Batch object shape {} | "
+        msg += "Batch label lenght {}"
+        print(msg.format(idx +1, num_batches, bobject.shape, len(blabel)))
         
-        print("Dataloader:", dl)
-        print("Dataloader Length: ", len(dl))
-        print("Batch object: ", bobject.shape)
-        print("Batch label: ", len(blabel))
-
+    
     # TODO: To be removed, since all data is based now in the summary file
     # Get a dict of areas and spaces
-    areas_and_spaces = get_spaces(PC_DATA_PATH)
+    # areas_and_spaces = get_spaces(PC_DATA_PATH)
 
     # TODO: Rebuild the normalization to be based on the sumamry file,
     # not in the traversal of directories
@@ -199,10 +196,10 @@ if __name__ == "__main__":
     # RGB_normalization(areas_and_spaces)
 
     # To quickly test o3d
-    '''
+    """
     pcd = o3d.io.read_point_cloud(
         os.path.join(PC_DATA_PATH, TEST_PC + PC_FILE_EXTENSION_RGB_NORM),
         format='xyzrgb')
     print(pcd)
-    '''
+    """
     # o3d.visualization.draw_geometries([pcd])

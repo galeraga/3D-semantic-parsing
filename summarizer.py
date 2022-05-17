@@ -1,16 +1,20 @@
 
+from genericpath import exists
 from settings import *
 
 class S3DIS_Summarizer():
     """
-    Class to get info from the S3DIS dataset
+    Class to generate the ground truth file.
+    It also gets additional info from the S3DIS dataset, such as 
+    the points per object or the data health status
     """
 
     # Names of the cols are going to be saved in the CSV summary file
     # after folder traversal
-    S3DIS_summary_cols = ["Area", "Space", "Object", "Object Points", "Space Label", "Object Label"]
+    S3DIS_summary_cols = ["Area", "Space", "Object", 
+        "Object Points", "Space Label", "Object Label", "Health Status"]
 
-    def __init__(self, path_to_data, rebuild = False):
+    def __init__(self, path_to_data, rebuild = False, check_consistency = False):
         """
         Inspect the dataset to get the following info:
 
@@ -19,6 +23,7 @@ class S3DIS_Summarizer():
             - Objects
             - Points per object
             - Labels (for both areas and spaces)
+            - Data health status
         
         S3DIS dataset structure:
 
@@ -37,20 +42,37 @@ class S3DIS_Summarizer():
             - Points per object
             - Space Label
             - Object Label
+            - Health Status
 
-        If rebuild is set to True, the summary file is generated again
+        Args:
+            - rebuild: If rebuild is set to True, the summary file is 
+                generated again
+            - check_consistency: perform a data consistency check in 
+                order to remove data with inconsistent format
         """
         
         self.path_to_data = path_to_data
         self.rebuild = rebuild
+        self.path_to_summary_file = os.path.join(self.path_to_data, S3DIS_SUMMARY_FILE)
 
         # Do NOT process the info if the summary file already exists
-        if self.check_summary_file() and (self.rebuild == False):
+        if os.path.exists(self.path_to_summary_file):
+            # Creates the Pandas DataFrame for future use in the class
+            self.summary_df = pd.read_csv(self.path_to_summary_file, 
+                header =0, 
+                usecols = self.S3DIS_summary_cols, 
+                sep = "\t") 
+            
+            if self.rebuild == False:
                 msg = "Skipping summary file generation. The S3DIS summary file {} already exists in {}"
                 print(msg.format(S3DIS_SUMMARY_FILE, self.path_to_data))
-                return
+                
+            if check_consistency:
+                  self.check_data_consistency()               
+            
+            return
         
-        print("Generating summary file {} in {}".format(S3DIS_SUMMARY_FILE, self.path_to_data))
+        print("Generating ground truth file (summary file) from folder traversal {} in {}".format(S3DIS_SUMMARY_FILE, self.path_to_data))
 
         # Every line of the S3DIS summary file will contain:
         # (area, space, object, points_per_object, space label, object label)
@@ -81,41 +103,92 @@ class S3DIS_Summarizer():
                 # (not the_rgb_norm.txt), since rgb normalization is 
                 # optional (only required to visualize data with Open3D)        
                 objects = sorted([object for object in os.listdir(path_to_objects) 
-                    if not PC_FILE_EXTENSION_RGB_NORM in object])    
+                    if (PC_FILE_EXTENSION in object) and (ALREADY_RGB_NORMALIZED_SUFFIX not in object)])    
 
-                for object in objects:
+                desc = "Getting points from objects in {} {}".format(area, space)
+                
+                for object in tqdm(objects, desc = desc):
                     # Get the object label
                     # From chair_1, chair_2, take only "chair"
                     object_label = object.split("_")[0]
-    
-                    # Avoid saving .DStore and other files
-                    if "." not in object_label:
-                        
-                        # Get the number of points in the object
-                        print("Getting points from file (object) {}_{}_{}".format(area, space, object))
-                        with open(os.path.join(path_to_objects, object)) as f:
-                            points_per_object = len(list(f))
-                        
-                        # Save all the traversal info in the summary file:
-                        # (Area, space, object, points per object, space label, object label)
-                        summary_line.append((area, space, object, points_per_object, space_label, object_label))
+        
+                    # Get the number of points in the object
+                    with open(os.path.join(path_to_objects, object)) as f:
+                        points_per_object = len(list(f))
+                    
+                    # Save all the traversal info in the summary file:
+                    # (Area, space, object, points per object, space label, object label, health status)
+                    summary_line.append((area, space, object, 
+                        points_per_object, space_label, object_label, "Unknown"))
 
 
         # Save the data into the CSV summary file
-        summary_df = pd.DataFrame(summary_line)
-        summary_df.columns = self.S3DIS_summary_cols
-        summary_df.to_csv(os.path.join(PC_DATA_PATH, S3DIS_SUMMARY_FILE), index = False, sep = "\t")
-
-
-    def check_summary_file(self):
+        self.summary_df = pd.DataFrame(summary_line)
+        self.summary_df.columns = self.S3DIS_summary_cols
+        self.summary_df.to_csv(os.path.join(PC_DATA_PATH, S3DIS_SUMMARY_FILE), index = False, sep = "\t")
+        
+        # Always check consistency after generating the file
+        self.check_data_consistency()
+        
+        
+    def check_data_consistency(self):
         """
-        Checks whether the summary file already exists
+        Check the point cloud files in order to know whether the files are 
+        readable or not. 
+
+        To do so, reading the CSV with pandas as np.float32 is enough to know
+        whether future conversion to torch tensor will work.
+
+        If the conversion is feasible, flag the point cloud file as 
+        "Good" in the "Health Status" col of the sumamry file
+
+        If not, flag de point cloud file as "Bad" in the "Health Status" 
+        col of the sumamry file
         """
 
-        summary_existence = True if S3DIS_SUMMARY_FILE in os.listdir(self.path_to_data) else False
-
-        return summary_existence
     
+        for idx, row in tqdm(self.summary_df.iterrows(), 
+            desc = "Checking data consistency. Please wait..."):
+            
+            # Get the values needed to open the physical TXT file
+            area = self.summary_df.iloc[idx, 0]
+            space = self.summary_df.iloc[idx, 1]
+            obj_file = self.summary_df.iloc[idx, 2]
+        
+            # print("Checking consistency of file {}_{}_{} (idx: {})".format(
+            #    area, space, obj_file, idx), end =' ')
+
+            # Fetch the object point cloud
+            path_to_obj = os.path.join(self.path_to_data, area, space, "Annotations", obj_file)
+
+            try:
+                # Let's try to open the file as np.float32      
+                pd.read_csv(path_to_obj, sep = " ", dtype = np.float32)
+                
+                # Flag the file as "Good", if success
+                self.summary_df.at[idx,"Health Status"] = "Good"
+                
+            except ValueError:
+                # Flag the file as "Bad", if failure
+                self.summary_df.at[idx,"Health Status"] = "Bad"
+
+                # TODO: Write error on logger
+                
+            
+            finally:
+                # Save health status changes
+                self.summary_df.to_csv(os.path.join(PC_DATA_PATH, S3DIS_SUMMARY_FILE), index = False, sep = "\t")
+            
+    def report_health_issues(self):
+        """
+        Provide information about how many objects have issues with 
+        their point cloud
+
+        
+        Return the indexes of the rows/files flagged with bad healthy status
+        """     
+        
+        return list(self.summary_df.index[self.summary_df["Health Status"] == "Bad"])
 
     def get_labels(self):
         """
@@ -129,7 +202,7 @@ class S3DIS_Summarizer():
             object_labels: A dict containing {0: object_0, 1: object_1, ... }
         """
         
-        if self.check_summary_file() == False:
+        if not os.path.exists(self.path_to_summary_file):
             msg = "No S3DIS summary file {} found at {}."
             msg += "Summary file is going to be automatically generated"
             print(msg.format(S3DIS_SUMMARY_FILE, self.path_to_data))     
@@ -172,7 +245,7 @@ class S3DIS_Summarizer():
         Get several statistics about the dataset
         """
 
-        if self.check_summary_file() == False:
+        if not os.path.exists(self.path_to_summary_file):
             msg = "No S3DIS summary file {} found at {}."
             msg += "Summary file is going to be automatically generated"
             print(msg.format(S3DIS_SUMMARY_FILE, self.path_to_data))     

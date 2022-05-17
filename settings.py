@@ -6,6 +6,8 @@ import os
 import pandas as pd
 import open3d as o3d
 import torch
+import torch.nn as nn
+import torch.nn.functional as F
 import sys
 import logging
 import numpy as np
@@ -36,3 +38,26 @@ BUILDING_DISTRIBUTION = {
     'Building 2': ["Area_2", "Area_4"], 
     'Building 3': ["Area_5"], 
 }
+
+
+eparams = {
+    'pc_data_path': "/Users/jgalera/datasets/S3DIS/byhand",
+    'pc_file_extension': ".txt",
+    'already_rgb_normalized_suffix': "_rgb_norm",
+    'pc_file_extensiom_rgb_norm': "_rgb_norm.txt",
+    'log_file': "conversion.log",
+    's3dis_summary_file': "s3dis_summary.csv",
+}
+
+hparams = {
+    'batch_size': 128,
+    'learning_rate': 0.001,
+    'num_workers': 0
+}
+
+hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+# TODO: define num_points depending on arg parser
+# hparams['num_points_per_object'] = 4096,
+# TODO: define num_classes depending on arg parser
+# hparams['num_classes'] = 

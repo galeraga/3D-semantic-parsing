@@ -157,7 +157,7 @@ if __name__ == "__main__":
     # Create the S3DIS dataset
     ds = S3DISDataset(PC_DATA_PATH)
     print(ds)
-    
+
     for idx,i in enumerate(ds):
         obj, label = i
         print("{} - Object shape {} | Label: {} ".format(idx, obj.shape, label))
@@ -199,8 +199,10 @@ if __name__ == "__main__":
     # RGB_normalization(areas_and_spaces)
 
     # To quickly test o3d
+    '''
     pcd = o3d.io.read_point_cloud(
         os.path.join(PC_DATA_PATH, TEST_PC + PC_FILE_EXTENSION_RGB_NORM),
         format='xyzrgb')
     print(pcd)
+    '''
     # o3d.visualization.draw_geometries([pcd])

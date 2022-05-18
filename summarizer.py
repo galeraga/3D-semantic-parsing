@@ -289,18 +289,39 @@ class S3DIS_Summarizer():
         print("Min points per object: ", object_points_df.min())
         print("Mean points per object: ", object_points_df.mean())
         print("Median points per object: ", object_points_df.median())
-        print("Quantile 90%: ", object_points_df.quantile(0.90))
-        #TODO: quantiles and percentiles of points
-
         
-        # TODO: Total objects per space
-        ...
+        # The cumulative of the quantiles.
+        print("Quantile 90%: ", object_points_df.quantile(0.90))
+        # quantiles and percentiles of points
+        print("Quantile 10%:", object_points_df.quantile(0.10))    
+        
+        # Total objects per space
+        #space_list = summary['Space']
+        space_list = summary['Space'].to_list()
+        space_set = set(space_list)
+        for space in space_set:
+            space_df = summary.loc[summary['Space'] == space]
+            objects_per_area = len(sorted(set(space_df["Object Points"])))
+            print("Space: {}, number of objects: {}".format(space, objects_per_area))
+        
+        # Points per area
+        for area in areas:
+            area_df = summary.loc[summary['Area'] == area]
+            area_points = area_df["Object Points"]
+            print("Points per {}: {}".format(area, area_points.sum()))
 
-        # TODO: Points per area
-        ...
-
-        # TODO: Points per space
-        ...
+        # Points per space:
+        for space in space_set:
+            space_df = summary.loc[summary['Space'] == space]
+            space_points = space_df["Object Points"]
+            #print("Points per {}: {}".format(space, space_points.sum()))
+        
+        # Points per kind of space.
+        # He comprovat que els valors que aquests valors son les sumes dels anteriors.
+        summary_spaces = summary.groupby(summary["Space"].str.split('_').str[0]).sum()
+        print(summary_spaces)
 
         # TODO: Points per kind of object
-        ...
+        # We sum all the Points of summary['Object'] that have similar names.
+        summary_objects = summary.groupby(summary['Object'].str.split('_').str[0]).sum()
+        print(summary_objects)

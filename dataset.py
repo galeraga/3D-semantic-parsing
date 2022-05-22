@@ -22,7 +22,7 @@ class S3DISDataset(torch.utils.data.Dataset):
         self.transform = transform
         # The ground truth file    
         self.summary_df = pd.read_csv(
-                os.path.join(self.root_dir, S3DIS_SUMMARY_FILE), 
+                os.path.join(self.root_dir, eparams['s3dis_summary_file']), 
                 header = None, 
                 skiprows=1,
                 sep = "\t"
@@ -104,7 +104,7 @@ class S3DISDataset(torch.utils.data.Dataset):
         msg_list.append("S3DIS DATASET INFORMATION")
         msg_list.append(80 * "-")
         msg_list.append("Data source: " + self.root_dir)
-        msg_list.append("Summary file ({}) info: ".format(S3DIS_SUMMARY_FILE))
+        msg_list.append("Summary file ({}) info: ".format(eparams['s3dis_summary_file']))
         msg_list.append(str(self.summary_df))        
         msg = '\n'.join(msg_list)
         

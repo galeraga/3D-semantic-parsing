@@ -67,7 +67,7 @@ class S3DIS_Summarizer():
         
         self.path_to_data = path_to_data
         self.rebuild = rebuild
-        self.path_to_summary_file = os.path.join(self.path_to_data, S3DIS_SUMMARY_FILE)
+        self.path_to_summary_file = os.path.join(self.path_to_data, eparams['s3dis_summary_file'])
 
         # Do NOT process the info if the summary file already exists
         if os.path.exists(self.path_to_summary_file):
@@ -79,14 +79,14 @@ class S3DIS_Summarizer():
             
             if self.rebuild == False:
                 msg = "Skipping summary file generation. The S3DIS summary file {} already exists in {}"
-                print(msg.format(S3DIS_SUMMARY_FILE, self.path_to_data))
+                print(msg.format(eparams['s3dis_summary_file'], self.path_to_data))
                 
             if check_consistency:
                   self.check_data_consistency()               
             
             return
         
-        print("Generating ground truth file (summary file) from folder traversal {} in {}".format(S3DIS_SUMMARY_FILE, self.path_to_data))
+        print("Generating ground truth file (summary file) from folder traversal {} in {}".format(eparams['s3dis_summary_file'], self.path_to_data))
 
         # Every line of the S3DIS summary file will contain:
         # (area, space, object, points_per_object, space label, object label)
@@ -131,7 +131,7 @@ class S3DIS_Summarizer():
                 # (not the_rgb_norm.txt), since rgb normalization is 
                 # optional (only required to visualize data with Open3D)        
                 objects = sorted([object for object in os.listdir(path_to_objects) 
-                    if (PC_FILE_EXTENSION in object) and (ALREADY_RGB_NORMALIZED_SUFFIX not in object)])    
+                    if (eparams['pc_file_extension'] in object) and (eparams['already_rgb_normalized_suffix'] not in object)])    
 
                 desc = "Getting points from objects in {} {}".format(area, space)
                 
@@ -162,7 +162,7 @@ class S3DIS_Summarizer():
         # Save the data into the CSV summary file
         self.summary_df = pd.DataFrame(summary_line)
         self.summary_df.columns = self.S3DIS_summary_cols
-        self.summary_df.to_csv(os.path.join(PC_DATA_PATH, S3DIS_SUMMARY_FILE), index = False, sep = "\t")
+        self.summary_df.to_csv(os.path.join(eparams['pc_data_path'], eparams['s3dis_summary_file']), index = False, sep = "\t")
         
         # Always check consistency after generating the file
         self.check_data_consistency()
@@ -215,7 +215,7 @@ class S3DIS_Summarizer():
             
             finally:
                 # Save health status changes
-                self.summary_df.to_csv(os.path.join(PC_DATA_PATH, S3DIS_SUMMARY_FILE), index = False, sep = "\t")
+                self.summary_df.to_csv(os.path.join(eparams['pc_data_path'], eparams['s3dis_summary_file']), index = False, sep = "\t")
             
     def report_health_issues(self):
         """
@@ -243,7 +243,7 @@ class S3DIS_Summarizer():
         if not os.path.exists(self.path_to_summary_file):
             msg = "No S3DIS summary file {} found at {}."
             msg += "Summary file is going to be automatically generated"
-            print(msg.format(S3DIS_SUMMARY_FILE, self.path_to_data))     
+            print(msg.format(eparams['s3dis_summary_file'], self.path_to_data))     
             self.__init__(self.path_to_data, rebuild = True)
         
         # Define the sets and dicts to be used 
@@ -253,7 +253,7 @@ class S3DIS_Summarizer():
         object_labels = dict()
 
         # Open the CSV summary file
-        summary = os.path.join(self.path_to_data, S3DIS_SUMMARY_FILE)
+        summary = os.path.join(self.path_to_data, eparams['s3dis_summary_file'])
                 
         # Process each line in the summary file
         with open(summary) as f:
@@ -286,11 +286,11 @@ class S3DIS_Summarizer():
         if not os.path.exists(self.path_to_summary_file):
             msg = "No S3DIS summary file {} found at {}."
             msg += "Summary file is going to be automatically generated"
-            print(msg.format(S3DIS_SUMMARY_FILE, self.path_to_data))     
+            print(msg.format(eparams['s3dis_summary_file'], self.path_to_data))     
             self.__init__(self.path_to_data, rebuild = True)
         
         # Open the CSV summary file
-        summary = os.path.join(self.path_to_data, S3DIS_SUMMARY_FILE)
+        summary = os.path.join(self.path_to_data, eparams['s3dis_summary_file'])
 
         # Get the whole summary
         summary = pd.read_csv(summary, header =0, usecols = self.S3DIS_summary_cols, sep = "\t")

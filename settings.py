@@ -7,6 +7,7 @@ import pandas as pd
 import open3d as o3d
 import torch
 import torch.nn as nn
+import torch.optim as optim
 import torch.nn.functional as F
 import sys
 import logging
@@ -32,7 +33,7 @@ PC_FILE_EXTENSION_RGB_NORM = ALREADY_RGB_NORMALIZED_SUFFIX + PC_FILE_EXTENSION
 LOG_FILE = "conversion.log"
 S3DIS_SUMMARY_FILE = "s3dis_summary.csv"
 # All point cloud objects must have the same number of points
-MAX_OBJ_POINTS = 4096
+# MAX_OBJ_POINTS = 100
 BUILDING_DISTRIBUTION = {
     'Building 1': ["Area_1", "Area_3", "Area_6"], 
     'Building 2': ["Area_2", "Area_4"], 
@@ -52,7 +53,11 @@ eparams = {
 hparams = {
     'batch_size': 128,
     'learning_rate': 0.001,
-    'num_workers': 0
+    'num_workers': 0,
+    'num_classes': 2,
+    'num_points_per_object': 1000,
+    'dimensions_per_object': 6,
+    'epochs': 5,
 }
 
 hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'

@@ -6,6 +6,7 @@
 from settings import * 
 from summarizer import S3DIS_Summarizer
 from dataset import S3DISDataset
+from model import ClassificationPointNet
 
 # Define the logging settings
 # Logging is Python-version sensitive
@@ -131,27 +132,20 @@ def get_spaces(path_to_data):
 
 
 if __name__ == "__main__":
-    
-    # Two minor issues when working with S3DIS dataset:
-    # - Open3D does NOT support TXT file extension, so we have to specify 
-    #   the xyzrgb format (check supported file extensions here: 
-    #   http://www.open3d.org/docs/latest/tutorial/Basic/file_io.html) 
-    # - When working with xyzrgb format, each line contains [x, y, z, r, g, b], 
-    #   where r, g, b are in floats of range [0, 1]
-    #   So we need to normalize the RGB values from the S3DIS dataset in order 
-    #   to allow Open3D to display them
 
     # Create the summary file that will contain important info about the dataset
     summary = S3DIS_Summarizer(PC_DATA_PATH, check_consistency = False)
     
-    # Get the labels 
-    space_labels, object_labels = summary.get_labels()
+    # Get the labels dict
+    # {0: 'openspace', 1: 'pantry', ... , 10: 'lounge'}
+    # {0: 'bookcase', 1: 'door', 2: 'ceiling', ... , 13: 'floor'}
+    # space_labels_dict, object_labels_dict = summary.get_labels()
     
     # Get statistical info
-    summary.get_stats()
+    # summary.get_stats()
 
     # Create the S3DIS dataset
-    ds = S3DISDataset(PC_DATA_PATH)
+    ds = S3DISDataset(PC_DATA_PATH, transform = None)
     print(ds)
     
     """
@@ -174,11 +168,25 @@ if __name__ == "__main__":
                                             split_criteria,
                                             generator=torch.Generator().manual_seed(1))
 
-    train_dataloader = torch.utils.data.DataLoader(train_dataset, batch_size=128, shuffle=True)
-    val_dataloader = torch.utils.data.DataLoader(val_dataset, batch_size=128, shuffle=True)
-    test_dataloader = torch.utils.data.DataLoader(test_dataset, batch_size=128, shuffle=False)
-
+    train_dataloader = torch.utils.data.DataLoader(
+            train_dataset, 
+            batch_size = hparams['batch_size'], 
+            shuffle = True
+            )
     
+    val_dataloader = torch.utils.data.DataLoader(
+            val_dataset,
+            batch_size = hparams['batch_size'], 
+            shuffle = True
+            )
+    
+    test_dataloader = torch.utils.data.DataLoader(
+            test_dataset, 
+            batch_size = hparams['batch_size'], 
+            shuffle = False
+            )
+
+    """
     num_batches = len(train_dataloader)
     for idx, dl in enumerate(train_dataloader):
         bobject, blabel = dl
@@ -186,8 +194,112 @@ if __name__ == "__main__":
         msg += "Batch object shape {} | "
         msg += "Batch label lenght {}"
         print(msg.format(idx +1, num_batches, bobject.shape, len(blabel)))
-        
+    """ 
     
+
+    # Model instance    
+    model = ClassificationPointNet(num_classes = hparams['num_classes'],
+                                   point_dimension = hparams['dimensions_per_object'])
+
+    optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
+
+    # Training
+    train_loss = []
+    test_loss = []
+    train_acc = []
+    test_acc = []
+    best_loss= np.inf
+
+    for epoch in tqdm(range(hparams['epochs'])):
+        epoch_train_loss = []
+        epoch_train_acc = []
+
+        # training loop
+        for data in train_dataloader:
+            points, targets = data  
+
+            """
+            if torch.cuda.is_available():
+                points, targets = points.cuda(), targets.cuda()
+            if points.shape[0] <= 1:
+                continue
+            """
+
+            optimizer.zero_grad()
+            model = model.train()
+
+            preds, feature_transform, tnet_out, ix_maxpool = model(points)
+
+            # Why?  
+            identity = torch.eye(feature_transform.shape[-1])
+
+            if torch.cuda.is_available():
+                identity = identity.cuda()
+            
+            regularization_loss = torch.norm(
+                identity - torch.bmm(feature_transform, feature_transform.transpose(2, 1)))
+            
+
+            # Loss
+            # The negative log likelihood loss. 
+            # It is useful to train a classification problem with C classes.
+            # torch.nn.functional.nll_loss(input, target, weight=None, size_average=None, ignore_index=- 100, reduce=None, reduction='mean')
+            # input – (N,C) 
+
+            loss = F.nll_loss(preds, targets) + 0.001 * regularization_loss
+            # Why adding 0.001?
+
+            # loss = F.nll_loss(preds, targets) + 0.001 
+            epoch_train_loss.append(loss.cpu().item())
+            loss.backward()
+            optimizer.step()
+            
+            preds = preds.data.max(1)[1]
+            corrects = preds.eq(targets.data).cpu().sum()
+
+            accuracy = corrects.item() / float(hparams['batch_size'])
+            epoch_train_acc.append(accuracy)
+
+        epoch_test_loss = []
+        epoch_test_acc = []
+
+        # validation loop
+        for batch_number, data in enumerate(test_dataloader):
+            points, targets = data
+            if torch.cuda.is_available():
+                points, targets = points.cuda(), targets.cuda()
+            
+            model = model.eval()
+            preds, feature_transform, tnet_out, ix = model(points)
+            loss = F.nll_loss(preds, targets)
+            epoch_test_loss.append(loss.cpu().item())
+            
+            preds = preds.data.max(1)[1]
+            corrects = preds.eq(targets.data).cpu().sum()
+            accuracy = corrects.item() / float(hparams['batch_size'])
+            epoch_test_acc.append(accuracy)
+
+        print('Epoch %s: train loss: %s, val loss: %f, train accuracy: %s,  val accuracy: %f'
+                % (epoch,
+                    round(np.mean(epoch_train_loss), 4),
+                    round(np.mean(epoch_test_loss), 4),
+                    round(np.mean(epoch_train_acc), 4),
+                    round(np.mean(epoch_test_acc), 4)))
+
+        if np.mean(test_loss) < best_loss:
+            state = {
+                'model':model.state_dict(),
+                'optimizer':optimizer.state_dict()
+            }
+            torch.save(state, os.path.join('checkpoints', '3Dmnist_checkpoint_%s.pth' % (hparams['num_points_per_object'])))
+            best_loss=np.mean(test_loss)
+
+        train_loss.append(np.mean(epoch_train_loss))
+        test_loss.append(np.mean(epoch_test_loss))
+        train_acc.append(np.mean(epoch_train_acc))
+        test_acc.append(np.mean(epoch_test_acc))
+
+
     # TODO: To be removed, since all data is based now in the summary file
     # Get a dict of areas and spaces
     # areas_and_spaces = get_spaces(PC_DATA_PATH)
@@ -198,6 +310,15 @@ if __name__ == "__main__":
     # RGB_normalization(areas_and_spaces)
 
     # To quickly test o3d
+    # Two minor issues when working with S3DIS dataset:
+    # - Open3D does NOT support TXT file extension, so we have to specify 
+    #   the xyzrgb format (check supported file extensions here: 
+    #   http://www.open3d.org/docs/latest/tutorial/Basic/file_io.html) 
+    # - When working with xyzrgb format, each line contains [x, y, z, r, g, b], 
+    #   where r, g, b are in floats of range [0, 1]
+    #   So we need to normalize the RGB values from the S3DIS dataset in order 
+    #   to allow Open3D to display them
+
     """
     pcd = o3d.io.read_point_cloud(
         os.path.join(PC_DATA_PATH, TEST_PC + PC_FILE_EXTENSION_RGB_NORM),

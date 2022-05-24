@@ -9,7 +9,7 @@ from dataset import S3DISDataset
 from model import ClassificationPointNet
 
 # Define the logging settings
-# Logging is Python-version sensitive
+# Logging is Python-version sensitive
 for handler in logging.root.handlers[:]:
     logging.root.removeHandler(handler)
 
@@ -107,11 +107,9 @@ def get_spaces(path_to_data):
     """
     Inspect the dataset location to determine the amount of available 
     areas and spaces (offices, hallways, etc) 
-
     Path_to_data\Area_N\office_X
                        \office_Y
                        \office_Z
-
     Input: Path to dataset
     Output: A dict with 
         - key: Area_N

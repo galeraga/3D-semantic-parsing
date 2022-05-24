@@ -49,7 +49,7 @@ hparams = {
     'num_workers': 0,
     'num_classes': 14,
     'num_points_per_object': 100,
-    'dimensions_per_object': 6,
+    'dimensions_per_object': 3,
     'epochs': 5,
 }
 

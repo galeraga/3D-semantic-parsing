@@ -244,7 +244,7 @@ if __name__ == "__main__":
             # It is useful to train a classification problem with C classes.
             # torch.nn.functional.nll_loss(input, target, ...) 
             # input – (N,C) (N: batch_size; C: num_classes) 
-            # target (C)
+            # target - (C)
             # preds.shape[batch_size, num_classes]
             # targets.shape[batch_size], but every item in the target tensor
             # must be in the range of num_classes - 1 

@@ -4,8 +4,6 @@ class TransformationNet(nn.Module):
     """
     The building block (T-Net) of the PointNet architecture 
 
-    It's an affine transformation matrix
-
     Used to apply both input transform and feature transformations,
     according to Figure 2 of the original PointNet architecture paper
 
@@ -88,35 +86,53 @@ class BasePointNet(nn.Module):
 
     def forward(self, x):
 
+        # x.shape([batch_size, num_points_per_object, dimensions_per_object])
         num_points = x.shape[1]
         
         # Input transformation
-        # T-Net tensor [batch, 3, 3]
+        # input_transform.shape([batch_size, dimensions_per_object, dimensions_per_object]) (t-net tensor)
         input_transform = self.input_transform(x) 
         
         # Batch matrix-matrix product 
+        # Output: x.shape([[batch_size, num_points_per_object, dimensions_per_object]])
         x = torch.bmm(x, input_transform) 
-        x = x.transpose(2, 1) 
-        tnet_out=x.cpu().detach().numpy()
         
+        # After transposing: x.shape([batch_size, dimensions_per_object, num_points_per_object])
+        x = x.transpose(2, 1) 
+        # tnet_out.shape(c)
+        tnet_out=x.cpu().detach().numpy()
+        # After relu x.shape(([batch_size, 64, num_points_per_object]))
         x = F.relu(self.bn_1(self.conv_1(x)))
+        # After transposing x.shape(([batch_size, num_points_per_object, 64]))
         x = x.transpose(2, 1)
         
         # Feature transformation
-        # T-Net tensor [batch, 64, 64]
+        # x.shape([batch_size, num_points_per_object, 64])
+        # feature_transform.shape([batch_size, 64, 64])
         feature_transform = self.feature_transform(x) 
+        # Output after bmm: x.shape([[batch_size, num_points_per_object, 64]])
         x = torch.bmm(x, feature_transform)
+        
+        # Saving the features for semantic segmentation 
+        segmentation_local_features = x
+        
         x = x.transpose(2, 1)
         x = F.relu(self.bn_2(self.conv_2(x)))
-        x = F.relu(self.bn_3(self.conv_3(x)))      
+        # After relu x.shape[batch_size, 1024, num_points_per_object]
+        x = F.relu(self.bn_3(self.conv_3(x))) 
         
-        # Max-pooling
+        # Saving the features for semantic segmentation 
+        # global_feature_matrix.shape[batch_size, num_points_per_object, 1024]
+        segmentation_global_features = x.transpose(2,1)     
+        
+        # Max-pooling (x.shape after pooling:[batch_size, 1024, 1])
         x, ix = nn.MaxPool1d(num_points, return_indices=True)(x)  
         
-        # Global Feature Vector 
+        # Global Feature Vector (shape([batch_size, 1024]))
         global_feature_vector = x.view(-1, 1024)   
 
-        return global_feature_vector, feature_transform, tnet_out, ix
+        return (global_feature_vector, feature_transform, tnet_out, ix,
+                segmentation_local_features, segmentation_global_features)
 
 
 class ClassificationPointNet(nn.Module):
@@ -146,7 +162,7 @@ class ClassificationPointNet(nn.Module):
 
     def forward(self, x):
         
-        global_feature_vector, feature_transform, tnet_out, ix_maxpool = self.base_pointnet(x)
+        global_feature_vector, feature_transform, tnet_out, ix_maxpool, _ = self.base_pointnet(x)
 
         x = F.relu(self.bn_1(self.fc_1(global_feature_vector)))
         x = F.relu(self.bn_2(self.fc_2(x)))
@@ -158,12 +174,14 @@ class ClassificationPointNet(nn.Module):
 
 class SegmentationPointNet(nn.Module):
     """
-    Implements the segmentation network of the PointNet architecture
+    Implements the semantic segmentation network of the PointNet architecture
 
-    Concatenates local point features (the feature transformation vector) with
-    global features (the global feature vector)
+    Concatenates local point features (the feature transformation vector) 
+    with global features (the global feature vector) to get the probabality 
+    of each point in the cloud
 
     From https://github.com/yunxiaoshi/pointnet-pytorch/blob/master/pointnet.py
+    From https://github.com/fxia22/pointnet.pytorch/blob/master/pointnet/model.py
     """
 
     def __init__(self, num_classes, point_dimension = 3):
@@ -186,14 +204,18 @@ class SegmentationPointNet(nn.Module):
 	
     def forward(self, x):
 
-        num_points = x.size[1]
+        num_points = x.shape[1]
         
-        # x, trans = self.base_pointnet(x)
         # Get the global and local features
-        global_feature_vector, feature_transform, tnet_out, ix_maxpool = self.base_pointnet(x)
+        global_feature_vector, feature_transform, tnet_out, ix_maxpool, seg_local_feats, seg_global_feats = self.base_pointnet(x)
+
+        # feature_transform.shape([batch_size, 64, 64])
+        # global_feature_vector.shape([batch_size, 1024])
+        # tnet_out.shape([batch_size, point_dimension, num_points_per_object])
+        # ix_maxpool.shape([batch_size, 1024, 1])
 
         # Concatenate global and local features (adding cols)
-        x = torch.cat((feature_transform, global_feature_vector), dim = 1)
+        x = torch.cat((seg_local_feats, seg_global_feats), dim = 2)
         
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
@@ -202,10 +224,13 @@ class SegmentationPointNet(nn.Module):
 
         x = x.transpose(2, 1)
 
-        x = F.log_softmax(x.view(-1, self.num_classes), dim = -1)
+        pred = F.log_softmax(x.view(-1, self.num_classes), dim = -1)
+        
         # x = x.view(-1, num_points, self.num_classes)
         
-        return x
+        # Returning the same values than ClassificationPointNet
+        # to keep compatatibility in main.py
+        return pred, feature_transform, tnet_out, ix_maxpool
 
 
 

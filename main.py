@@ -6,7 +6,7 @@
 from settings import * 
 from summarizer import S3DIS_Summarizer
 from dataset import S3DISDataset
-from model import ClassificationPointNet
+from model import ClassificationPointNet, SegmentationPointNet
 
 # Define the logging settings
 # Logging is Python-version sensitive
@@ -195,9 +195,17 @@ if __name__ == "__main__":
     """ 
     
 
-    # Model instance    
-    model = ClassificationPointNet(num_classes = hparams['num_classes'],
+    # Model instance. Select the task to perform manually    
+    task = "segmentation"
+
+    if task == "classification":
+        model = ClassificationPointNet(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object'])
+    
+    if task == "segmentation":
+        model = SegmentationPointNet(num_classes = hparams['num_classes'],
+                                   point_dimension = hparams['dimensions_per_object'])
+
 
     optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
 
@@ -226,7 +234,7 @@ if __name__ == "__main__":
             optimizer.zero_grad()
             model = model.train()
 
-            preds, feature_transform, tnet_out, ix_maxpool = model(points)
+            preds, feature_transform, tnet_out, ix_maxpool, _ = model(points)
 
             # Why?  
             identity = torch.eye(feature_transform.shape[-1])
@@ -271,7 +279,7 @@ if __name__ == "__main__":
                 points, targets = points.cuda(), targets.cuda()
             
             model = model.eval()
-            preds, feature_transform, tnet_out, ix = model(points)
+            preds, feature_transform, tnet_out, ix, _ = model(points)
             loss = F.nll_loss(preds, targets)
             epoch_val_loss.append(loss.cpu().item())
             

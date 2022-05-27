@@ -49,8 +49,8 @@ hparams = {
     'num_workers': 0,
     'num_classes': 14,
     'num_points_per_object': 100,
-    'dimensions_per_object': 3,
-    'epochs': 10,
+    'dimensions_per_object': 6,
+    'epochs': 5,
 }
 
 hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'

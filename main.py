@@ -1,7 +1,7 @@
 # http://www.open3d.org/docs/latest/introduction.html
 # Pay attention to Open3D-Viewer App http://www.open3d.org/docs/latest/introduction.html#open3d-viewer-app
 # and the Open3D-ML http://www.open3d.org/docs/latest/introduction.html#open3d-ml
-# pip install open3d
+
 
 from settings import * 
 from summarizer import S3DIS_Summarizer
@@ -203,9 +203,9 @@ if __name__ == "__main__":
 
     # Training
     train_loss = []
-    test_loss = []
+    val_loss = []
     train_acc = []
-    test_acc = []
+    val_acc = []
     best_loss= np.inf
 
     for epoch in tqdm(range(hparams['epochs'])):
@@ -261,11 +261,11 @@ if __name__ == "__main__":
             accuracy = corrects.item() / float(hparams['batch_size'])
             epoch_train_acc.append(accuracy)
 
-        epoch_test_loss = []
-        epoch_test_acc = []
+        epoch_val_loss = []
+        epoch_val_acc = []
 
         # validation loop
-        for batch_number, data in enumerate(test_dataloader):
+        for batch_number, data in enumerate(val_dataloader):
             points, targets = data
             if torch.cuda.is_available():
                 points, targets = points.cuda(), targets.cuda()
@@ -273,21 +273,21 @@ if __name__ == "__main__":
             model = model.eval()
             preds, feature_transform, tnet_out, ix = model(points)
             loss = F.nll_loss(preds, targets)
-            epoch_test_loss.append(loss.cpu().item())
+            epoch_val_loss.append(loss.cpu().item())
             
             preds = preds.data.max(1)[1]
             corrects = preds.eq(targets.data).cpu().sum()
             accuracy = corrects.item() / float(hparams['batch_size'])
-            epoch_test_acc.append(accuracy)
+            epoch_val_acc.append(accuracy)
 
         print('Epoch %s: train loss: %s, val loss: %f, train accuracy: %s,  val accuracy: %f'
                 % (epoch,
                     round(np.mean(epoch_train_loss), 4),
-                    round(np.mean(epoch_test_loss), 4),
+                    round(np.mean(epoch_val_loss), 4),
                     round(np.mean(epoch_train_acc), 4),
-                    round(np.mean(epoch_test_acc), 4)))
+                    round(np.mean(epoch_val_acc), 4)))
 
-        if np.mean(test_loss) < best_loss:
+        if np.mean(val_loss) < best_loss:
             state = {
                 'model': model.state_dict(),
                 'optimizer': optimizer.state_dict()
@@ -299,12 +299,12 @@ if __name__ == "__main__":
                     'S3DIS_checkpoint_%s.pth' % (hparams['num_points_per_object'])
                     )
                 )
-            best_loss=np.mean(test_loss)
+            best_loss=np.mean(val_loss)
 
         train_loss.append(np.mean(epoch_train_loss))
-        test_loss.append(np.mean(epoch_test_loss))
+        val_loss.append(np.mean(epoch_val_loss))
         train_acc.append(np.mean(epoch_train_acc))
-        test_acc.append(np.mean(epoch_test_acc))
+        val_acc.append(np.mean(epoch_val_acc))
 
 
     # TODO: To be removed, since all data is based now in the summary file

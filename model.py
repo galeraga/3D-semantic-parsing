@@ -2,26 +2,39 @@ from settings import *
 
 class TransformationNet(nn.Module):
     """
-    T-Net
+    The building block (T-Net) of the PointNet architecture 
+
+    It's an affine transformation matrix
+
+    Used to apply both input transform and feature transformations,
+    according to Figure 2 of the original PointNet architecture paper
+
+    T-Net aligns all input set to a canonical space before feature extraction.
+    How does it do it? It predicts an affine transformation matrix of 3x3 
+    to be applied to the coordinate of input points (x, y, z).
+    
+    T-Net aligns all input set to a canonical space by learning 
+    a transformation matrix
     """
 
     def __init__(self, input_dim, output_dim):
         super(TransformationNet, self).__init__()
         self.output_dim = output_dim
         
+        # Conv1d for point independent feature extraction
         self.conv_1 = nn.Conv1d(input_dim, 64, 1)
         self.conv_2 = nn.Conv1d(64, 128, 1)
-        self.conv_3 = nn.Conv1d(128, 256, 1)
+        self.conv_3 = nn.Conv1d(128, 1024, 1)
 
         self.bn_1 = nn.BatchNorm1d(64)
         self.bn_2 = nn.BatchNorm1d(128)
-        self.bn_3 = nn.BatchNorm1d(256)
-        self.bn_4 = nn.BatchNorm1d(256)
-        self.bn_5 = nn.BatchNorm1d(128)
+        self.bn_3 = nn.BatchNorm1d(1024)
+        self.bn_4 = nn.BatchNorm1d(512)
+        self.bn_5 = nn.BatchNorm1d(256)
 
-        self.fc_1 = nn.Linear(256, 256)
-        self.fc_2 = nn.Linear(256, 128)
-        self.fc_3 = nn.Linear(128, self.output_dim*self.output_dim)
+        self.fc_1 = nn.Linear(1024, 512)
+        self.fc_2 = nn.Linear(512, 256)
+        self.fc_3 = nn.Linear(256, self.output_dim*self.output_dim)
        
 
     def forward(self, x):
@@ -35,7 +48,7 @@ class TransformationNet(nn.Module):
 
         # Define the Maxpool1D and apply it on x directly
         x = nn.MaxPool1d(num_points)(x)
-        x = x.view(-1, 256)
+        x = x.view(-1, 1024)
 
         x = F.relu(self.bn_4(self.fc_1(x)))
         x = F.relu(self.bn_5(self.fc_2(x)))
@@ -51,6 +64,13 @@ class TransformationNet(nn.Module):
 
 
 class BasePointNet(nn.Module):
+    """
+    Defines the PointNet architecture for the classification network,
+    according to Figure 2 from the original paper
+
+    It provides the network architecture from the input points to the 
+    max pool layer, providing the global feature vector
+    """
 
     def __init__(self, point_dimension):
         super(BasePointNet, self).__init__()
@@ -58,66 +78,134 @@ class BasePointNet(nn.Module):
         self.feature_transform = TransformationNet(input_dim=64, output_dim=64)
         
         self.conv_1 = nn.Conv1d(point_dimension, 64, 1)
-        self.conv_2 = nn.Conv1d(64, 64, 1)
-        self.conv_3 = nn.Conv1d(64, 64, 1)
-        self.conv_4 = nn.Conv1d(64, 128, 1)
-        self.conv_5 = nn.Conv1d(128, 256, 1)
+        self.conv_2 = nn.Conv1d(64, 128, 1)
+        self.conv_3 = nn.Conv1d(128, 1024, 1)
 
         self.bn_1 = nn.BatchNorm1d(64)
-        self.bn_2 = nn.BatchNorm1d(64)
-        self.bn_3 = nn.BatchNorm1d(64)
-        self.bn_4 = nn.BatchNorm1d(128)
-        self.bn_5 = nn.BatchNorm1d(256)
+        self.bn_2 = nn.BatchNorm1d(128)
+        self.bn_3 = nn.BatchNorm1d(1024)
         
 
-    def forward(self, x, plot=False):
+    def forward(self, x):
 
         num_points = x.shape[1]
         
-        input_transform = self.input_transform(x) # T-Net tensor [batch, 3, 3]
-        x = torch.bmm(x, input_transform) # Batch matrix-matrix product 
+        # Input transformation
+        # T-Net tensor [batch, 3, 3]
+        input_transform = self.input_transform(x) 
+        
+        # Batch matrix-matrix product 
+        x = torch.bmm(x, input_transform) 
         x = x.transpose(2, 1) 
         tnet_out=x.cpu().detach().numpy()
         
         x = F.relu(self.bn_1(self.conv_1(x)))
-        x = F.relu(self.bn_2(self.conv_2(x)))
         x = x.transpose(2, 1)
-
-        feature_transform = self.feature_transform(x) # T-Net tensor [batch, 64, 64]
+        
+        # Feature transformation
+        # T-Net tensor [batch, 64, 64]
+        feature_transform = self.feature_transform(x) 
         x = torch.bmm(x, feature_transform)
         x = x.transpose(2, 1)
-        x = F.relu(self.bn_3(self.conv_3(x)))
-        x = F.relu(self.bn_4(self.conv_4(x)))
-        x = F.relu(self.bn_5(self.conv_5(x)))
-        x, ix = nn.MaxPool1d(num_points, return_indices=True)(x)  # max-pooling
-        x = x.view(-1, 256)  # global feature vector 
+        x = F.relu(self.bn_2(self.conv_2(x)))
+        x = F.relu(self.bn_3(self.conv_3(x)))      
+        
+        # Max-pooling
+        x, ix = nn.MaxPool1d(num_points, return_indices=True)(x)  
+        
+        # Global Feature Vector 
+        global_feature_vector = x.view(-1, 1024)   
 
-        return x, feature_transform, tnet_out, ix
+        return global_feature_vector, feature_transform, tnet_out, ix
 
 
 class ClassificationPointNet(nn.Module):
+    """
+    Completes the PointNet architecture for the classification network,
+    according to Figure 2 from the original paper
+
+    It provides the network architecture from the global feature vector
+    to the classification output score
+    """
 
     def __init__(self, num_classes, dropout=0.3, point_dimension = 3):
         
         super(ClassificationPointNet, self).__init__()
         self.base_pointnet = BasePointNet(point_dimension = point_dimension)
 
-        self.fc_1 = nn.Linear(256, 128)
-        self.fc_2 = nn.Linear(128, 64)
-        self.fc_3 = nn.Linear(64, num_classes)
+        # TODO: The official PointNet architecture uses MLP(512, 256, num_classes)
+        # from the global feature vector (1024)
+        self.fc_1 = nn.Linear(1024, 512)
+        self.fc_2 = nn.Linear(512, 256)
+        self.fc_3 = nn.Linear(256, num_classes)
 
-        self.bn_1 = nn.BatchNorm1d(128)
-        self.bn_2 = nn.BatchNorm1d(64)
+        self.bn_1 = nn.BatchNorm1d(512)
+        self.bn_2 = nn.BatchNorm1d(256)
 
         self.dropout_1 = nn.Dropout(dropout)
 
     def forward(self, x):
         
-        x, feature_transform, tnet_out, ix_maxpool = self.base_pointnet(x)
+        global_feature_vector, feature_transform, tnet_out, ix_maxpool = self.base_pointnet(x)
 
-        x = F.relu(self.bn_1(self.fc_1(x)))
+        x = F.relu(self.bn_1(self.fc_1(global_feature_vector)))
         x = F.relu(self.bn_2(self.fc_2(x)))
         x = self.dropout_1(x)
         
         # preds, feature_transform, tnet_out, ix_maxpool
         return F.log_softmax(self.fc_3(x), dim=1), feature_transform, tnet_out, ix_maxpool
+
+
+class SegmentationPointNet(nn.Module):
+    """
+    Implements the segmentation network of the PointNet architecture
+
+    Concatenates local point features (the feature transformation vector) with
+    global features (the global feature vector)
+
+    From https://github.com/yunxiaoshi/pointnet-pytorch/blob/master/pointnet.py
+    """
+
+    def __init__(self, num_classes, point_dimension = 3):
+
+        super(SegmentationPointNet, self).__init__()
+        
+        self.num_classes = num_classes
+        
+        self.base_pointnet = BasePointNet(point_dimension = point_dimension)
+        
+        self.conv1 = nn.Conv1d(1088, 512, 1)
+        self.conv2 = nn.Conv1d(512, 256, 1)
+        self.conv3 = nn.Conv1d(256, 128, 1)
+        self.conv4 = nn.Conv1d(128, self.num_classes, 1)
+        
+        self.bn1 = nn.BatchNorm1d(512)
+        self.bn2 = nn.BatchNorm1d(256)
+        self.bn3 = nn.BatchNorm1d(128)
+
+	
+    def forward(self, x):
+
+        num_points = x.size[1]
+        
+        # x, trans = self.base_pointnet(x)
+        # Get the global and local features
+        global_feature_vector, feature_transform, tnet_out, ix_maxpool = self.base_pointnet(x)
+
+        # Concatenate global and local features (adding cols)
+        x = torch.cat((feature_transform, global_feature_vector), dim = 1)
+        
+        x = F.relu(self.bn1(self.conv1(x)))
+        x = F.relu(self.bn2(self.conv2(x)))
+        x = F.relu(self.bn3(self.conv3(x)))
+        x = self.conv4(x)
+
+        x = x.transpose(2, 1)
+
+        x = F.log_softmax(x.view(-1, self.num_classes), dim = -1)
+        # x = x.view(-1, num_points, self.num_classes)
+        
+        return x
+
+
+

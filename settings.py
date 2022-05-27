@@ -34,7 +34,7 @@ BUILDING_DISTRIBUTION = {
 }
 # Environment (file system and so on) params
 eparams = {
-    'pc_data_path': "/Users/jgalera/datasets/S3DIS/byhand",
+    'pc_data_path': "/Users/jgalera/datasets/S3DIS/aligned",
     'pc_file_extension': ".txt",
     'already_rgb_normalized_suffix': "_rgb_norm",
     'pc_file_extensiom_rgb_norm': "_rgb_norm.txt",
@@ -50,7 +50,7 @@ hparams = {
     'num_classes': 14,
     'num_points_per_object': 100,
     'dimensions_per_object': 3,
-    'epochs': 5,
+    'epochs': 10,
 }
 
 hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'

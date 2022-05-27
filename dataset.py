@@ -34,7 +34,7 @@ class S3DISDataset(torch.utils.data.Dataset):
         to avoid errors while processing data
         """
         healthy_objects = self.summary_df[self.summary_df[8] == "Good"]
-        return len(healthy_objects)
+        return len(healthy_objects) -1 
 
     def __getitem__(self, idx):
 
@@ -60,7 +60,7 @@ class S3DISDataset(torch.utils.data.Dataset):
         if obj_health == "Good":
             path_to_obj = os.path.join(self.root_dir, area, space, "Annotations", obj_file)
             
-            # Element order is ignored when data is retieved by cols in Pandas
+            # Element order is ignored when data is retrieved by cols in Pandas
             # so we need to define the order of the cols
             cols_to_get = [col for col in range (hparams['dimensions_per_object'])]
             obj_df = pd.read_csv(

@@ -121,10 +121,6 @@ class BasePointNet(nn.Module):
         # After relu x.shape[batch_size, 1024, num_points_per_object]
         x = F.relu(self.bn_3(self.conv_3(x))) 
         
-        # Saving the features for semantic segmentation 
-        # global_feature_matrix.shape[batch_size, num_points_per_object, 1024]
-        segmentation_global_features = x.transpose(2,1)     
-        
         # Max-pooling (x.shape after pooling:[batch_size, 1024, 1])
         x, ix = nn.MaxPool1d(num_points, return_indices=True)(x)  
         
@@ -132,7 +128,7 @@ class BasePointNet(nn.Module):
         global_feature_vector = x.view(-1, 1024)   
 
         return (global_feature_vector, feature_transform, tnet_out, ix,
-                segmentation_local_features, segmentation_global_features)
+                segmentation_local_features)
 
 
 class ClassificationPointNet(nn.Module):
@@ -162,7 +158,7 @@ class ClassificationPointNet(nn.Module):
         """
         x.shape([batch_size, num_points_per_object, dimensions_per_object])
         """
-        global_feature_vector, feature_transform, tnet_out, ix_maxpool, seg_local_feats, seg_global_feats = self.base_pointnet(x)
+        global_feature_vector, feature_transform, tnet_out, ix_maxpool, seg_local_feats = self.base_pointnet(x)
         
         # global_feature_vector.shape([batch_size, 1024])
         # Relu output: [batch_size, 512]
@@ -217,13 +213,16 @@ class SegmentationPointNet(nn.Module):
         num_points = x.shape[1]
         
         # Get the global and local features
+        # global_feature_vector.shape([128, 1024])
         # seg_local_feats.shape([batch_size, num_points_per_object, 64])
-        # seg_global_feats.shape([batch_size, num_points_per_object, 1024])
-        global_feature_vector, feature_transform, tnet_out, ix_maxpool, seg_local_feats, seg_global_feats = self.base_pointnet(x)
+        global_feature_vector, feature_transform, tnet_out, ix_maxpool, seg_local_feats  = self.base_pointnet(x)
 
+        # Adapt the global feature vector to be concatenated
+        global_feature_vector = global_feature_vector.view(-1, 1, 1024).repeat(1, num_points, 1)
+        
         # Concatenate global and local features (adding cols)
         # x.shape([batch_size, num_points_per_object, 1088])
-        x = torch.cat((seg_local_feats, seg_global_feats), dim = 2)
+        x = torch.cat((seg_local_feats, global_feature_vector), dim = 2)
         
         x = x.transpose(2, 1)
         x = F.relu(self.bn1(self.conv1(x)))

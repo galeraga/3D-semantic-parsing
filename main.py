@@ -197,6 +197,7 @@ if __name__ == "__main__":
 
     # Model instance. Select manually the task to perform
     task = "segmentation"
+    # task = "classification"
 
     if task == "classification":
         model = ClassificationPointNet(num_classes = hparams['num_classes'],

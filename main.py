@@ -5,16 +5,26 @@ PointNet implementation with S3DIS dataset
 from settings import * 
 from dataset import S3DISDataset
 from model import ClassificationPointNet, SegmentationPointNet
+from tensorboardlogger import TensorBoardLogger 
 
 
 def test_classification(model, test_dataloader):
     """
+    TBD
     """
     ...
     
 def train_classification(model, train_dataloader, val_dataloader):
     """
+    Train the PointNet classification network
 
+    Inputs:
+        - model: the PointNet model class
+        - train_dataloader
+        - val_dataloader
+
+    Outputs:
+        - None
     """
 
     # Training
@@ -79,6 +89,7 @@ def train_classification(model, train_dataloader, val_dataloader):
 
             accuracy = corrects.item() / float(hparams['batch_size'])
             epoch_train_acc.append(accuracy)
+            
 
         epoch_val_loss = []
         epoch_val_acc = []
@@ -98,6 +109,7 @@ def train_classification(model, train_dataloader, val_dataloader):
             corrects = preds.eq(targets.data).cpu().sum()
             accuracy = corrects.item() / float(hparams['batch_size'])
             epoch_val_acc.append(accuracy)
+
 
         print('Epoch %s: train loss: %s, val loss: %f, train accuracy: %s,  val accuracy: %f'
                 % (epoch,
@@ -125,13 +137,19 @@ def train_classification(model, train_dataloader, val_dataloader):
         train_acc.append(np.mean(epoch_train_acc))
         val_acc.append(np.mean(epoch_val_acc))
 
+        # Log results to TensorBoard per every epoch
+        logger.writer.add_scalar("Loss/Training", train_loss[-1], epoch)
+        logger.writer.add_scalar("Loss/Validation", val_loss[-1], epoch)
+        logger.writer.add_scalar("Accuracy/Training", train_acc[-1], epoch)
+        logger.writer.add_scalar("Accuracy/Validation", val_acc[-1], epoch)
+
 
 if __name__ == "__main__":
 
     # Get parser args to decide what the program has to do
     args = parser.parse_args()
 
-    # Adjust some hyperparameters based on the desired load
+    # Adjust some hyperparameters based on the desired resource consumption
     if args.load == "low":
         hparams["num_points_per_object"] = 100
         hparams["dimensions_per_object"] = 3
@@ -146,6 +164,7 @@ if __name__ == "__main__":
         hparams["num_points_per_object"] = 4096
         hparams["dimensions_per_object"] = 6
         hparams["epochs"] = 50
+        hparams["num_workers"] = 4
     
     # Create the S3DIS dataset
     ds = S3DISDataset(eparams['pc_data_path'], transform = None)
@@ -169,19 +188,22 @@ if __name__ == "__main__":
     train_dataloader = torch.utils.data.DataLoader(
             train_dataset, 
             batch_size = hparams['batch_size'], 
-            shuffle = True
+            shuffle = True,
+            num_workers = hparams["num_workers"]
             )
     
     val_dataloader = torch.utils.data.DataLoader(
             val_dataset,
             batch_size = hparams['batch_size'], 
-            shuffle = True
+            shuffle = True,
+            num_workers = hparams["num_workers"]
             )
     
     test_dataloader = torch.utils.data.DataLoader(
             test_dataset, 
             batch_size = hparams['batch_size'], 
-            shuffle = False
+            shuffle = False,
+            num_workers = hparams["num_workers"]
             )
 
     # Model instance creation (goal-dependent)
@@ -195,6 +217,11 @@ if __name__ == "__main__":
 
     optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
 
+    
+    logger = TensorBoardLogger(args, model)
+    
+    logger.log_model_graph(model, train_dataloader)
+
     # Select the task to do
     if args.goal == "classification": 
         if args.task == "train":
@@ -206,5 +233,7 @@ if __name__ == "__main__":
             train_classification(model, train_dataloader, val_dataloader)
         if args.task == "test":
             test_classification(model, test_dataloader)
-
+    
+    
+    
 

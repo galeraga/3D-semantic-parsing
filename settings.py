@@ -4,8 +4,8 @@ File use to store global vars and required libraries among modules
 
 import os
 import argparse
+import datetime
 import pandas as pd
-#import open3d as o3d
 import torch
 import torch.nn as nn
 import torch.optim as optim
@@ -15,6 +15,7 @@ import logging
 import numpy as np
 import random
 from tqdm import tqdm
+from torch.utils.tensorboard import SummaryWriter
 
 # If import is not set this way, accessing o3d.ml.torch will throw an error:
 # AttributeError: module 'open3d.ml' has no attribute 'torch'
@@ -39,6 +40,7 @@ eparams = {
     'pc_file_extension': ".txt",
     'already_rgb_normalized_suffix': "_rgb_norm",
     'pc_file_extensiom_rgb_norm': "_rgb_norm.txt",
+    'tensorboard_log_dir': "runs/pointnet_with_s3dis",
     'log_file': "conversion.log",
     's3dis_summary_file': "s3dis_summary.csv",
 }
@@ -95,7 +97,6 @@ parser.add_argument("--load",
                     help = "Either low, medium or high")
 
 
-# TODO: Replace logger with Tensorboard
 # Define the logging settings
 # Logging is Python-version sensitive
 for handler in logging.root.handlers[:]:

@@ -149,8 +149,6 @@ class ClassificationPointNet(nn.Module):
         super(ClassificationPointNet, self).__init__()
         self.base_pointnet = BasePointNet(point_dimension = point_dimension)
 
-        # TODO: The official PointNet architecture uses MLP(512, 256, num_classes)
-        # from the global feature vector (1024)
         self.fc_1 = nn.Linear(1024, 512)
         self.fc_2 = nn.Linear(512, 256)
         self.fc_3 = nn.Linear(256, num_classes)
@@ -161,15 +159,27 @@ class ClassificationPointNet(nn.Module):
         self.dropout_1 = nn.Dropout(dropout)
 
     def forward(self, x):
+        """
+        x.shape([batch_size, num_points_per_object, dimensions_per_object])
+        """
+        global_feature_vector, feature_transform, tnet_out, ix_maxpool, seg_local_feats, seg_global_feats = self.base_pointnet(x)
         
-        global_feature_vector, feature_transform, tnet_out, ix_maxpool, _ = self.base_pointnet(x)
-
+        # global_feature_vector.shape([batch_size, 1024])
+        # Relu output: [batch_size, 512]
         x = F.relu(self.bn_1(self.fc_1(global_feature_vector)))
+        # Relu output: [batch_size, 256]
         x = F.relu(self.bn_2(self.fc_2(x)))
+        # Dropout output: [batch_size, 256]
         x = self.dropout_1(x)
         
+        # x.shape([batch_size, num_classes])
+        x = self.fc_3(x)
+
+        # preds.shape([batch_size, num_classes])
+        preds = F.log_softmax(x, dim=1)
+        
         # preds, feature_transform, tnet_out, ix_maxpool
-        return F.log_softmax(self.fc_3(x), dim=1), feature_transform, tnet_out, ix_maxpool
+        return preds, feature_transform, tnet_out, ix_maxpool
 
 
 class SegmentationPointNet(nn.Module):
@@ -207,30 +217,33 @@ class SegmentationPointNet(nn.Module):
         num_points = x.shape[1]
         
         # Get the global and local features
+        # seg_local_feats.shape([batch_size, num_points_per_object, 64])
+        # seg_global_feats.shape([batch_size, num_points_per_object, 1024])
         global_feature_vector, feature_transform, tnet_out, ix_maxpool, seg_local_feats, seg_global_feats = self.base_pointnet(x)
 
-        # feature_transform.shape([batch_size, 64, 64])
-        # global_feature_vector.shape([batch_size, 1024])
-        # tnet_out.shape([batch_size, point_dimension, num_points_per_object])
-        # ix_maxpool.shape([batch_size, 1024, 1])
-
         # Concatenate global and local features (adding cols)
+        # x.shape([batch_size, num_points_per_object, 1088])
         x = torch.cat((seg_local_feats, seg_global_feats), dim = 2)
         
+        x = x.transpose(2, 1)
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
         x = self.conv4(x)
-
-        x = x.transpose(2, 1)
-
-        pred = F.log_softmax(x.view(-1, self.num_classes), dim = -1)
         
+        # Input shape: x.shape(batch_size, num_classes, num_points_per_object)
+        # Output shape: x.shape(batch_size, num_points_per_object, num_classes)
+        x = x.transpose(2, 1)
+        
+        # Apply log_softmax over the last dim (num_classes)
+        preds = F.log_softmax(x, dim = -1)
+        
+        # TODO: Preds has to return ([batch_size, num_classes])
         # x = x.view(-1, num_points, self.num_classes)
         
         # Returning the same values than ClassificationPointNet
         # to keep compatatibility in main.py
-        return pred, feature_transform, tnet_out, ix_maxpool
+        return preds, feature_transform, tnet_out, ix_maxpool
 
 
 

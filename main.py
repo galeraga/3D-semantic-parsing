@@ -195,7 +195,7 @@ if __name__ == "__main__":
     """ 
     
 
-    # Model instance. Select the task to perform manually    
+    # Model instance. Select manually the task to perform
     task = "segmentation"
 
     if task == "classification":
@@ -234,7 +234,7 @@ if __name__ == "__main__":
             optimizer.zero_grad()
             model = model.train()
 
-            preds, feature_transform, tnet_out, ix_maxpool, _ = model(points)
+            preds, feature_transform, tnet_out, ix_maxpool = model(points)
 
             # Why?  
             identity = torch.eye(feature_transform.shape[-1])
@@ -279,7 +279,7 @@ if __name__ == "__main__":
                 points, targets = points.cuda(), targets.cuda()
             
             model = model.eval()
-            preds, feature_transform, tnet_out, ix, _ = model(points)
+            preds, feature_transform, tnet_out, ix = model(points)
             loss = F.nll_loss(preds, targets)
             epoch_val_loss.append(loss.cpu().item())
             

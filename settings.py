@@ -3,6 +3,7 @@ File use to store global vars and required libraries among modules
 """
 
 import os
+import argparse
 import pandas as pd
 #import open3d as o3d
 import torch
@@ -44,18 +45,70 @@ eparams = {
 
 # Model hyperparameters
 hparams = {
-    'batch_size': 128,
+    'batch_size': 32,
     'learning_rate': 0.001,
     'num_workers': 0,
     'num_classes': 14,
-    'num_points_per_object': 100,
-    'dimensions_per_object': 6,
-    'epochs': 5,
+    'num_points_per_object': 0,
+    'dimensions_per_object': 0,
+    'epochs': 0,
 }
 
 hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-# TODO: define num_points depending on arg parser
-# hparams['num_points_per_object'] = 4096,
-# TODO: define num_classes depending on arg parser
-# hparams['num_classes'] = 
+# Parser definition
+parser_desc = "Provides convenient out-of-the-box options to train or test "
+parser_desc += "a PointNet model based on S3DIS dataset"
+
+parser = argparse.ArgumentParser(prog = "main", 
+                    usage = "%(prog)s.py goal=(class|seg) task=(train|test) profile=(low|medium|high)",
+                    description = parser_desc)
+
+parser.add_argument("--goal", 
+                    "-g",
+                    metavar = "goal",
+                    type = str,
+                    action = "store",
+                    nargs = 1,
+                    default = "classification",
+                    choices = ["class", "seg"],
+                    help = "Either classification (class) or segmentation (seg)")
+
+parser.add_argument("--task",
+                    "-t", 
+                    metavar = "task",
+                    type = str,
+                    action = "store",
+                    nargs = 1,
+                    default = "train",
+                    choices = ["train", "test"],
+                    help = "Either train or test")
+
+parser.add_argument("--load",
+                    "-l",
+                    metavar = "load",
+                    type = str,
+                    action = "store",
+                    nargs = 1,
+                    default = "low",
+                    choices = ["low", "medium", "high"],
+                    help = "Either low, medium or high")
+
+
+# TODO: Replace logger with Tensorboard
+# Define the logging settings
+# Logging is Python-version sensitive
+for handler in logging.root.handlers[:]:
+    logging.root.removeHandler(handler)
+
+# For Python < 3.9 (minor version: 9) 
+# encoding argument can't be used
+if sys.version_info[1] < 9:
+    logging.basicConfig(filename = os.path.join(eparams['pc_data_path'], eparams['log_file']),
+        level=logging.WARNING,
+        format='%(asctime)s %(message)s')
+else:
+    logging.basicConfig(filename = os.path.join(eparams['pc_data_path'], eparams['log_file']),
+        encoding='utf-8', 
+        level=logging.WARNING,
+        format='%(asctime)s %(message)s')

@@ -228,6 +228,7 @@ class SegmentationPointNet(nn.Module):
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
+    
         x = self.conv4(x)
         
         # Input shape: x.shape(batch_size, num_classes, num_points_per_object)
@@ -238,7 +239,7 @@ class SegmentationPointNet(nn.Module):
         preds = F.log_softmax(x, dim = -1)
         
         # TODO: Preds has to return ([batch_size, num_classes])
-        # x = x.view(-1, num_points, self.num_classes)
+        # preds = x.view(batch_size, num_points, self.num_classes)
         
         # Returning the same values than ClassificationPointNet
         # to keep compatatibility in main.py

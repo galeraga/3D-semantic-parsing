@@ -6,6 +6,7 @@ from settings import *
 from dataset import S3DISDataset
 from model import ClassificationPointNet, SegmentationPointNet
 from tensorboardlogger import TensorBoardLogger 
+from summarizer import S3DIS_Summarizer
 
 
 def test_classification(model, test_dataloader):
@@ -146,8 +147,17 @@ def train_classification(model, train_dataloader, val_dataloader):
 
 if __name__ == "__main__":
 
+    # Create the ground truth file
+    summary_file = S3DIS_Summarizer(eparams["pc_data_path"])
+
     # Get parser args to decide what the program has to do
     args = parser.parse_args()
+
+    # Create a TensorBoard logger instance
+    logger = TensorBoardLogger(args)
+
+    # Log insights from the S3DIS dataset into TensorBoard
+    logger.log_dataset_stats(summary_file)
 
     # Adjust some hyperparameters based on the desired resource consumption
     if args.load == "low":
@@ -166,6 +176,12 @@ if __name__ == "__main__":
         hparams["epochs"] = 50
         hparams["num_workers"] = 4
     
+    # Logging hparams for future reference
+    # add_scalar requires non string items
+    hpars = [("hparams/" + k, torch.tensor(v)) for k, v in hparams.items() if not isinstance(v, str)]
+    for p in hpars:
+        logger.writer.add_scalar(p[0], p[1])
+
     # Create the S3DIS dataset
     ds = S3DISDataset(eparams['pc_data_path'], transform = None)
     print(ds)
@@ -218,7 +234,7 @@ if __name__ == "__main__":
     optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
 
     
-    logger = TensorBoardLogger(args, model)
+    
     
     logger.log_model_graph(model, train_dataloader)
 

@@ -27,7 +27,8 @@ class TensorBoardLogger():
             sep = "\t"
             )
         
-        # Info per area
+        # Per area info
+        # Get a list of all the different areas ([Area_1, Area_2,...])
         areas = sorted(set(summary['Area']))
 
         for idx, area in enumerate(areas):     
@@ -35,9 +36,14 @@ class TensorBoardLogger():
             area_df = summary.loc[summary['Area'] == area]
 
             # Spaces per area
-            # For that area, get non-repeated spaces
+            spaces = area_df["Space"]
+            spaces_set = set()
+            for space in spaces:
+                # Area_1_WC_1, Area_1_WC_2,...
+                spaces_set.add(area + "_" + space)
+
             self.writer.add_scalar("S3DIS Dataset/Spaces per area", 
-                len(sorted(set(area_df["Space"]))), 
+                len(spaces_set), 
                 idx + 1
                 )
             
@@ -47,32 +53,35 @@ class TensorBoardLogger():
                 idx + 1
                 )
 
-        # Info per spaces
+
+        # Per space info
+        # Get a list of all the different spaces ([hallway_1, hallway_2, ...])
         spaces = sorted(set(summary['Space']))
 
         for idx, space in enumerate(spaces):
-            # Returns a new dataframe containing only the spaces
+            # Returns a new dataframe containing only the proper space
             space_df = summary.loc[summary['Space'] == space]
 
-            objects_per_area = len(sorted(set(space_df["Object Points"])))
-            print("Space: {}, number of objects: {}".format(space, objects_per_area))
-        
-        # TODO: Points per area
-        for area in areas:
-            area_df = summary.loc[summary['Area'] == area]
-            area_points = area_df["Object Points"]
-            print("Points per {}: {}".format(area, area_points.sum()))
+            # Different classes per space
+            self.writer.add_scalar("S3DIS Dataset/Classes per space", 
+                len(sorted(set(space_df["Object ID"]))), 
+                idx + 1
+                )
 
-        # TODO: Points per space:
-        for space in spaces:
-            space_df = summary.loc[summary['Space'] == space]
-            space_points = space_df["Object Points"]
-            #print("Points per {}: {}".format(space, space_points.sum()))
-        
-            # Points per kind of space.
-            # He comprovat que els valors que aquests valors son les sumes dels anteriors.
-            summary_spaces = summary.groupby(summary["Space"].str.split('_').str[0]).sum()
-            print(summary_spaces)
+        # Per object class info
+        # Get a list of all the different object classes ([0, 1, ...])
+        obj_classes = sorted(set(summary['Object ID'])) 
+
+        for id in obj_classes:
+            # Returns a new dataframe containing only the proper object id
+            obj_class_id_df = summary.loc[summary['Object ID'] == id]
+                   
+            # Mean points of that object class         
+            self.writer.add_scalar("S3DIS Dataset/Mean points per class", 
+                obj_class_id_df["Object Points"].sum()/len(obj_class_id_df),
+                id
+                )
+
 
 
 

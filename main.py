@@ -9,24 +9,103 @@ from tensorboardlogger import TensorBoardLogger
 from summarizer import S3DIS_Summarizer
 
 
-def test_classification(model, test_dataloader):
+def create_dataloaders(ds):
     """
-    TBD
+    Creates the dataloaders
     """
-    ...
+
+    # Splitting the dataset (80% training, 10% validation, 10% test)
+    # TODO: Modify the dataset to be split by building
+    # Building 1 (Area 1, Area 3, Area 6), Building 2 (Area 2, Area 4), Building 3 (Area 5)
+    original_ds_length = len(ds)
+    training_ds_length = round(0.8*original_ds_length)
+    validation_ds_length = round(0.1*original_ds_length)
+    test_ds_length = round(0.1*original_ds_length)
+
+    split_criteria = [training_ds_length, validation_ds_length, test_ds_length]
     
-def train_classification(model, train_dataloader, val_dataloader):
+    train_dataset, val_dataset, test_dataset = torch.utils.data.dataset.random_split(ds,
+                                            split_criteria,
+                                            generator=torch.Generator().manual_seed(1))
+
+    # Dataloaders creation
+    train_dataloader = torch.utils.data.DataLoader(
+            train_dataset, 
+            batch_size = hparams['batch_size'], 
+            shuffle = True,
+            num_workers = hparams["num_workers"]
+            )
+    
+    val_dataloader = torch.utils.data.DataLoader(
+            val_dataset,
+            batch_size = hparams['batch_size'], 
+            shuffle = True,
+            num_workers = hparams["num_workers"]
+            )
+    
+    test_dataloader = torch.utils.data.DataLoader(
+            test_dataset, 
+            batch_size = hparams['batch_size'], 
+            shuffle = False,
+            num_workers = hparams["num_workers"]
+            )
+    
+    return train_dataloader, val_dataloader, test_dataloader
+
+
+def test_classification(model, dataloaders):
+    """
+    Test the classification network
+    """
+  
+    test_dataloader = dataloaders[2]
+    
+    # Path to the checkpoint file
+    model_checkpoint = os.path.join(
+                    eparams['pc_data_path'],
+                    "S3DIS_checkpoint_{}.pth".format(hparams["num_points_per_object"])
+                    )
+    
+    # If the checkpoint does not exist, train the model
+    if not os.path.exists(model_checkpoint):
+        train_classification(model, dataloaders)
+    else:
+        state = torch.load(
+                    model_checkpoint, 
+                    map_location = torch.device(hparams["device"]))
+        model.load_state_dict(state['model'])  
+
+    # Enter evaluation mode
+    model.eval()
+    
+    for batch_number, data in enumerate(test_dataloader):
+        points, target_labels = data
+        preds, feature_transform, tnet_out, ix = model(points)
+        
+        # preds.shape([batch_size, num_classes])
+        preds = preds.data.max(1)[1]
+        
+        corrects = preds.eq(target_labels.data).cpu().sum()
+        accuracy = corrects.item() / float(hparams['batch_size'])
+        
+        logger.writer.add_scalar("Accuracy/Test", accuracy, batch_number)
+       
+               
+def train_classification(model, dataloaders):
     """
     Train the PointNet classification network
 
     Inputs:
         - model: the PointNet model class
-        - train_dataloader
-        - val_dataloader
+        - dataloaders: train, val and test
 
     Outputs:
         - None
     """
+
+    # Get the proper dataloaders
+    train_dataloader = dataloaders[0]
+    val_dataloader = dataloaders[1]
 
     # Training
     train_loss = []
@@ -34,6 +113,8 @@ def train_classification(model, train_dataloader, val_dataloader):
     train_acc = []
     val_acc = []
     best_loss= np.inf
+
+    optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
 
     for epoch in tqdm(range(hparams['epochs'])):
         epoch_train_loss = []
@@ -51,6 +132,7 @@ def train_classification(model, train_dataloader, val_dataloader):
             """
 
             optimizer.zero_grad()
+            
             model = model.train()
 
             preds, feature_transform, tnet_out, ix_maxpool = model(points)
@@ -128,7 +210,7 @@ def train_classification(model, train_dataloader, val_dataloader):
                 state, 
                 os.path.join(
                     eparams['pc_data_path'],
-                    'S3DIS_checkpoint_%s.pth' % (hparams['num_points_per_object'])
+                    "S3DIS_checkpoint_{}.pth".format(hparams["num_points_per_object"])
                     )
                 )
             best_loss=np.mean(val_loss)
@@ -138,7 +220,7 @@ def train_classification(model, train_dataloader, val_dataloader):
         train_acc.append(np.mean(epoch_train_acc))
         val_acc.append(np.mean(epoch_val_acc))
 
-        # Log results to TensorBoard per every epoch
+        # Log results to TensorBoard for every epoch
         logger.writer.add_scalar("Loss/Training", train_loss[-1], epoch)
         logger.writer.add_scalar("Loss/Validation", val_loss[-1], epoch)
         logger.writer.add_scalar("Accuracy/Training", train_acc[-1], epoch)
@@ -186,41 +268,9 @@ if __name__ == "__main__":
     ds = S3DISDataset(eparams['pc_data_path'], transform = None)
     print(ds)
     
-    # Splitting the dataset (80% training, 10% validation, 10% test)
-    # TODO: Modify the dataset to be split by building
-    # Building 1 (Area 1, Area 3, Area 6), Building 2 (Area 2, Area 4), Building 3 (Area 5)
-    original_ds_length = len(ds)
-    training_ds_length = round(0.8*original_ds_length)
-    validation_ds_length = round(0.1*original_ds_length)
-    test_ds_length = round(0.1*original_ds_length)
-
-    split_criteria = [training_ds_length, validation_ds_length, test_ds_length]
-    
-    train_dataset, val_dataset, test_dataset = torch.utils.data.dataset.random_split(ds,
-                                            split_criteria,
-                                            generator=torch.Generator().manual_seed(1))
-
-    # Dataloaders creation
-    train_dataloader = torch.utils.data.DataLoader(
-            train_dataset, 
-            batch_size = hparams['batch_size'], 
-            shuffle = True,
-            num_workers = hparams["num_workers"]
-            )
-    
-    val_dataloader = torch.utils.data.DataLoader(
-            val_dataset,
-            batch_size = hparams['batch_size'], 
-            shuffle = True,
-            num_workers = hparams["num_workers"]
-            )
-    
-    test_dataloader = torch.utils.data.DataLoader(
-            test_dataset, 
-            batch_size = hparams['batch_size'], 
-            shuffle = False,
-            num_workers = hparams["num_workers"]
-            )
+    # Create the dataloaders
+    # dataloaders = (train_dataloader, validation_dataloader, test_dataloader)
+    dataloaders = create_dataloaders(ds)
 
     # Model instance creation (goal-dependent)
     if args.goal == "classification":
@@ -231,13 +281,7 @@ if __name__ == "__main__":
         model = SegmentationPointNet(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object'])
 
-    optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
-
     
-    
-    
-    logger.log_model_graph(model, train_dataloader)
-
     # Select the task to do
     if args.goal == "classification": 
         if args.task == "train":
@@ -246,9 +290,9 @@ if __name__ == "__main__":
             msg += "{} dimensions per object | ".format(hparams['dimensions_per_object'])
             msg += "{} batch_size ".format(hparams['batch_size'])
             print(msg)
-            train_classification(model, train_dataloader, val_dataloader)
+            train_classification(model, dataloaders)
         if args.task == "test":
-            test_classification(model, test_dataloader)
+            test_classification(model, dataloaders)
     
     
     

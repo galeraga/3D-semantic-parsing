@@ -34,6 +34,10 @@ eparams = {
     'tensorboard_log_dir': "runs/pointnet_with_s3dis",
 }
 
+# Checking if the script is running in GCP
+if "OS_IMAGE_FAMILY" in os.environ.keys():
+    eparams['pc_data_path'] = "/s3dis/data"
+
 # Model hyperparameters
 hparams = {
     'batch_size': 32,

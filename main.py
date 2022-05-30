@@ -15,7 +15,8 @@ def task_welcome_msg(task = None):
     msg = "Starting {}-{} with: ".format(task, args.goal)
     msg += "{} points per object | ".format(hparams['num_points_per_object'])
     msg += "{} dimensions per object | ".format(hparams['dimensions_per_object'])
-    msg += "{} batch_size ".format(hparams['batch_size'])
+    msg += "{} batch_size | ".format(hparams['batch_size'])
+    msg += "device: {}".format(hparams['device'])
     print(msg)
 
 def create_dataloaders(ds):
@@ -98,8 +99,8 @@ def test_classification(model, dataloaders):
     # Enter evaluation mode
     model.eval()
     
-    print("Testing data classification")
     # Test the model
+    print("Testing data classification")
     for batch_idx, data in enumerate(tqdm(test_dataloader)):
         points, target_labels = data
         preds, feature_transform, tnet_out, ix = model(points)
@@ -151,8 +152,11 @@ def train_classification(model, dataloaders):
         # training loop
         for data in train_dataloader:
             points, targets = data  
+            
+            points = points.to(device)
+            targets = targets.to(device)
 
-            """
+            """"
             if torch.cuda.is_available():
                 points, targets = points.cuda(), targets.cuda()
             if points.shape[0] <= 1:
@@ -256,6 +260,9 @@ def train_classification(model, dataloaders):
 
 if __name__ == "__main__":
 
+    # Prepare to run on CUDA/CPU
+    device = hparams['device']
+
     # Create a TensorBoard logger instance
     logger = TensorBoardLogger(args)
 
@@ -284,13 +291,14 @@ if __name__ == "__main__":
 
 
     # Model instance creation (goal-dependent)
+    
     if args.goal == "classification":
         model = ClassificationPointNet(num_classes = hparams['num_classes'],
-                                   point_dimension = hparams['dimensions_per_object'])
+                                   point_dimension = hparams['dimensions_per_object']).to(device)
     
     if args.goal == "segmentation":
         model = SegmentationPointNet(num_classes = hparams['num_classes'],
-                                   point_dimension = hparams['dimensions_per_object'])
+                                   point_dimension = hparams['dimensions_per_object']).to(device)
 
     
     # Select the task to do

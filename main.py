@@ -55,7 +55,7 @@ def create_dataloaders(ds):
     test_dataloader = torch.utils.data.DataLoader(
             test_dataset, 
             batch_size = hparams['batch_size'], 
-            shuffle = False,
+            shuffle = True,
             num_workers = hparams["num_workers"]
             )
     
@@ -70,11 +70,12 @@ def test_classification(model, dataloaders):
     # Task welcome message
     task_welcome_msg(task = "test")
     
-    # Select the proper dataloader
-    test_dataloader = dataloaders[2]
-    
     # Path to the checkpoint file
-    model_checkpoint = os.path.join(eparams['pc_data_path'], eparams["checkpoint_name"])
+    model_checkpoint = os.path.join(
+            eparams['pc_data_path'], 
+            eparams['checkpoints_folder'], 
+            eparams["checkpoint_name"]
+            )
     
     # If the checkpoint does not exist, train the model
     if not os.path.exists(model_checkpoint):
@@ -88,11 +89,18 @@ def test_classification(model, dataloaders):
                 map_location = torch.device(hparams["device"]))
     model.load_state_dict(state['model'])  
 
+    # Select the proper dataloader
+    test_dataloader = dataloaders[2]
+
+    # Aux test vars
+    accuracies = []
+    
     # Enter evaluation mode
     model.eval()
     
+    print("Testing data classification")
     # Test the model
-    for batch_number, data in enumerate(test_dataloader):
+    for batch_idx, data in enumerate(tqdm(test_dataloader)):
         points, target_labels = data
         preds, feature_transform, tnet_out, ix = model(points)
         
@@ -101,9 +109,12 @@ def test_classification(model, dataloaders):
         
         corrects = preds.eq(target_labels.data).cpu().sum()
         accuracy = corrects.item() / float(hparams['batch_size'])
+        accuracies.append(accuracy)
         
-        logger.writer.add_scalar("Accuracy/Test", accuracy, batch_number)
-       
+        logger.writer.add_scalar("Accuracy/Test", accuracy, batch_idx)
+    
+    mean_accuracy = (torch.FloatTensor(accuracies).sum()/len(accuracies))*100
+    print("Average accuracy: {:.2f} ".format(float(mean_accuracy)))
                
 def train_classification(model, dataloaders):
     """
@@ -225,7 +236,9 @@ def train_classification(model, dataloaders):
             }
             torch.save(
                 state, 
-                os.path.join(eparams['pc_data_path'], eparams["checkpoint_name"])
+                os.path.join(eparams['pc_data_path'], 
+                    eparams["checkpoints_folder"],
+                    eparams["checkpoint_name"])
                 )
             best_loss=np.mean(val_loss)
 

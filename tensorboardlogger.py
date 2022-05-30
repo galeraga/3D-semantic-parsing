@@ -160,4 +160,19 @@ class TensorBoardLogger():
 
 
         # Be patient! Projector logs can take a while
+    
+    def log_hparams(self, params):
+        """
+        Log haprams for future reference
+        """
+        
+        # add_scalar requires non string items
+        hpars = [("hparams/" + k, torch.tensor(v)) for k, v in hparams.items() if not isinstance(v, str)]
+        for p in hpars:
+            self.writer.add_scalar(p[0], p[1])
+
+
+    def finish(self):
+        self.writer.close()
+        # TODO: Send info to TensorBoard.dev
 

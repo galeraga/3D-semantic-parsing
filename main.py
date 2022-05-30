@@ -9,6 +9,15 @@ from tensorboardlogger import TensorBoardLogger
 from summarizer import S3DIS_Summarizer
 
 
+def task_welcome_msg(task = None):
+    """
+    """
+    msg = "Starting {}-{} with: ".format(task, args.goal)
+    msg += "{} points per object | ".format(hparams['num_points_per_object'])
+    msg += "{} dimensions per object | ".format(hparams['dimensions_per_object'])
+    msg += "{} batch_size ".format(hparams['batch_size'])
+    print(msg)
+
 def create_dataloaders(ds):
     """
     Creates the dataloaders
@@ -55,29 +64,34 @@ def create_dataloaders(ds):
 
 def test_classification(model, dataloaders):
     """
-    Test the classification network
+    Test the PointNet classification network
     """
-  
+
+    # Task welcome message
+    task_welcome_msg(task = "test")
+    
+    # Select the proper dataloader
     test_dataloader = dataloaders[2]
     
     # Path to the checkpoint file
-    model_checkpoint = os.path.join(
-                    eparams['pc_data_path'],
-                    "S3DIS_checkpoint_{}.pth".format(hparams["num_points_per_object"])
-                    )
+    model_checkpoint = os.path.join(eparams['pc_data_path'], eparams["checkpoint_name"])
     
     # If the checkpoint does not exist, train the model
     if not os.path.exists(model_checkpoint):
+        print("The model does not seem already trained! Starting the training rigth now...")
         train_classification(model, dataloaders)
-    else:
-        state = torch.load(
-                    model_checkpoint, 
-                    map_location = torch.device(hparams["device"]))
-        model.load_state_dict(state['model'])  
+    
+    # Loading the existing checkpoint
+    print("Loading checkpoint {} ...".format(model_checkpoint))
+    state = torch.load(
+                model_checkpoint, 
+                map_location = torch.device(hparams["device"]))
+    model.load_state_dict(state['model'])  
 
     # Enter evaluation mode
     model.eval()
     
+    # Test the model
     for batch_number, data in enumerate(test_dataloader):
         points, target_labels = data
         preds, feature_transform, tnet_out, ix = model(points)
@@ -103,11 +117,14 @@ def train_classification(model, dataloaders):
         - None
     """
 
+    # Task welcome message
+    task_welcome_msg(task = "train")
+    
     # Get the proper dataloaders
     train_dataloader = dataloaders[0]
     val_dataloader = dataloaders[1]
 
-    # Training
+    # Aux training vars
     train_loss = []
     val_loss = []
     train_acc = []
@@ -208,10 +225,7 @@ def train_classification(model, dataloaders):
             }
             torch.save(
                 state, 
-                os.path.join(
-                    eparams['pc_data_path'],
-                    "S3DIS_checkpoint_{}.pth".format(hparams["num_points_per_object"])
-                    )
+                os.path.join(eparams['pc_data_path'], eparams["checkpoint_name"])
                 )
             best_loss=np.mean(val_loss)
 
@@ -229,41 +243,18 @@ def train_classification(model, dataloaders):
 
 if __name__ == "__main__":
 
-    # Create the ground truth file
-    summary_file = S3DIS_Summarizer(eparams["pc_data_path"])
-
-    # Get parser args to decide what the program has to do
-    args = parser.parse_args()
-
     # Create a TensorBoard logger instance
     logger = TensorBoardLogger(args)
+
+    # Create the ground truth file
+    summary_file = S3DIS_Summarizer(eparams["pc_data_path"], logger)
 
     # Log insights from the S3DIS dataset into TensorBoard
     logger.log_dataset_stats(summary_file)
 
-    # Adjust some hyperparameters based on the desired resource consumption
-    if args.load == "low":
-        hparams["num_points_per_object"] = 100
-        hparams["dimensions_per_object"] = 3
-        hparams["epochs"] = 5
-
-    if args.load == "medium":
-        hparams["num_points_per_object"] = 1000
-        hparams["dimensions_per_object"] = 3
-        hparams["epochs"] = 10
-        
-    if args.load == "high":
-        hparams["num_points_per_object"] = 4096
-        hparams["dimensions_per_object"] = 6
-        hparams["epochs"] = 50
-        hparams["num_workers"] = 4
-    
     # Logging hparams for future reference
-    # add_scalar requires non string items
-    hpars = [("hparams/" + k, torch.tensor(v)) for k, v in hparams.items() if not isinstance(v, str)]
-    for p in hpars:
-        logger.writer.add_scalar(p[0], p[1])
-
+    logger.log_hparams(hparams)
+    
     # Create the S3DIS dataset
     ds = S3DISDataset(eparams['pc_data_path'], transform = None)
     print(ds)
@@ -271,6 +262,13 @@ if __name__ == "__main__":
     # Create the dataloaders
     # dataloaders = (train_dataloader, validation_dataloader, test_dataloader)
     dataloaders = create_dataloaders(ds)
+
+    # Define the checkpoint name
+    eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_points_{}_dims.pth".format(
+                                            hparams["num_points_per_object"],
+                                            hparams["dimensions_per_object"]
+                                            )
+
 
     # Model instance creation (goal-dependent)
     if args.goal == "classification":
@@ -283,17 +281,17 @@ if __name__ == "__main__":
 
     
     # Select the task to do
-    if args.goal == "classification": 
-        if args.task == "train":
-            msg = "Starting {}-{} with: ".format(args.task, args.goal)
-            msg += "{} points per object | ".format(hparams['num_points_per_object'])
-            msg += "{} dimensions per object | ".format(hparams['dimensions_per_object'])
-            msg += "{} batch_size ".format(hparams['batch_size'])
-            print(msg)
+    # When choices are given in parser add_argument, the parser returns a list 
+    # with the selected choice
+    if "classification" in args.goal: 
+        if "train" in args.task:
             train_classification(model, dataloaders)
-        if args.task == "test":
+        
+        if "test" in args.task:
             test_classification(model, dataloaders)
     
+    # Close TensorBoard logger and send runs to TensorBoard.dev
+    logger.finish()
     
     
 

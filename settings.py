@@ -17,32 +17,21 @@ import random
 from tqdm import tqdm
 from torch.utils.tensorboard import SummaryWriter
 
-# If import is not set this way, accessing o3d.ml.torch will throw an error:
-# AttributeError: module 'open3d.ml' has no attribute 'torch'
-
-#import open3d.ml.torch as ml3d
-
-# Set the sample path HERE:
-# Select what do yo want to visualize: an space or and object
-# Uncomment the following line if yoy want to visualize an space
-#TEST_PC = "Area_1/office_1/office_1"
-# Uncomment the following line if yoy want to visualize an object
-TEST_PC = "Area_1/office_1/Annotations/table_1"
-
-BUILDING_DISTRIBUTION = {
+building_distribution = {
     'Building 1': ["Area_1", "Area_3", "Area_6"], 
     'Building 2': ["Area_2", "Area_4"], 
     'Building 3': ["Area_5"], 
 }
+
 # Environment (file system and so on) params
 eparams = {
     'pc_data_path': "/Users/jgalera/datasets/S3DIS/aligned",
     'pc_file_extension': ".txt",
     'already_rgb_normalized_suffix': "_rgb_norm",
     'pc_file_extensiom_rgb_norm': "_rgb_norm.txt",
-    'tensorboard_log_dir': "runs/pointnet_with_s3dis",
-    'log_file': "conversion.log",
     's3dis_summary_file': "s3dis_summary.csv",
+    "checkpoints_folder": "checkpoints",
+    'tensorboard_log_dir': "runs/pointnet_with_s3dis",
 }
 
 # Model hyperparameters
@@ -58,12 +47,18 @@ hparams = {
 
 hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
 
+# Creating the checkpoint folder
+checkpoint_folder = os.path.join(eparams["pc_data_path"], eparams["checkpoints_folder"])
+
+if not os.path.exists(checkpoint_folder):
+    os.makedirs(checkpoint_folder)
+
 # Parser definition
 parser_desc = "Provides convenient out-of-the-box options to train or test "
 parser_desc += "a PointNet model based on S3DIS dataset"
 
 parser = argparse.ArgumentParser(prog = "main", 
-                    usage = "%(prog)s.py goal=(class|seg) task=(train|test) profile=(low|medium|high)",
+                    usage = "%(prog)s.py goal=(class|seg) task=(train|test) load=(low|medium|high)",
                     description = parser_desc)
 
 parser.add_argument("--goal", 
@@ -96,20 +91,23 @@ parser.add_argument("--load",
                     choices = ["low", "medium", "high"],
                     help = "Either low, medium or high")
 
+# Get parser args to decide what the program has to do
+args = parser.parse_args()
 
-# Define the logging settings
-# Logging is Python-version sensitive
-for handler in logging.root.handlers[:]:
-    logging.root.removeHandler(handler)
+# Adjust some hyperparameters based on the desired resource consumption
+if args.load == "low":
+    hparams["num_points_per_object"] = 100
+    hparams["dimensions_per_object"] = 3
+    hparams["epochs"] = 5
 
-# For Python < 3.9 (minor version: 9) 
-# encoding argument can't be used
-if sys.version_info[1] < 9:
-    logging.basicConfig(filename = os.path.join(eparams['pc_data_path'], eparams['log_file']),
-        level=logging.WARNING,
-        format='%(asctime)s %(message)s')
-else:
-    logging.basicConfig(filename = os.path.join(eparams['pc_data_path'], eparams['log_file']),
-        encoding='utf-8', 
-        level=logging.WARNING,
-        format='%(asctime)s %(message)s')
+if args.load == "medium":
+    hparams["num_points_per_object"] = 1000
+    hparams["dimensions_per_object"] = 3
+    hparams["epochs"] = 10
+    
+if args.load == "high":
+    hparams["num_points_per_object"] = 4096
+    hparams["dimensions_per_object"] = 6
+    hparams["epochs"] = 50
+    hparams["num_workers"] = 4
+

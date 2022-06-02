@@ -306,6 +306,15 @@ if __name__ == "__main__":
         if "test" in args.task:
             test_classification(model, dataloaders)
     
+    # TODO
+    if "segmentation" in args.goal: 
+        if "train" in args.task:
+            ...
+        
+        if "test" in args.task:
+            ...
+    
+    
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.finish()
     

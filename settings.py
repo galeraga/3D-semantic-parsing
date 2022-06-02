@@ -72,7 +72,7 @@ parser.add_argument("--goal",
                     action = "store",
                     nargs = 1,
                     default = "classification",
-                    choices = ["class", "seg"],
+                    choices = ["classification", "segmentation"],
                     help = "Either classification (class) or segmentation (seg)")
 
 parser.add_argument("--task",

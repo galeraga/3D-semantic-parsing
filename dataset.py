@@ -34,7 +34,7 @@ class S3DISDataset(torch.utils.data.Dataset):
         to avoid errors while processing data
         """
         healthy_objects = self.summary_df[self.summary_df[8] == "Good"]
-        return len(healthy_objects)
+        return len(healthy_objects) -1 
 
     def __getitem__(self, idx):
 
@@ -55,17 +55,24 @@ class S3DISDataset(torch.utils.data.Dataset):
         obj_label = summary_line[6]
         obj_label_id = summary_line[7]
         obj_health = summary_line[8]
-    
-        
+          
         # Fetch the object point cloud, if object health is good:
         if obj_health == "Good":
             path_to_obj = os.path.join(self.root_dir, area, space, "Annotations", obj_file)
-            obj_df = pd.read_csv(path_to_obj, sep = " ", dtype = np.float32)
+            
+            # Element order is ignored when data is retrieved by cols in Pandas
+            # so we need to define the order of the cols
+            cols_to_get = [col for col in range (hparams['dimensions_per_object'])]
+            obj_df = pd.read_csv(
+                path_to_obj, 
+                sep = " ", 
+                dtype = np.float32, 
+                header = None,
+                usecols = cols_to_get 
+                )[cols_to_get]
+
             obj = torch.tensor(obj_df.values)
 
-            # TODO: Review why we points in the cloud does not excatly match
-            # print("Object shape {} (poins cloud from summary: {}) ({}_{}_Annotations_{}): ".format(obj.shape, total_obj_points, area, space, obj_file))
-        
             # Torch Dataloaders expects each tensor to be equal size
             # TODO: MAX_OBJ_POINTS has te be defined, based on point cloud analysis
             if(len(obj) > hparams['num_points_per_object']):   

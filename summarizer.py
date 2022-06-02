@@ -11,9 +11,6 @@ class S3DIS_Summarizer():
 
     # Names of the cols are going to be saved in the CSV summary file
     # after folder traversal
-    # S3DIS_summary_cols = ["Area", "Space", "Object", 
-    #    "Object Points", "Space Label", "Space ID", "Object Label", "Object ID", "Health Status"]
-
     S3DIS_summary_cols = [
             "Area", 
             "Space", 
@@ -26,7 +23,7 @@ class S3DIS_Summarizer():
             "Health Status"
         ]
 
-    def __init__(self, path_to_data, rebuild = False, check_consistency = False):
+    def __init__(self, path_to_data, logger, rebuild = False, check_consistency = False):
         """
         Inspect the dataset to get the following info:
 
@@ -68,6 +65,7 @@ class S3DIS_Summarizer():
         self.path_to_data = path_to_data
         self.rebuild = rebuild
         self.path_to_summary_file = os.path.join(self.path_to_data, eparams['s3dis_summary_file'])
+        self.logger = logger
 
         # Do NOT process the info if the summary file already exists
         if os.path.exists(self.path_to_summary_file):
@@ -210,7 +208,9 @@ class S3DIS_Summarizer():
                 # Flag the file as "Bad", if failure
                 self.summary_df.at[idx,"Health Status"] = "Bad"
 
-                # TODO: Write error on logger
+                # Write error on logger
+                msg = "The following file seems to be corrupted: {} ".format(path_to_obj)
+                self.logger.writer.add_text("Summarizer/Error", msg)
                 
             
             finally:

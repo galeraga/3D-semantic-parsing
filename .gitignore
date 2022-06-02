@@ -3,3 +3,7 @@ __pycache__/dataset.cpython-38.pyc
 __pycache__/settings.cpython-38.pyc
 .gitignore
 __pycache__/summarizer.cpython-38.pyc
+__pycache__/model.cpython-38.pyc
+__pycache__/tensorboard.cpython-38.pyc
+.gitignore
+__pycache__/tensorboardlogger.cpython-38.pyc

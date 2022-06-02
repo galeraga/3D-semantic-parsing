@@ -1,155 +1,27 @@
-# http://www.open3d.org/docs/latest/introduction.html
-# Pay attention to Open3D-Viewer App http://www.open3d.org/docs/latest/introduction.html#open3d-viewer-app
-# and the Open3D-ML http://www.open3d.org/docs/latest/introduction.html#open3d-ml
-# pip install open3d
+"""
+PointNet implementation with S3DIS dataset
+"""
 
 from settings import * 
-from summarizer import S3DIS_Summarizer
 from dataset import S3DISDataset
-from model import ClassificationPointNet
-
-# Define the logging settings
-# Logging is Python-version sensitive
-for handler in logging.root.handlers[:]:
-    logging.root.removeHandler(handler)
-
-# For Python < 3.9 (minor version: 9) 
-# encoding argument can't be used
-if sys.version_info[1] < 9:
-    logging.basicConfig(filename = os.path.join(eparams['pc_data_path'], eparams['log_file']),
-        level=logging.WARNING,
-        format='%(asctime)s %(message)s')
-else:
-    logging.basicConfig(filename = os.path.join(eparams['pc_data_path'], eparams['log_file']),
-        encoding='utf-8', 
-        level=logging.WARNING,
-        format='%(asctime)s %(message)s')
+from model import ClassificationPointNet, SegmentationPointNet
+from tensorboardlogger import TensorBoardLogger 
+from summarizer import S3DIS_Summarizer
 
 
-def normalize_RGB_single_file(f):
+def task_welcome_msg(task = None):
     """
-    Takes the input file and calculates the RGB normalization
-    for a single point cloud file
     """
+    msg = "Starting {}-{} with: ".format(task, args.goal)
+    msg += "{} points per object | ".format(hparams['num_points_per_object'])
+    msg += "{} dimensions per object | ".format(hparams['dimensions_per_object'])
+    msg += "{} batch_size | ".format(hparams['batch_size'])
+    msg += "device: {}".format(hparams['device'])
+    print(msg)
 
-    # Keep the original dataset file intact and create 
-    # a new file with normalized RGB values 
-    file_path, file_name = os.path.split(f)   
-    tgt_file = file_name.split('.')[0] + eparams['pc_file_extension_rgb_norm']
-     
-    # Skip the process if the file has been already normalized
-    if (tgt_file in os.listdir(file_path)) or (eparams['pc_file_extension_rgb_norm'] in file_name):
-        print("...skipped (already normalized)")
-        return
-    else:
-        tgt_file = os.path.join(file_path, tgt_file)
-
-    normalized = ''
-    with open(f) as src:
-        with open(tgt_file, "w") as tgt:
-            try:
-                for l in src:
-                    # Convert the str to list for easier manipulation
-                    x, y, z, r, g, b = l.split()
-                    r = float(r)/255
-                    g = float(g)/255
-                    b = float(b)/255
-
-                    # Back to str again
-                    normalized += ' '.join([str(x), str(y), str(z), 
-                        '{:.8s}'.format(str(r)), 
-                        '{:.8s}'.format(str(g)), 
-                        '{:.8s}'.format(str(b)), 
-                        '\n'])        
-                
-                tgt.write(normalized)
-
-            except ValueError:
-                msg1 = " -> unable to procees file %s " % src.name
-                msg2 = msg1 + "(check log at %s)" % os.path.join(eparams['pc_data_path'], eparams['log_file'])
-                print(msg2)
-                logging.warning(msg1)
-            
-            else:
-                print("...done")
-
-
-def RGB_normalization(areas):
+def create_dataloaders(ds):
     """
-    Normalize RGB in all disjoint spaces in order to let o3d display them
-    """
-    # Let's gather the total number of spaces to process    
-    total_areas = len(areas)
-    total_spaces = 0
-    for space in areas:
-        total_spaces += len(areas[space])
-
-    # Let's process each space
-    total_processed = 0
-    for idx, (area, folders) in enumerate(sorted(areas.items())):
-        for folder in sorted(folders):    
-            total_processed += 1         
-            print("Processing RGB normalization in {} ({}/{})| file {} ({}/{})".format(
-                area, (idx+1), total_areas, folder, total_processed, total_spaces), 
-                end = " ")
-            path_to_space = os.path.join(eparams['pc_data_path'], area, folder)
-            normalize_RGB_single_file(os.path.join(path_to_space, folder) + eparams['pc_file_extension'])
-
-            # Let's also process the annotations
-            path_to_annotations = os.path.join(path_to_space,"Annotations")
-            for file in os.listdir(path_to_annotations):
-                print("\tProcessing RGB normalization in file: ", file, end = " ")
-                normalize_RGB_single_file(os.path.join(path_to_annotations, file))
-
-
-
-def get_spaces(path_to_data):
-    """
-    Inspect the dataset location to determine the amount of available 
-    areas and spaces (offices, hallways, etc) 
-    Path_to_data\Area_N\office_X
-                       \office_Y
-                       \office_Z
-    Input: Path to dataset
-    Output: A dict with 
-        - key: Area_N
-        - values: a list of included disjoint spaces per Area
-    """
-    
-    # Keep only folders starting with Area_XXX
-    areas = dict((folder, '') for folder in os.listdir(path_to_data) if folder.startswith('Area'))
-    
-    # For every area folder, get the disjoint spaces included within it
-    # Removing any file that contains '.' (e.g., .DStore, alignment.txt)
-    # os.path.join takes into account the concrete OS separator ("/", "\")
-    for area in areas:
-        areas[area] = sorted([subfolder for subfolder in os.listdir(os.path.join(path_to_data, area)) 
-            if not '.' in subfolder])
-
-    return areas
-
-
-if __name__ == "__main__":
-
-    # Create the summary file that will contain important info about the dataset
-    summary = S3DIS_Summarizer(eparams['pc_data_path'], check_consistency = False)
-    
-    # Get the labels dict
-    # {0: 'openspace', 1: 'pantry', ... , 10: 'lounge'}
-    # {0: 'bookcase', 1: 'door', 2: 'ceiling', ... , 13: 'floor'}
-    # space_labels_dict, object_labels_dict = summary.get_labels()
-    
-    # Get statistical info
-    # summary.get_stats()
-
-    # Create the S3DIS dataset
-    ds = S3DISDataset(eparams['pc_data_path'], transform = None)
-    print(ds)
-    
-    """
-    for idx,i in enumerate(ds):
-        obj, label = i
-        print("{} - Object shape {} | Label: {} ".format(idx, obj.shape, label)) 
+    Creates the dataloaders
     """
 
     # Splitting the dataset (80% training, 10% validation, 10% test)
@@ -166,47 +38,112 @@ if __name__ == "__main__":
                                             split_criteria,
                                             generator=torch.Generator().manual_seed(1))
 
+    # Dataloaders creation
     train_dataloader = torch.utils.data.DataLoader(
             train_dataset, 
             batch_size = hparams['batch_size'], 
-            shuffle = True
+            shuffle = True,
+            num_workers = hparams["num_workers"]
             )
     
     val_dataloader = torch.utils.data.DataLoader(
             val_dataset,
             batch_size = hparams['batch_size'], 
-            shuffle = True
+            shuffle = True,
+            num_workers = hparams["num_workers"]
             )
     
     test_dataloader = torch.utils.data.DataLoader(
             test_dataset, 
             batch_size = hparams['batch_size'], 
-            shuffle = False
+            shuffle = True,
+            num_workers = hparams["num_workers"]
             )
-
-    """
-    num_batches = len(train_dataloader)
-    for idx, dl in enumerate(train_dataloader):
-        bobject, blabel = dl
-        msg = "Checking dataloader {}/{} | "
-        msg += "Batch object shape {} | "
-        msg += "Batch label lenght {}"
-        print(msg.format(idx +1, num_batches, bobject.shape, len(blabel)))
-    """ 
     
+    return train_dataloader, val_dataloader, test_dataloader
 
-    # Model instance    
-    model = ClassificationPointNet(num_classes = hparams['num_classes'],
-                                   point_dimension = hparams['dimensions_per_object'])
+
+def test_classification(model, dataloaders):
+    """
+    Test the PointNet classification network
+    """
+
+    # Task welcome message
+    task_welcome_msg(task = "test")
+    
+    # Path to the checkpoint file
+    model_checkpoint = os.path.join(
+            eparams['pc_data_path'], 
+            eparams['checkpoints_folder'], 
+            eparams["checkpoint_name"]
+            )
+    
+    # If the checkpoint does not exist, train the model
+    if not os.path.exists(model_checkpoint):
+        print("The model does not seem already trained! Starting the training rigth now...")
+        train_classification(model, dataloaders)
+    
+    # Loading the existing checkpoint
+    print("Loading checkpoint {} ...".format(model_checkpoint))
+    state = torch.load(
+                model_checkpoint, 
+                map_location = torch.device(hparams["device"]))
+    model.load_state_dict(state['model'])  
+
+    # Select the proper dataloader
+    test_dataloader = dataloaders[2]
+
+    # Aux test vars
+    accuracies = []
+    
+    # Enter evaluation mode
+    model.eval()
+    
+    # Test the model
+    print("Testing data classification")
+    for batch_idx, data in enumerate(tqdm(test_dataloader)):
+        points, target_labels = data
+        preds, feature_transform, tnet_out, ix = model(points)
+        
+        # preds.shape([batch_size, num_classes])
+        preds = preds.data.max(1)[1]
+        
+        corrects = preds.eq(target_labels.data).cpu().sum()
+        accuracy = corrects.item() / float(hparams['batch_size'])
+        accuracies.append(accuracy)
+        
+        logger.writer.add_scalar("Accuracy/Test", accuracy, batch_idx)
+    
+    mean_accuracy = (torch.FloatTensor(accuracies).sum()/len(accuracies))*100
+    print("Average accuracy: {:.2f} ".format(float(mean_accuracy)))
+               
+def train_classification(model, dataloaders):
+    """
+    Train the PointNet classification network
+
+    Inputs:
+        - model: the PointNet model class
+        - dataloaders: train, val and test
+
+    Outputs:
+        - None
+    """
+
+    # Task welcome message
+    task_welcome_msg(task = "train")
+    
+    # Get the proper dataloaders
+    train_dataloader = dataloaders[0]
+    val_dataloader = dataloaders[1]
+
+    # Aux training vars
+    train_loss = []
+    val_loss = []
+    train_acc = []
+    val_acc = []
+    best_loss= np.inf
 
     optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
-
-    # Training
-    train_loss = []
-    test_loss = []
-    train_acc = []
-    test_acc = []
-    best_loss= np.inf
 
     for epoch in tqdm(range(hparams['epochs'])):
         epoch_train_loss = []
@@ -215,8 +152,11 @@ if __name__ == "__main__":
         # training loop
         for data in train_dataloader:
             points, targets = data  
+            
+            points = points.to(device)
+            targets = targets.to(device)
 
-            """
+            """"
             if torch.cuda.is_available():
                 points, targets = points.cuda(), targets.cuda()
             if points.shape[0] <= 1:
@@ -224,6 +164,7 @@ if __name__ == "__main__":
             """
 
             optimizer.zero_grad()
+            
             model = model.train()
 
             preds, feature_transform, tnet_out, ix_maxpool = model(points)
@@ -234,6 +175,7 @@ if __name__ == "__main__":
             if torch.cuda.is_available():
                 identity = identity.cuda()
             
+            
             regularization_loss = torch.norm(
                 identity - torch.bmm(feature_transform, feature_transform.transpose(2, 1)))
             
@@ -242,13 +184,15 @@ if __name__ == "__main__":
             # It is useful to train a classification problem with C classes.
             # torch.nn.functional.nll_loss(input, target, ...) 
             # input – (N,C) (N: batch_size; C: num_classes) 
-            # target (C)
+            # target - (C)
             # preds.shape[batch_size, num_classes]
             # targets.shape[batch_size], but every item in the target tensor
             # must be in the range of num_classes - 1 
             # E.g: if num_classes = 2 -> target[i] < 2 {0, 1}
 
-            # Why adding 0.001 and regularization_loss
+            # A regularization loss (with weight 0.001) is added to the softmax
+            # classification loss to make the matrix close to ortoghonal
+            # (quoted from supplementary info from the original paper)
             loss = F.nll_loss(preds, targets) + 0.001 * regularization_loss
             
             epoch_train_loss.append(loss.cpu().item())
@@ -260,12 +204,13 @@ if __name__ == "__main__":
 
             accuracy = corrects.item() / float(hparams['batch_size'])
             epoch_train_acc.append(accuracy)
+            
 
-        epoch_test_loss = []
-        epoch_test_acc = []
+        epoch_val_loss = []
+        epoch_val_acc = []
 
         # validation loop
-        for batch_number, data in enumerate(test_dataloader):
+        for batch_number, data in enumerate(val_dataloader):
             points, targets = data
             if torch.cuda.is_available():
                 points, targets = points.cuda(), targets.cuda()
@@ -273,63 +218,101 @@ if __name__ == "__main__":
             model = model.eval()
             preds, feature_transform, tnet_out, ix = model(points)
             loss = F.nll_loss(preds, targets)
-            epoch_test_loss.append(loss.cpu().item())
+            epoch_val_loss.append(loss.cpu().item())
             
             preds = preds.data.max(1)[1]
             corrects = preds.eq(targets.data).cpu().sum()
             accuracy = corrects.item() / float(hparams['batch_size'])
-            epoch_test_acc.append(accuracy)
+            epoch_val_acc.append(accuracy)
+
 
         print('Epoch %s: train loss: %s, val loss: %f, train accuracy: %s,  val accuracy: %f'
                 % (epoch,
                     round(np.mean(epoch_train_loss), 4),
-                    round(np.mean(epoch_test_loss), 4),
+                    round(np.mean(epoch_val_loss), 4),
                     round(np.mean(epoch_train_acc), 4),
-                    round(np.mean(epoch_test_acc), 4)))
+                    round(np.mean(epoch_val_acc), 4)))
 
-        if np.mean(test_loss) < best_loss:
+        if np.mean(val_loss) < best_loss:
             state = {
                 'model': model.state_dict(),
                 'optimizer': optimizer.state_dict()
             }
             torch.save(
                 state, 
-                os.path.join(
-                    eparams['pc_data_path'],
-                    'S3DIS_checkpoint_%s.pth' % (hparams['num_points_per_object'])
-                    )
+                os.path.join(eparams['pc_data_path'], 
+                    eparams["checkpoints_folder"],
+                    eparams["checkpoint_name"])
                 )
-            best_loss=np.mean(test_loss)
+            best_loss=np.mean(val_loss)
 
         train_loss.append(np.mean(epoch_train_loss))
-        test_loss.append(np.mean(epoch_test_loss))
+        val_loss.append(np.mean(epoch_val_loss))
         train_acc.append(np.mean(epoch_train_acc))
-        test_acc.append(np.mean(epoch_test_acc))
+        val_acc.append(np.mean(epoch_val_acc))
+
+        # Log results to TensorBoard for every epoch
+        logger.writer.add_scalar("Loss/Training", train_loss[-1], epoch)
+        logger.writer.add_scalar("Loss/Validation", val_loss[-1], epoch)
+        logger.writer.add_scalar("Accuracy/Training", train_acc[-1], epoch)
+        logger.writer.add_scalar("Accuracy/Validation", val_acc[-1], epoch)
 
 
-    # TODO: To be removed, since all data is based now in the summary file
-    # Get a dict of areas and spaces
-    # areas_and_spaces = get_spaces(PC_DATA_PATH)
+if __name__ == "__main__":
 
-    # TODO: Rebuild the normalization to be based on the sumamry file,
-    # not in the traversal of directories
-    # Normalize RGB in all spaces
-    # RGB_normalization(areas_and_spaces)
+    # Prepare to run on CUDA/CPU
+    device = hparams['device']
 
-    # To quickly test o3d
-    # Two minor issues when working with S3DIS dataset:
-    # - Open3D does NOT support TXT file extension, so we have to specify 
-    #   the xyzrgb format (check supported file extensions here: 
-    #   http://www.open3d.org/docs/latest/tutorial/Basic/file_io.html) 
-    # - When working with xyzrgb format, each line contains [x, y, z, r, g, b], 
-    #   where r, g, b are in floats of range [0, 1]
-    #   So we need to normalize the RGB values from the S3DIS dataset in order 
-    #   to allow Open3D to display them
+    # Create a TensorBoard logger instance
+    logger = TensorBoardLogger(args)
 
-    """
-    pcd = o3d.io.read_point_cloud(
-        os.path.join(PC_DATA_PATH, TEST_PC + PC_FILE_EXTENSION_RGB_NORM),
-        format='xyzrgb')
-    print(pcd)
-    """
-    # o3d.visualization.draw_geometries([pcd])
+    # Create the ground truth file
+    summary_file = S3DIS_Summarizer(eparams["pc_data_path"], logger)
+
+    # Log insights from the S3DIS dataset into TensorBoard
+    logger.log_dataset_stats(summary_file)
+
+    # Logging hparams for future reference
+    logger.log_hparams(hparams)
+    
+    # Create the S3DIS dataset
+    ds = S3DISDataset(eparams['pc_data_path'], transform = None)
+    print(ds)
+    
+    # Create the dataloaders
+    # dataloaders = (train_dataloader, validation_dataloader, test_dataloader)
+    dataloaders = create_dataloaders(ds)
+
+    # Define the checkpoint name
+    eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_points_{}_dims.pth".format(
+                                            hparams["num_points_per_object"],
+                                            hparams["dimensions_per_object"]
+                                            )
+
+
+    # Model instance creation (goal-dependent)
+    
+    if args.goal == "classification":
+        model = ClassificationPointNet(num_classes = hparams['num_classes'],
+                                   point_dimension = hparams['dimensions_per_object']).to(device)
+    
+    if args.goal == "segmentation":
+        model = SegmentationPointNet(num_classes = hparams['num_classes'],
+                                   point_dimension = hparams['dimensions_per_object']).to(device)
+
+    
+    # Select the task to do
+    # When choices are given in parser add_argument, the parser returns a list 
+    # with the selected choice
+    if "classification" in args.goal: 
+        if "train" in args.task:
+            train_classification(model, dataloaders)
+        
+        if "test" in args.task:
+            test_classification(model, dataloaders)
+    
+    # Close TensorBoard logger and send runs to TensorBoard.dev
+    logger.finish()
+    
+    
+

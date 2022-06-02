@@ -27,6 +27,7 @@ def create_dataloaders(ds):
     # Splitting the dataset (80% training, 10% validation, 10% test)
     # TODO: Modify the dataset to be split by building
     # Building 1 (Area 1, Area 3, Area 6), Building 2 (Area 2, Area 4), Building 3 (Area 5)
+    # Other papers set Area 5 for test
     original_ds_length = len(ds)
     training_ds_length = round(0.8*original_ds_length)
     validation_ds_length = round(0.1*original_ds_length)
@@ -151,22 +152,15 @@ def train_classification(model, dataloaders):
 
         # training loop
         for data in train_dataloader:
+            model = model.train()
+            
             points, targets = data  
             
             points = points.to(device)
             targets = targets.to(device)
 
-            """"
-            if torch.cuda.is_available():
-                points, targets = points.cuda(), targets.cuda()
-            if points.shape[0] <= 1:
-                continue
-            """
-
             optimizer.zero_grad()
             
-            model = model.train()
-
             preds, feature_transform, tnet_out, ix_maxpool = model(points)
 
             # Why?  
@@ -196,12 +190,12 @@ def train_classification(model, dataloaders):
             loss = F.nll_loss(preds, targets) + 0.001 * regularization_loss
             
             epoch_train_loss.append(loss.cpu().item())
+           
             loss.backward()
             optimizer.step()
             
             preds = preds.data.max(1)[1]
             corrects = preds.eq(targets.data).cpu().sum()
-
             accuracy = corrects.item() / float(hparams['batch_size'])
             epoch_train_acc.append(accuracy)
             
@@ -211,13 +205,15 @@ def train_classification(model, dataloaders):
 
         # validation loop
         for batch_number, data in enumerate(val_dataloader):
-            points, targets = data
-            if torch.cuda.is_available():
-                points, targets = points.cuda(), targets.cuda()
-            
             model = model.eval()
+    
+            points, targets = data
+            points = points.to(device)
+            targets = targets.to(device)
+                     
             preds, feature_transform, tnet_out, ix = model(points)
             loss = F.nll_loss(preds, targets)
+            
             epoch_val_loss.append(loss.cpu().item())
             
             preds = preds.data.max(1)[1]
@@ -291,7 +287,6 @@ if __name__ == "__main__":
 
 
     # Model instance creation (goal-dependent)
-    
     if args.goal == "classification":
         model = ClassificationPointNet(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object']).to(device)

@@ -63,7 +63,7 @@ def create_dataloaders(ds):
     
     return train_dataloader, val_dataloader, test_dataloader
 
-
+@torch.no_grad()
 def test_classification(model, dataloaders):
     """
     Test the PointNet classification network
@@ -287,11 +287,11 @@ if __name__ == "__main__":
 
 
     # Model instance creation (goal-dependent)
-    if args.goal == "classification":
+    if "classification" in args.goal:
         model = ClassificationPointNet(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object']).to(device)
     
-    if args.goal == "segmentation":
+    if "segmentation" in args.goal:
         model = SegmentationPointNet(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object']).to(device)
 

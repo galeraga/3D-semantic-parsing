@@ -6,12 +6,12 @@ Point clouds is a type of geometric data structure.
 
 PointNet: Respects invariance of input points and no voxel grids are needed
 
-Available PointNet tasks:
+PointNet provides a unified architecture for the following applications:
 1) Object (shape) classification
 2) Part segmentation
 3) Scene semantic parsing
 
-In this project, we'll be focus on implementing only object classification and scene semantic parsing
+In this project, we'll be focus on implementing only object classification and scene semantic parsing. As a dataset, we'll use the S3DIS dataset.
 
 ## Section 1
 This is section1 

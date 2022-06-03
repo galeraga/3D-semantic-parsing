@@ -17,7 +17,7 @@ In this project, we'll be focus on implementing only object classification and s
 ## Main goals
 This is section1 
 
-### The dataset
+### Subsection 1
 This is subsection 1.1 
 
 #### Subsection 1.1.1
@@ -26,6 +26,7 @@ This is subsection 1.1.1
 ## Repository Structure
 This is section1 
 
+## The dataset
 
 ## Related Work
 

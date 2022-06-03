@@ -173,6 +173,8 @@ def train_classification(model, dataloaders):
             # TODO: According to the original paper, it should only be applied
             # during the alignment of the feature space (with higher dimension (64))
             # than the spatial transformation matrix (3)
+            # With the regularization loss, the model optimization becomes more
+            # stable and achieves better performance
             regularization_loss = torch.norm(
                 identity - torch.bmm(feature_transform, feature_transform.transpose(2, 1)))
             

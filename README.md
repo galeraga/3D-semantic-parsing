@@ -4,7 +4,7 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
 ## Abstract
 Point clouds is a type of geometric data structure.
 
-PointNet: Respects invariance of points in the inputs and no voxel grids are needed
+PointNet: Respects invariance of input points and no voxel grids are needed
 
 Available PointNet tasks:
 1) Object (shape) classification

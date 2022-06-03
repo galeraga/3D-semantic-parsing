@@ -18,6 +18,7 @@ In this project, we'll be focus on implementing only object classification and s
 This is section1 
 
 ## The dataset
+3D Semantic Parsing of Large-Scale Indoor Spaces (S3DIS)
 
 ### Subsection 1
 This is subsection 1.1 

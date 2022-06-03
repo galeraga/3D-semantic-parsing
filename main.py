@@ -169,7 +169,10 @@ def train_classification(model, dataloaders):
             if torch.cuda.is_available():
                 identity = identity.cuda()
             
-            
+            # Formula (2) in original paper (Lreg)
+            # TODO: According to the original paper, it should only be applied
+            # during the alignment of the feature space (with higher dimension (64))
+            # than the spatial transformation matrix (3)
             regularization_loss = torch.norm(
                 identity - torch.bmm(feature_transform, feature_transform.transpose(2, 1)))
             

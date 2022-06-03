@@ -8,7 +8,7 @@ PointNet: Respects invariance of input points and no voxel grids are needed
 
 PointNet provides a unified deep learning architecture for the following applications, based on 3D point cloud inputs:
 1) Shape classification 
-2) Part segmentation
+2) Shape part segmentation
 3) Scene semantic parsing
 
 In this project, we'll be focus on implementing only object classification and scene semantic parsing. As a dataset, we'll use the S3DIS dataset.

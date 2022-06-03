@@ -2,11 +2,11 @@
 Repo to host the UPC AIDL spring 2022 post-graduate project
 
 ## Abstract
-Point clouds is a type of 3D geometric data structure.
+A point cloud is a type of 3D geometric data structure, based on unordered set of vectors.
 
 PointNet: Respects invariance of input points and no voxel grids are needed
 
-PointNet provides a unified deep learning architecture for the following applications, based on 3D point cloud inputs:
+PointNet provides a unified deep learning architecture for the following applications, based on point cloud inputs:
 1) Shape classification 
 2) Shape part segmentation
 3) Scene semantic parsing

@@ -45,7 +45,7 @@ class TransformationNet(nn.Module):
         x = F.relu(self.bn_3(self.conv_3(x)))
 
         # Define the Maxpool1D and apply it on x directly
-        x = nn.MaxPool1d(num_points, return_indices = False)(x)
+        x = nn.MaxPool1d(num_points, return_indices = False, ceil_mode = False)(x)
         x = x.view(-1, 1024)
 
         x = F.relu(self.bn_4(self.fc_1(x)))
@@ -122,7 +122,7 @@ class BasePointNet(nn.Module):
         x = F.relu(self.bn_3(self.conv_3(x))) 
         
         # Max-pooling (x.shape after pooling:[batch_size, 1024, 1])
-        x, ix = nn.MaxPool1d(num_points, return_indices=True)(x)  
+        x, ix = nn.MaxPool1d(num_points, return_indices = True, ceil_mode = False)(x)  
         
         # Global Feature Vector (shape([batch_size, 1024]))
         global_feature_vector = x.view(-1, 1024)   

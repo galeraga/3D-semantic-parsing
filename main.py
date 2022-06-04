@@ -290,7 +290,8 @@ if __name__ == "__main__":
     dataloaders = create_dataloaders(ds)
 
     # Define the checkpoint name
-    eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_points_{}_dims.pth".format(
+    eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_{}_points_{}_dims.pth".format(
+                                            ''.join(args.goal),
                                             hparams["num_points_per_object"],
                                             hparams["dimensions_per_object"]
                                             )

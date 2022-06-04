@@ -100,6 +100,12 @@ parser.add_argument("--load",
 args = parser.parse_args()
 
 # Adjust some hyperparameters based on the desired resource consumption
+# In GCP, "Our suggested max number of worker in current system is 2, 
+# which is smaller than what this DataLoader is going to create. Please
+# be aware that excessive worker creation might get DataLoader running 
+# slow or even freeze, lower the worker number to avoid potential 
+# slowness/freeze if necessary.
+
 if "low" in args.load:
     hparams["num_points_per_object"] = 100
     hparams["dimensions_per_object"] = 3
@@ -109,10 +115,10 @@ if "medium" in args.load:
     hparams["num_points_per_object"] = 1024
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 10
-    
+
 if "high" in args.load:
     hparams["num_points_per_object"] = 4096
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 50
-    hparams["num_workers"] = 4
+    hparams["num_workers"] = 2
 

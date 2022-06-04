@@ -36,7 +36,7 @@ eparams = {
 
 # Checking if the script is running in GCP
 if "OS_IMAGE_FAMILY" in os.environ.keys():
-    eparams['pc_data_path'] = "/s3dis/data"
+    eparams['pc_data_path'] = "/home/s3disuser/data"
 
 # Model hyperparameters
 hparams = {
@@ -72,7 +72,7 @@ parser.add_argument("--goal",
                     action = "store",
                     nargs = 1,
                     default = "classification",
-                    choices = ["class", "seg"],
+                    choices = ["classification", "segmentation"],
                     help = "Either classification (class) or segmentation (seg)")
 
 parser.add_argument("--task",
@@ -100,12 +100,12 @@ args = parser.parse_args()
 
 # Adjust some hyperparameters based on the desired resource consumption
 if args.load == "low":
-    hparams["num_points_per_object"] = 100
+    hparams["num_points_per_object"] = 512
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 5
 
 if args.load == "medium":
-    hparams["num_points_per_object"] = 1000
+    hparams["num_points_per_object"] = 1024
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 10
     

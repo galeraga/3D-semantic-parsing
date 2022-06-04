@@ -7,7 +7,7 @@ Each point is a vector of its (z, y, z) coordinate plus extra feature channels s
 
 PointNet: Respects invariance of input points and no voxel grids are needed
 
-PointNet provides a unified deep learning architecture for the following applications, based on point cloud inputs:
+PointNet provides a unified deep learning architecture for the following application recognition tasks, based on point cloud inputs:
 1) Shape classification 
 2) Shape part segmentation
 3) Scene semantic parsing

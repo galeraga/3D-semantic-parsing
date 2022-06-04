@@ -8,3 +8,4 @@ scikit-learn==1.0.2
 pandas==1.4.2
 PyYAML==6.0
 open3d
+tensorboard==2.9.0

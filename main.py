@@ -27,6 +27,7 @@ def create_dataloaders(ds):
     # Splitting the dataset (80% training, 10% validation, 10% test)
     # TODO: Modify the dataset to be split by building
     # Building 1 (Area 1, Area 3, Area 6), Building 2 (Area 2, Area 4), Building 3 (Area 5)
+    # Other papers set Area 5 for test
     original_ds_length = len(ds)
     training_ds_length = round(0.8*original_ds_length)
     validation_ds_length = round(0.1*original_ds_length)
@@ -62,7 +63,7 @@ def create_dataloaders(ds):
     
     return train_dataloader, val_dataloader, test_dataloader
 
-
+@torch.no_grad()
 def test_classification(model, dataloaders):
     """
     Test the PointNet classification network
@@ -151,22 +152,15 @@ def train_classification(model, dataloaders):
 
         # training loop
         for data in train_dataloader:
+            model = model.train()
+            
             points, targets = data  
             
             points = points.to(device)
             targets = targets.to(device)
 
-            """"
-            if torch.cuda.is_available():
-                points, targets = points.cuda(), targets.cuda()
-            if points.shape[0] <= 1:
-                continue
-            """
-
             optimizer.zero_grad()
             
-            model = model.train()
-
             preds, feature_transform, tnet_out, ix_maxpool = model(points)
 
             # Why?  
@@ -175,7 +169,12 @@ def train_classification(model, dataloaders):
             if torch.cuda.is_available():
                 identity = identity.cuda()
             
-            
+            # Formula (2) in original paper (Lreg)
+            # TODO: According to the original paper, it should only be applied
+            # during the alignment of the feature space (with higher dimension (64))
+            # than the spatial transformation matrix (3)
+            # With the regularization loss, the model optimization becomes more
+            # stable and achieves better performance
             regularization_loss = torch.norm(
                 identity - torch.bmm(feature_transform, feature_transform.transpose(2, 1)))
             
@@ -196,12 +195,12 @@ def train_classification(model, dataloaders):
             loss = F.nll_loss(preds, targets) + 0.001 * regularization_loss
             
             epoch_train_loss.append(loss.cpu().item())
+           
             loss.backward()
             optimizer.step()
             
             preds = preds.data.max(1)[1]
             corrects = preds.eq(targets.data).cpu().sum()
-
             accuracy = corrects.item() / float(hparams['batch_size'])
             epoch_train_acc.append(accuracy)
             
@@ -211,13 +210,15 @@ def train_classification(model, dataloaders):
 
         # validation loop
         for batch_number, data in enumerate(val_dataloader):
-            points, targets = data
-            if torch.cuda.is_available():
-                points, targets = points.cuda(), targets.cuda()
-            
             model = model.eval()
+    
+            points, targets = data
+            points = points.to(device)
+            targets = targets.to(device)
+                     
             preds, feature_transform, tnet_out, ix = model(points)
             loss = F.nll_loss(preds, targets)
+            
             epoch_val_loss.append(loss.cpu().item())
             
             preds = preds.data.max(1)[1]
@@ -291,12 +292,11 @@ if __name__ == "__main__":
 
 
     # Model instance creation (goal-dependent)
-    
-    if args.goal == "classification":
+    if "classification" in args.goal:
         model = ClassificationPointNet(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object']).to(device)
     
-    if args.goal == "segmentation":
+    if "segmentation" in args.goal:
         model = SegmentationPointNet(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object']).to(device)
 
@@ -310,6 +310,15 @@ if __name__ == "__main__":
         
         if "test" in args.task:
             test_classification(model, dataloaders)
+    
+    # TODO
+    if "segmentation" in args.goal: 
+        if "train" in args.task:
+            ...
+        
+        if "test" in args.task:
+            ...
+    
     
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.finish()

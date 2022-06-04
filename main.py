@@ -16,7 +16,8 @@ def task_welcome_msg(task = None):
     msg += "{} points per object | ".format(hparams['num_points_per_object'])
     msg += "{} dimensions per object | ".format(hparams['dimensions_per_object'])
     msg += "{} batch_size | ".format(hparams['batch_size'])
-    msg += "device: {}".format(hparams['device'])
+    msg += "device: {} | ".format(hparams['device'])
+    msg += "workers: {}".format(hparams['num_workers'])
     print(msg)
 
 def create_dataloaders(ds):

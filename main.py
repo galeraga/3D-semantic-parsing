@@ -146,117 +146,121 @@ def train_classification(model, dataloaders):
 
     optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
 
-    for epoch in tqdm(range(hparams['epochs'])):
-        epoch_train_loss = []
-        epoch_train_acc = []
+    # To avoid MaxPool1d warning in GCP
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
 
-        # training loop
-        for data in train_dataloader:
-            model = model.train()
+        for epoch in tqdm(range(hparams['epochs'])):
+            epoch_train_loss = []
+            epoch_train_acc = []
+
+            # training loop
+            for data in train_dataloader:
+                model = model.train()
+                
+                points, targets = data  
+                
+                points = points.to(device)
+                targets = targets.to(device)
+
+                optimizer.zero_grad()
+                
+                preds, feature_transform, tnet_out, ix_maxpool = model(points)
+
+                # Why?  
+                identity = torch.eye(feature_transform.shape[-1])
+
+                if torch.cuda.is_available():
+                    identity = identity.cuda()
+                
+                # Formula (2) in original paper (Lreg)
+                # TODO: According to the original paper, it should only be applied
+                # during the alignment of the feature space (with higher dimension (64))
+                # than the spatial transformation matrix (3)
+                # With the regularization loss, the model optimization becomes more
+                # stable and achieves better performance
+                regularization_loss = torch.norm(
+                    identity - torch.bmm(feature_transform, feature_transform.transpose(2, 1)))
+                
+
+                # Loss: The negative log likelihood loss 
+                # It is useful to train a classification problem with C classes.
+                # torch.nn.functional.nll_loss(input, target, ...) 
+                # input – (N,C) (N: batch_size; C: num_classes) 
+                # target - (C)
+                # preds.shape[batch_size, num_classes]
+                # targets.shape[batch_size], but every item in the target tensor
+                # must be in the range of num_classes - 1 
+                # E.g: if num_classes = 2 -> target[i] < 2 {0, 1}
+
+                # A regularization loss (with weight 0.001) is added to the softmax
+                # classification loss to make the matrix close to ortoghonal
+                # (quoted from supplementary info from the original paper)
+                loss = F.nll_loss(preds, targets) + 0.001 * regularization_loss
+                
+                epoch_train_loss.append(loss.cpu().item())
             
-            points, targets = data  
-            
-            points = points.to(device)
-            targets = targets.to(device)
+                loss.backward()
+                optimizer.step()
+                
+                preds = preds.data.max(1)[1]
+                corrects = preds.eq(targets.data).cpu().sum()
+                accuracy = corrects.item() / float(hparams['batch_size'])
+                epoch_train_acc.append(accuracy)
+                
 
-            optimizer.zero_grad()
-            
-            preds, feature_transform, tnet_out, ix_maxpool = model(points)
+            epoch_val_loss = []
+            epoch_val_acc = []
 
-            # Why?  
-            identity = torch.eye(feature_transform.shape[-1])
-
-            if torch.cuda.is_available():
-                identity = identity.cuda()
-            
-            # Formula (2) in original paper (Lreg)
-            # TODO: According to the original paper, it should only be applied
-            # during the alignment of the feature space (with higher dimension (64))
-            # than the spatial transformation matrix (3)
-            # With the regularization loss, the model optimization becomes more
-            # stable and achieves better performance
-            regularization_loss = torch.norm(
-                identity - torch.bmm(feature_transform, feature_transform.transpose(2, 1)))
-            
-
-            # Loss: The negative log likelihood loss 
-            # It is useful to train a classification problem with C classes.
-            # torch.nn.functional.nll_loss(input, target, ...) 
-            # input – (N,C) (N: batch_size; C: num_classes) 
-            # target - (C)
-            # preds.shape[batch_size, num_classes]
-            # targets.shape[batch_size], but every item in the target tensor
-            # must be in the range of num_classes - 1 
-            # E.g: if num_classes = 2 -> target[i] < 2 {0, 1}
-
-            # A regularization loss (with weight 0.001) is added to the softmax
-            # classification loss to make the matrix close to ortoghonal
-            # (quoted from supplementary info from the original paper)
-            loss = F.nll_loss(preds, targets) + 0.001 * regularization_loss
-            
-            epoch_train_loss.append(loss.cpu().item())
-           
-            loss.backward()
-            optimizer.step()
-            
-            preds = preds.data.max(1)[1]
-            corrects = preds.eq(targets.data).cpu().sum()
-            accuracy = corrects.item() / float(hparams['batch_size'])
-            epoch_train_acc.append(accuracy)
-            
-
-        epoch_val_loss = []
-        epoch_val_acc = []
-
-        # validation loop
-        for batch_number, data in enumerate(val_dataloader):
-            model = model.eval()
-    
-            points, targets = data
-            points = points.to(device)
-            targets = targets.to(device)
-                     
-            preds, feature_transform, tnet_out, ix = model(points)
-            loss = F.nll_loss(preds, targets)
-            
-            epoch_val_loss.append(loss.cpu().item())
-            
-            preds = preds.data.max(1)[1]
-            corrects = preds.eq(targets.data).cpu().sum()
-            accuracy = corrects.item() / float(hparams['batch_size'])
-            epoch_val_acc.append(accuracy)
+            # validation loop
+            for batch_number, data in enumerate(val_dataloader):
+                model = model.eval()
+        
+                points, targets = data
+                points = points.to(device)
+                targets = targets.to(device)
+                        
+                preds, feature_transform, tnet_out, ix = model(points)
+                loss = F.nll_loss(preds, targets)
+                
+                epoch_val_loss.append(loss.cpu().item())
+                
+                preds = preds.data.max(1)[1]
+                corrects = preds.eq(targets.data).cpu().sum()
+                accuracy = corrects.item() / float(hparams['batch_size'])
+                epoch_val_acc.append(accuracy)
 
 
-        print('Epoch %s: train loss: %s, val loss: %f, train accuracy: %s,  val accuracy: %f'
-                % (epoch,
-                    round(np.mean(epoch_train_loss), 4),
-                    round(np.mean(epoch_val_loss), 4),
-                    round(np.mean(epoch_train_acc), 4),
-                    round(np.mean(epoch_val_acc), 4)))
+            print('Epoch %s: train loss: %s, val loss: %f, train accuracy: %s,  val accuracy: %f'
+                    % (epoch,
+                        round(np.mean(epoch_train_loss), 4),
+                        round(np.mean(epoch_val_loss), 4),
+                        round(np.mean(epoch_train_acc), 4),
+                        round(np.mean(epoch_val_acc), 4)))
 
-        if np.mean(val_loss) < best_loss:
-            state = {
-                'model': model.state_dict(),
-                'optimizer': optimizer.state_dict()
-            }
-            torch.save(
-                state, 
-                os.path.join(eparams['pc_data_path'], 
-                    eparams["checkpoints_folder"],
-                    eparams["checkpoint_name"])
-                )
-            best_loss=np.mean(val_loss)
+            if np.mean(val_loss) < best_loss:
+                state = {
+                    'model': model.state_dict(),
+                    'optimizer': optimizer.state_dict()
+                }
+                torch.save(
+                    state, 
+                    os.path.join(eparams['pc_data_path'], 
+                        eparams["checkpoints_folder"],
+                        eparams["checkpoint_name"])
+                    )
+                best_loss=np.mean(val_loss)
 
-        train_loss.append(np.mean(epoch_train_loss))
-        val_loss.append(np.mean(epoch_val_loss))
-        train_acc.append(np.mean(epoch_train_acc))
-        val_acc.append(np.mean(epoch_val_acc))
+            train_loss.append(np.mean(epoch_train_loss))
+            val_loss.append(np.mean(epoch_val_loss))
+            train_acc.append(np.mean(epoch_train_acc))
+            val_acc.append(np.mean(epoch_val_acc))
 
-        # Log results to TensorBoard for every epoch
-        logger.writer.add_scalar("Loss/Training", train_loss[-1], epoch)
-        logger.writer.add_scalar("Loss/Validation", val_loss[-1], epoch)
-        logger.writer.add_scalar("Accuracy/Training", train_acc[-1], epoch)
-        logger.writer.add_scalar("Accuracy/Validation", val_acc[-1], epoch)
+            # Log results to TensorBoard for every epoch
+            logger.writer.add_scalar("Loss/Training", train_loss[-1], epoch)
+            logger.writer.add_scalar("Loss/Validation", val_loss[-1], epoch)
+            logger.writer.add_scalar("Accuracy/Training", train_acc[-1], epoch)
+            logger.writer.add_scalar("Accuracy/Validation", val_acc[-1], epoch)
 
 
 if __name__ == "__main__":

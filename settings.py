@@ -100,19 +100,19 @@ parser.add_argument("--load",
 args = parser.parse_args()
 
 # Adjust some hyperparameters based on the desired resource consumption
-if args.load == "low":
-    hparams["num_points_per_object"] = 512
+if "low" in args.load:
+    hparams["num_points_per_object"] = 100
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 5
 
-if args.load == "medium":
+if "medium" in args.load:
     hparams["num_points_per_object"] = 1024
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 10
     
-if args.load == "high":
+if "high" in args.load:
     hparams["num_points_per_object"] = 4096
-    hparams["dimensions_per_object"] = 6
+    hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 50
     hparams["num_workers"] = 4
 

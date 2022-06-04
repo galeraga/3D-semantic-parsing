@@ -45,7 +45,7 @@ class TransformationNet(nn.Module):
         x = F.relu(self.bn_3(self.conv_3(x)))
 
         # Define the Maxpool1D and apply it on x directly
-        x = nn.MaxPool1d(num_points)(x)
+        x = nn.MaxPool1d(num_points, return_indices = False)(x)
         x = x.view(-1, 1024)
 
         x = F.relu(self.bn_4(self.fc_1(x)))

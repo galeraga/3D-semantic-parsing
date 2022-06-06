@@ -50,6 +50,9 @@ hparams = {
     'epochs': 0,
 }
 
+# Some useful info when running with GPUs in pytorch
+# torch.cuda.device_count() -> 1 (in our current GCP scenario)
+# torch.cuda.get_device_name(0) -> 'Tesla K80' (0 is de device_id from our availbale GPU)
 hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Creating the checkpoint folder

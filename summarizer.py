@@ -1,4 +1,5 @@
 
+from email import header
 from genericpath import exists
 from settings import *
 
@@ -80,14 +81,17 @@ class S3DIS_Summarizer():
                 print(msg.format(eparams['s3dis_summary_file'], self.path_to_data))
                 
             if check_consistency:
-                  self.check_data_consistency()               
+                  self.check_data_consistency()
+            
+            self.label_points_for_semantic_segmentation()               
             
             return
         
         print("Generating ground truth file (summary file) from folder traversal {} in {}".format(eparams['s3dis_summary_file'], self.path_to_data))
 
         # Every line of the S3DIS summary file will contain:
-        # (area, space, object, points_per_object, space label, object label)
+        # (area, space, space_label, space_id, object, 
+        # points_per_object, object label, object_id, health_status)
         summary_line = []
         
         # Aux vars to assign a dict-like ID to spaces and objects
@@ -165,7 +169,11 @@ class S3DIS_Summarizer():
         # Always check consistency after generating the file
         self.check_data_consistency()
         
+        # Create the proper file for semantic segmentation
+        # (every point must have the right label)
+        self.label_points_for_semantic_segmentation()               
         
+    
     def check_data_consistency(self):
         """
         Check the point cloud files in order to know whether the files are 
@@ -216,7 +224,136 @@ class S3DIS_Summarizer():
             finally:
                 # Save health status changes
                 self.summary_df.to_csv(os.path.join(eparams['pc_data_path'], eparams['s3dis_summary_file']), index = False, sep = "\t")
+
+    def label_points_for_semantic_segmentation(self):
+        """
+        Create the proper file for semantic segmenation
+
+        Basically, for every file in the "Annotations" folder:
+
+         - The label to be assigned to each point in the cloud will be based
+            on the file name the point is (e.g. all the points in chair_1.txt
+            will have the "chair" label)
+        
+        - A new file will be created inside the "Annotations" folder called
+            space_sem_seg.txt (e.g, conferenceRoom_1_sem_seg.txt)
+        
+        - This new file:
+                - will be the concatation of all the files inside the 
+                "Annotations" folder (since the file Area_1\office_1\office_1.txt
+                is the sum of all the files within Area_1\office_1\Annotations)
+                - will have an additional column for the label (based on the
+                file name we're concatenating)
+        
+        Following the Area_1\office_1 example, this way a new file called
+        Area_1\office_1\Annotations\office_1_sem_seg.txt will be created. 
+        This file will contain an extra column to host the label for every 
+        point in the cloud.
+
+        Area_space: 
+            Area             Space
+        0     Area_1              WC_1
+        41    Area_1  conferenceRoom_1
+        73    Area_1  conferenceRoom_2
+        119   Area_1        copyRoom_1
+        141   Area_1         hallway_1
+        ...      ...               ...
+        9576  Area_6          office_7
+        9614  Area_6          office_8
+        9689  Area_6          office_9
+        9763  Area_6       openspace_1
+        9811  Area_6          pantry_1
+        """
+
+        # Get unique area-space combinations from summary_df
+        # in order to know the exact number of spaces (around 272)
+        unique_area_space_df = self.summary_df[["Area", "Space"]].drop_duplicates()     
+        
+        total_unique_spaces = len(unique_area_space_df)
+        processed_spaces = 0
+
+        print("Labelling each point in the point cloud to allow semantic segmentation...")
+        
+        for i, (idx, row) in enumerate(unique_area_space_df.iterrows()):         
+            # Get the proper area ans space
+            area = row["Area"]
+            space = row["Space"]
+
+            # Checking if the semantic segmentation file already exists
+            # for this space within this area
+            # (e.g. Area_1\office_1\Annotations\office_1_sem_seg.txt)
+            path_to_objs = os.path.join(self.path_to_data, 
+                area, 
+                space, 
+                "Annotations"
+                )
+                
+            sem_seg_file = space + eparams["pc_file_extension_sem_seg_suffix"] + eparams["pc_file_extension"]
+            path_to_sem_seg_file = os.path.join(path_to_objs, sem_seg_file)
             
+
+            # Create the sementic segmentation file, 
+            if os.path.exists(path_to_sem_seg_file):
+                processed_spaces += 1
+                msg = "({}/{}) Skipping generation ".format(processed_spaces, total_unique_spaces)
+                msg += "of the semantic segmentation file"
+                msg += " {}_{} (file {} already exists)".format(
+                        area, 
+                        space,
+                        sem_seg_file)
+                print(msg)
+                
+            else:
+                # Update the processed rooms counter
+                processed_spaces += 1
+
+                # Let's start creating an empty semantic segmentation dataframe
+                sem_seg_df = pd.DataFrame()
+                       
+                # Get all the objects that belong to that concrete area and space
+                # (NOTE: from the summary_df!)
+                objects_df = self.summary_df[(self.summary_df["Area"] == area) &
+                    (self.summary_df["Space"] == space)]
+
+                # Define the message to print with tqdm
+                tqdm_msg = "({}/{}) Generating files ".format(processed_spaces, total_unique_spaces) 
+                tqdm_msg += "for semantic segmentation "
+                tqdm_msg += "in {}_{}".format(area, space)
+
+                # Let's read every file object
+                # TODO: Find out a faster way to compute the loop 
+                # (e.g, cudf lib, move to numpy to gpu, etc.)
+                for i in tqdm(objects_df.index, desc = tqdm_msg):
+                    # Get line by line info
+                    summary_line = self.summary_df.iloc[i]
+
+                    # Get the proper info from each line
+                    obj_file = summary_line["Object"]
+                    obj_label_id = summary_line["Object ID"]
+                    
+                    try:
+                        # Let's try to open the file as np.float32      
+                        path_to_obj = os.path.join(path_to_objs, obj_file)
+                        obj_df = pd.read_csv(path_to_obj, 
+                            sep = " ", 
+                            header = None,
+                            dtype = np.float32)
+                        
+                        # Adding the new col with the proper label
+                        # https://stackoverflow.com/questions/42473098/add-column-to-pandas-without-headers
+                        obj_df[len(obj_df.columns)] = obj_label_id
+
+                        # Save the semantic segmentation file
+                        sem_seg_df = pd.concat([sem_seg_df, obj_df])
+                        sem_seg_df.to_csv(path_to_sem_seg_file, index = False, sep = "\t")
+                                              
+                        
+                    except:    
+                        # Write error on logger
+                        msg = "The following file seems to be corrupted: {} ".format(path_to_obj)
+                        self.logger.writer.add_text("Summarizer/Error", msg)
+                 
+
     def report_health_issues(self):
         """
         Provide information about how many objects have issues with 

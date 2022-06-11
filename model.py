@@ -240,8 +240,7 @@ class SegmentationPointNet(nn.Module):
         # Apply log_softmax over the last dim (num_classes)
         preds = F.log_softmax(x, dim = -1)
         
-        # TODO: Preds has to return ([batch_size, num_classes])
-        # preds = x.view(batch_size, num_points, self.num_classes)
+        preds = x.view(-1, num_points, self.num_classes)
         
         # Returning the same values than ClassificationPointNet
         # to keep compatatibility in main.py

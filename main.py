@@ -12,16 +12,16 @@ from summarizer import S3DIS_Summarizer
 def task_welcome_msg(task = None):
     """
     """
-    msg = "Starting {}-{} with: ".format(task, args.goal)
+    msg = "Starting {}-{} with: ".format(task, ''.join(args.goal))
     msg += "{} points per object | ".format(hparams['num_points_per_object'])
     msg += "{} dimensions per object | ".format(hparams['dimensions_per_object'])
     msg += "{} batch_size | ".format(hparams['batch_size'])
-    msg += "workers: {}".format(hparams['num_workers'])
+    msg += "workers: {} |".format(hparams['num_workers'])
     
     if hparams['device'] == "cpu":
-        msg += "device: {} | ".format(hparams['device'])
+        msg += " device: {}".format(hparams['device'])
     else:
-        msg += "device: {} ({}x {})| ".format(hparams['device'],
+        msg += " device: {} ({}x {})".format(hparams['device'],
                                         torch.cuda.device_count(),
                                         torch.cuda.get_device_name(0)
                                         )
@@ -91,7 +91,7 @@ def test_classification(model, dataloaders):
     # If the checkpoint does not exist, train the model
     if not os.path.exists(model_checkpoint):
         print("The model does not seem already trained! Starting the training rigth now from scratch...")
-        train_classification(model, dataloaders)
+        train(model, dataloaders)
     
     # Loading the existing checkpoint
     print("Loading checkpoint {} ...".format(model_checkpoint))
@@ -127,9 +127,9 @@ def test_classification(model, dataloaders):
     mean_accuracy = (torch.FloatTensor(accuracies).sum()/len(accuracies))*100
     print("Average accuracy: {:.2f} ".format(float(mean_accuracy)))
                
-def train_classification(model, dataloaders):
+def train(model, dataloaders):
     """
-    Train the PointNet classification network
+    Train the PointNet network
 
     Inputs:
         - model: the PointNet model class
@@ -205,8 +205,16 @@ def train_classification(model, dataloaders):
                 # A regularization loss (with weight 0.001) is added to the softmax
                 # classification loss to make the matrix close to ortoghonal
                 # (quoted from supplementary info from the original paper)
-                loss = F.nll_loss(preds, targets) + 0.001 * regularization_loss
                 
+                if "classification" in args.goal: 
+                    loss = F.nll_loss(preds, targets) + 0.001 * regularization_loss
+                
+                if "segmentation" in args.goal: 
+                    # TODO: loss has to be defined for semantic segmentation
+                    # Loss functions for sem seg: https://arxiv.org/abs/2006.14822
+                    # Tversky Loss / Focal Tversky Loss seems to be the best...
+                    ...
+
                 epoch_train_loss.append(loss.cpu().item())
             
                 loss.backward()
@@ -230,7 +238,14 @@ def train_classification(model, dataloaders):
                 targets = targets.to(device)
                         
                 preds, feature_transform, tnet_out, ix = model(points)
-                loss = F.nll_loss(preds, targets)
+                
+                if "classification" in args.goal: 
+                    loss = F.nll_loss(preds, targets)
+
+                if "segmentation" in args.goal: 
+                    # TODO: loss has to be defined for semantic segmentation
+                    # Loss functions for sem seg: https://arxiv.org/abs/2006.14822
+                    ...
                 
                 epoch_val_loss.append(loss.cpu().item())
                 
@@ -320,20 +335,22 @@ if __name__ == "__main__":
     # with the selected choice
     if "classification" in args.goal: 
         if "train" in args.task:
-            train_classification(model, dataloaders)
+            train(model, dataloaders)
         
         if "test" in args.task:
             test_classification(model, dataloaders)
     
-    # TODO
+    # TODO  
     if "segmentation" in args.goal: 
+        # Create the files for semantic segmentation
+        summary_file.label_points_for_semantic_segmentation()
+       
         if "train" in args.task:
-            ...
+            train(model, dataloaders)
         
         if "test" in args.task:
             ...
-    
-    
+      
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.finish()
     

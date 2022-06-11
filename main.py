@@ -90,7 +90,7 @@ def test_classification(model, dataloaders):
     
     # If the checkpoint does not exist, train the model
     if not os.path.exists(model_checkpoint):
-        print("The model does not seem already trained! Starting the training rigth now...")
+        print("The model does not seem already trained! Starting the training rigth now from scratch...")
         train_classification(model, dataloaders)
     
     # Loading the existing checkpoint

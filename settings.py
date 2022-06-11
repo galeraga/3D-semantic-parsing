@@ -28,8 +28,9 @@ building_distribution = {
 eparams = {
     'pc_data_path': "/Users/jgalera/datasets/S3DIS/aligned",
     'pc_file_extension': ".txt",
+    'pc_file_extension_rgb_norm': "_rgb_norm.txt",
+    'pc_file_extension_sem_seg_suffix': "_sem_seg",
     'already_rgb_normalized_suffix': "_rgb_norm",
-    'pc_file_extensiom_rgb_norm': "_rgb_norm.txt",
     's3dis_summary_file': "s3dis_summary.csv",
     "checkpoints_folder": "checkpoints",
     'tensorboard_log_dir': "runs/pointnet_with_s3dis",

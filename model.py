@@ -188,6 +188,8 @@ class SegmentationPointNet(nn.Module):
 
     From https://github.com/yunxiaoshi/pointnet-pytorch/blob/master/pointnet.py
     From https://github.com/fxia22/pointnet.pytorch/blob/master/pointnet/model.py
+    From https://github.com/yanx27/Pointnet_Pointnet2_pytorch/tree/master/models
+    From https://github.com/LZDSJTU/pointnet_pytorch/blob/master/train_ptn.py
     """
 
     def __init__(self, num_classes, point_dimension = 3):

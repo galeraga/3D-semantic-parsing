@@ -83,8 +83,6 @@ class S3DIS_Summarizer():
             if check_consistency:
                   self.check_data_consistency()
             
-            self.label_points_for_semantic_segmentation()               
-            
             return
         
         print("Generating ground truth file (summary file) from folder traversal {} in {}".format(eparams['s3dis_summary_file'], self.path_to_data))
@@ -168,10 +166,6 @@ class S3DIS_Summarizer():
         
         # Always check consistency after generating the file
         self.check_data_consistency()
-        
-        # Create the proper file for semantic segmentation
-        # (every point must have the right label)
-        self.label_points_for_semantic_segmentation()               
         
     
     def check_data_consistency(self):
@@ -272,7 +266,7 @@ class S3DIS_Summarizer():
         total_unique_spaces = len(unique_area_space_df)
         processed_spaces = 0
 
-        print("Labelling each point in the point cloud to allow semantic segmentation...")
+        print("Checking whether point labelling has to be performed...")
         
         for i, (idx, row) in enumerate(unique_area_space_df.iterrows()):         
             # Get the proper area ans space
@@ -292,7 +286,7 @@ class S3DIS_Summarizer():
             path_to_sem_seg_file = os.path.join(path_to_objs, sem_seg_file)
             
 
-            # Create the sementic segmentation file, 
+            # Create the semantic segmentation file, 
             if os.path.exists(path_to_sem_seg_file):
                 processed_spaces += 1
                 msg = "({}/{}) Skipping generation ".format(processed_spaces, total_unique_spaces)
@@ -316,7 +310,7 @@ class S3DIS_Summarizer():
                     (self.summary_df["Space"] == space)]
 
                 # Define the message to print with tqdm
-                tqdm_msg = "({}/{}) Generating files ".format(processed_spaces, total_unique_spaces) 
+                tqdm_msg = "({}/{}) Generating file ".format(processed_spaces, total_unique_spaces) 
                 tqdm_msg += "for semantic segmentation "
                 tqdm_msg += "in {}_{}".format(area, space)
 
@@ -346,8 +340,7 @@ class S3DIS_Summarizer():
                         # Save the semantic segmentation file
                         sem_seg_df = pd.concat([sem_seg_df, obj_df])
                         sem_seg_df.to_csv(path_to_sem_seg_file, index = False, sep = "\t")
-                                              
-                        
+                                                                     
                     except:    
                         # Write error on logger
                         msg = "The following file seems to be corrupted: {} ".format(path_to_obj)

@@ -223,14 +223,18 @@ class S3DIS_Summarizer():
         """
         Create the proper file for semantic segmenation
 
-        Basically, for every file in the "Annotations" folder:
+        Method outlook:
 
          - The label to be assigned to each point in the cloud will be based
             on the file name the point is (e.g. all the points in chair_1.txt
-            will have the "chair" label)
+            will have the "chair" label). In fact, since the already created 
+            summary file already constains this info, it will be used to get
+            the proper label for each point
         
-        - A new file will be created inside the "Annotations" folder called
-            space_sem_seg.txt (e.g, conferenceRoom_1_sem_seg.txt)
+        - A new file will be created for every space/room containing all the 
+            annotated points. This file will be called space_annotated.txt 
+            (e.g, conferenceRoom_1_annotated.txt) and will be saved next to
+            the original non-annotated space/room (e.g, Area_1\office_1\office_1_annotated.txt)
         
         - This new file:
                 - will be the concatation of all the files inside the 
@@ -240,9 +244,11 @@ class S3DIS_Summarizer():
                 file name we're concatenating)
         
         Following the Area_1\office_1 example, this way a new file called
-        Area_1\office_1\Annotations\office_1_sem_seg.txt will be created. 
+        Area_1\office_1\office_1_annotated.txt will be created. 
         This file will contain an extra column to host the label for every 
         point in the cloud.
+
+        unique_area_space_df (with 272 rows! Note the index is not correlative)
 
         Area_space: 
             Area             Space
@@ -263,6 +269,7 @@ class S3DIS_Summarizer():
         # in order to know the exact number of spaces (around 272)
         unique_area_space_df = self.summary_df[["Area", "Space"]].drop_duplicates()     
         
+        # Aux vars to keep track of the labeling progress
         total_unique_spaces = len(unique_area_space_df)
         processed_spaces = 0
 
@@ -272,21 +279,25 @@ class S3DIS_Summarizer():
             # Get the proper area ans space
             area = row["Area"]
             space = row["Space"]
+            
+            # Defining path for the folder where the semantic segmentaion
+            # file is going to be saved
+            # (e.g. Area_1\office_1\office_1_annotated.txt)
 
-            # Checking if the semantic segmentation file already exists
-            # for this space within this area
-            # (e.g. Area_1\office_1\Annotations\office_1_sem_seg.txt)
-            path_to_objs = os.path.join(self.path_to_data, 
+            path_to_space = os.path.join(self.path_to_data, 
                 area, 
-                space, 
+                space
+                )
+            
+            path_to_objs = os.path.join(path_to_space,
                 "Annotations"
                 )
                 
             sem_seg_file = space + eparams["pc_file_extension_sem_seg_suffix"] + eparams["pc_file_extension"]
-            path_to_sem_seg_file = os.path.join(path_to_objs, sem_seg_file)
+            path_to_sem_seg_file = os.path.join(path_to_space, sem_seg_file)
             
-
-            # Create the semantic segmentation file, 
+            # Checking if the semantic segmentation file already exists
+            # for this space within this area
             if os.path.exists(path_to_sem_seg_file):
                 processed_spaces += 1
                 msg = "({}/{}) Skipping generation ".format(processed_spaces, total_unique_spaces)
@@ -296,7 +307,8 @@ class S3DIS_Summarizer():
                         space,
                         sem_seg_file)
                 print(msg)
-                
+            
+            # Create the semantic segmentation file   
             else:
                 # Update the processed rooms counter
                 processed_spaces += 1
@@ -314,7 +326,7 @@ class S3DIS_Summarizer():
                 tqdm_msg += "for semantic segmentation "
                 tqdm_msg += "in {}_{}".format(area, space)
 
-                # Let's read every file object
+                # Let's read every object/class file
                 # TODO: Find out a faster way to compute the loop 
                 # (e.g, cudf lib, move to numpy to gpu, etc.)
                 for i in tqdm(objects_df.index, desc = tqdm_msg):

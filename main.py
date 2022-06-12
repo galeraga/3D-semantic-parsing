@@ -310,6 +310,7 @@ if __name__ == "__main__":
     
     # Create the dataloaders
     # dataloaders = (train_dataloader, validation_dataloader, test_dataloader)
+    # TODO: Redefine the dataloaders based on task (classification, segmentation)
     dataloaders = create_dataloaders(ds)
 
     # Define the checkpoint name

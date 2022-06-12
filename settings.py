@@ -29,7 +29,7 @@ eparams = {
     'pc_data_path': "/Users/jgalera/datasets/S3DIS/aligned",
     'pc_file_extension': ".txt",
     'pc_file_extension_rgb_norm': "_rgb_norm.txt",
-    'pc_file_extension_sem_seg_suffix': "_sem_seg",
+    'pc_file_extension_sem_seg_suffix': "_annotated",
     'already_rgb_normalized_suffix': "_rgb_norm",
     's3dis_summary_file': "s3dis_summary.csv",
     "checkpoints_folder": "checkpoints",

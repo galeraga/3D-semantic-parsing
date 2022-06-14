@@ -325,8 +325,7 @@ if __name__ == "__main__":
         # Model instance creation (goal-dependent)
         model = ClassificationPointNet(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object']).to(device)
-    
-        
+          
         # Select the task to do
         if "train" in args.task:
             train(model, dataloaders)
@@ -338,19 +337,20 @@ if __name__ == "__main__":
     if "segmentation" in args.goal:
         # Create the S3DIS dataset
         ds = S3DISDataset4Segmentation(eparams['pc_data_path'], transform = None)
-
+        
         # Create the dataloaders
         # dataloaders = (train_dataloader, validation_dataloader, test_dataloader)
         # TODO: Redefine the dataloaders based on task (classification, segmentation)
         dataloaders = create_dataloaders(ds)
         
+        # Model instance creation (goal-dependent)
         model = SegmentationPointNet(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object']).to(device)
-
-    
+  
         # Create the files for semantic segmentation
         summary_file.label_points_for_semantic_segmentation()
        
+
         if "train" in args.task:
             train(model, dataloaders)
         

@@ -273,7 +273,7 @@ class S3DIS_Summarizer():
         total_unique_spaces = len(unique_area_space_df)
         processed_spaces = 0
 
-        print("Checking whether point labelling has to be performed...")
+        print("Checking whether point labeling has to be performed...")
         
         for i, (idx, row) in enumerate(unique_area_space_df.iterrows()):         
             # Get the proper area ans space

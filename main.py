@@ -3,7 +3,7 @@ PointNet implementation with S3DIS dataset
 """
 
 from settings import * 
-from dataset import S3DISDataset
+from dataset import S3DISDataset4Classification, S3DISDataset4Segmentation 
 from model import ClassificationPointNet, SegmentationPointNet
 from tensorboardlogger import TensorBoardLogger 
 from summarizer import S3DIS_Summarizer
@@ -305,7 +305,7 @@ if __name__ == "__main__":
     logger.log_hparams(hparams)
     
     # Create the S3DIS dataset
-    ds = S3DISDataset(eparams['pc_data_path'], transform = None)
+    ds = S3DISDataset4Classification(eparams['pc_data_path'], transform = None)
     print(ds)
     
     # Create the dataloaders

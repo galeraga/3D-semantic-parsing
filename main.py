@@ -304,15 +304,6 @@ if __name__ == "__main__":
     # Logging hparams for future reference
     logger.log_hparams(hparams)
     
-    # Create the S3DIS dataset
-    ds = S3DISDataset4Classification(eparams['pc_data_path'], transform = None)
-    print(ds)
-    
-    # Create the dataloaders
-    # dataloaders = (train_dataloader, validation_dataloader, test_dataloader)
-    # TODO: Redefine the dataloaders based on task (classification, segmentation)
-    dataloaders = create_dataloaders(ds)
-
     # Define the checkpoint name
     eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_{}_points_{}_dims.pth".format(
                                             ''.join(args.goal),
@@ -320,29 +311,43 @@ if __name__ == "__main__":
                                             hparams["dimensions_per_object"]
                                             )
 
-
-    # Model instance creation (goal-dependent)
+    # When choices are given in parser add_argument, the parser returns a list 
     if "classification" in args.goal:
+        # Create the S3DIS dataset
+        ds = S3DISDataset4Classification(eparams['pc_data_path'], transform = None)
+        print(ds)
+        
+        # Create the dataloaders
+        # dataloaders = (train_dataloader, validation_dataloader, test_dataloader)
+        # TODO: Redefine the dataloaders based on task (classification, segmentation)
+        dataloaders = create_dataloaders(ds)
+
+        # Model instance creation (goal-dependent)
         model = ClassificationPointNet(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object']).to(device)
     
-    if "segmentation" in args.goal:
-        model = SegmentationPointNet(num_classes = hparams['num_classes'],
-                                   point_dimension = hparams['dimensions_per_object']).to(device)
-
-    
-    # Select the task to do
-    # When choices are given in parser add_argument, the parser returns a list 
-    # with the selected choice
-    if "classification" in args.goal: 
+        
+        # Select the task to do
         if "train" in args.task:
             train(model, dataloaders)
         
         if "test" in args.task:
             test_classification(model, dataloaders)
+
+
+    if "segmentation" in args.goal:
+        # Create the S3DIS dataset
+        ds = S3DISDataset4Segmentation(eparams['pc_data_path'], transform = None)
+
+        # Create the dataloaders
+        # dataloaders = (train_dataloader, validation_dataloader, test_dataloader)
+        # TODO: Redefine the dataloaders based on task (classification, segmentation)
+        dataloaders = create_dataloaders(ds)
+        
+        model = SegmentationPointNet(num_classes = hparams['num_classes'],
+                                   point_dimension = hparams['dimensions_per_object']).to(device)
+
     
-    # TODO  
-    if "segmentation" in args.goal: 
         # Create the files for semantic segmentation
         summary_file.label_points_for_semantic_segmentation()
        

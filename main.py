@@ -13,7 +13,13 @@ def task_welcome_msg(task = None):
     """
     """
     msg = "Starting {}-{} with: ".format(task, ''.join(args.goal))
-    msg += "{} points per object | ".format(hparams['num_points_per_object'])
+    
+    if "classification" in args.goal:
+        msg += "{} points per object | ".format(hparams['num_points_per_object'])
+    
+    if "segmentation" in args.goal:
+        msg += "{} points per room | ".format(hparams['max_points_per_space'])
+
     msg += "{} dimensions per object | ".format(hparams['dimensions_per_object'])
     msg += "{} batch_size | ".format(hparams['batch_size'])
     msg += "workers: {} |".format(hparams['num_workers'])
@@ -112,7 +118,11 @@ def test_classification(model, dataloaders):
     # Test the model
     print("Testing data classification")
     for batch_idx, data in enumerate(tqdm(test_dataloader)):
-        points, target_labels = data
+        points, target_labels = data        
+                
+        points = points.to(device)
+        target_labels = target_labels.to(device)
+        
         preds, feature_transform, tnet_out, ix = model(points)
         
         # preds.shape([batch_size, num_classes])
@@ -177,11 +187,8 @@ def train(model, dataloaders):
                 preds, feature_transform, tnet_out, ix_maxpool = model(points)
 
                 # Why?  
-                identity = torch.eye(feature_transform.shape[-1])
+                identity = torch.eye(feature_transform.shape[-1]).to(device)
 
-                if torch.cuda.is_available():
-                    identity = identity.cuda()
-                
                 # Formula (2) in original paper (Lreg)
                 # TODO: According to the original paper, it should only be applied
                 # during the alignment of the feature space (with higher dimension (64))
@@ -335,8 +342,12 @@ if __name__ == "__main__":
 
 
     if "segmentation" in args.goal:
+        # Create the files for semantic segmentation
+        summary_file.label_points_for_semantic_segmentation()
+      
         # Create the S3DIS dataset
         ds = S3DISDataset4Segmentation(eparams['pc_data_path'], transform = None)
+        print(ds)
         
         # Create the dataloaders
         # dataloaders = (train_dataloader, validation_dataloader, test_dataloader)
@@ -346,10 +357,7 @@ if __name__ == "__main__":
         # Model instance creation (goal-dependent)
         model = SegmentationPointNet(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object']).to(device)
-  
-        # Create the files for semantic segmentation
-        summary_file.label_points_for_semantic_segmentation()
-       
+      
 
         if "train" in args.task:
             train(model, dataloaders)

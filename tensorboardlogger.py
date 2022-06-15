@@ -7,7 +7,7 @@ class TensorBoardLogger():
         # Define the folder where we will store all the tensorboard logs
         logdir = os.path.join(eparams['pc_data_path'], 
             eparams['tensorboard_log_dir'],
-            f"{args.goal}-{args.task}-{args.load}-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}")
+            f"{''.join(args.goal)}-{''.join(args.task)}-{''.join(args.load)}-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}")
 
         # Initialize Tensorboard Writer with the previous folder 'logdir'
         self.writer = SummaryWriter(logdir)
@@ -63,7 +63,7 @@ class TensorBoardLogger():
                         total_spaces
                         )
                     # Show different classes per room
-                    self.writer.add_scalar("S3DIS Dataset/Object classes per room here", 
+                    self.writer.add_scalar("S3DIS Dataset/Object classes per room", 
                         len(sorted(set(space_in_area_df["Object ID"]))), 
                         total_spaces
                         )             

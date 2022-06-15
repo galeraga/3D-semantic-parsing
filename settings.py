@@ -44,10 +44,10 @@ if "OS_IMAGE_FAMILY" in os.environ.keys():
 hparams = {
     'batch_size': 32,
     'learning_rate': 0.001,
-    'num_workers': 0,
     'num_classes': 14,
+    'num_workers': 0,
     'num_points_per_object': 0,
-    'max_points_per_space': 1e6,
+    'max_points_per_space': 0,
     'dimensions_per_object': 0,
     'epochs': 0,
 }
@@ -115,15 +115,18 @@ if "low" in args.load:
     hparams["num_points_per_object"] = 100
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 5
+    hparams["max_points_per_space"] = 1000
 
 if "medium" in args.load:
     hparams["num_points_per_object"] = 1024
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 10
+    hparams["max_points_per_space"] = 50000
 
 if "high" in args.load:
+    hparams["num_workers"] = 2
     hparams["num_points_per_object"] = 4096
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 50
-    hparams["num_workers"] = 2
+    hparams["max_points_per_space"] = 1000000
 

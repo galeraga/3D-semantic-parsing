@@ -240,7 +240,7 @@ class S3DISDataset4Segmentation(torch.utils.data.Dataset):
         msg_list.append("Data source: " + self.root_dir)
         msg_list.append("Summary file ({}) info: ".format(eparams['s3dis_summary_file']))
         msg_list.append(str(self.summary_df))        
-        msg_list.append("Areas and spaces info (for semantic purposes): ")
+        msg_list.append("\nAreas and spaces info (for semantic purposes): ")
         msg_list.append(str(self.unique_area_space_df))  
         msg = '\n'.join(msg_list)
         

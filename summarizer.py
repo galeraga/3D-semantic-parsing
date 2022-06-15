@@ -74,7 +74,7 @@ class S3DIS_Summarizer():
             self.summary_df = pd.read_csv(self.path_to_summary_file, 
                 header =0, 
                 usecols = self.S3DIS_summary_cols, 
-                sep = "\t") 
+                sep = "\t")     
             
             if self.rebuild == False:
                 msg = "Skipping summary file generation. The S3DIS summary file {} already exists in {}"
@@ -221,7 +221,7 @@ class S3DIS_Summarizer():
 
     def label_points_for_semantic_segmentation(self):
         """
-        Create the proper file for semantic segmenation
+        Create a single annotated file (per room/space) for semantic segmenation
 
         Method outlook:
 

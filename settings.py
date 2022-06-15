@@ -47,7 +47,7 @@ hparams = {
     'num_workers': 0,
     'num_classes': 14,
     'num_points_per_object': 0,
-    'max_points_per_space': 1e6,
+    'max_points_per_space': 1000000,
     'dimensions_per_object': 0,
     'epochs': 0,
 }

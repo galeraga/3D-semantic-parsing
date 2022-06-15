@@ -71,7 +71,7 @@ class S3DISDataset4Classification(torch.utils.data.Dataset):
                 usecols = cols_to_get 
                 )[cols_to_get]
 
-            obj = torch.tensor(obj_df.values)
+            obj = torch.tensor(obj_df.values, device = hparams["device"])
 
             # Torch Dataloaders expects each tensor to be equal size
             # TODO: MAX_OBJ_POINTS has te be defined, based on point cloud analysis
@@ -186,24 +186,22 @@ class S3DISDataset4Segmentation(torch.utils.data.Dataset):
         area = summary_line[0]
         space = summary_line[1]
           
-        # Fetch the object point cloud for the whole room
+        # Fetch the object point cloud file for the whole room
         sem_seg_file = space + eparams["pc_file_extension_sem_seg_suffix"] 
         sem_seg_file += eparams["pc_file_extension"]
         path_to_obj = os.path.join(self.root_dir, area, space, sem_seg_file )
-        
-        # Element order is ignored when data is retrieved by cols in Pandas
-        # so we need to define the order of the cols
-        cols_to_get = [col for col in range (hparams['dimensions_per_object'])]
+         
         space_df = pd.read_csv(
             path_to_obj, 
-            sep = " ", 
+            sep = "\t", 
             dtype = np.float32, 
             header = None,
-            usecols = cols_to_get 
-            )[cols_to_get]
+            )
+        # Convert the whole room file to tensor
+        room = torch.tensor(space_df.values, device = hparams["device"])
 
-        room = torch.tensor(space_df.values)
-
+        # Since point cloud tensors will have different amount of points/row,
+        # we need to set a common size for them all
         # Torch Dataloaders expects each tensor to be equal size
         if(len(room) > hparams['max_points_per_space']):   
             # Sample points 
@@ -221,10 +219,14 @@ class S3DISDataset4Segmentation(torch.utils.data.Dataset):
         
         if self.transform:
             room = self.transform(room)
-
-        # TODO: GET THE SPACE LABEL ID FOR EACH POINT
-
-        return room, torch.tensor(space_label_id)
+        
+        # The amount of cols to return per room will depend on whether or not
+        # we're taking the color into account
+        # room -> [x y x r g b label] (7 cols)
+        room_points = room[ :, :hparams["dimensions_per_object"]]
+        point_labels = room[ :, -1]
+        
+        return room_points, point_labels
     
 
     def __str__(self) -> str:

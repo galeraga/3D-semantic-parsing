@@ -211,19 +211,21 @@ class SegmentationPointNet(nn.Module):
 
 	
     def forward(self, x):
-
+        
+        # x.shape([batch_size, max_points_per_space, num_points_per_object])
         num_points = x.shape[1]
         
         # Get the global and local features
-        # global_feature_vector.shape([128, 1024])
-        # seg_local_feats.shape([batch_size, num_points_per_object, 64])
+        # global_feature_vector.shape([batch_size, 1024])
+        # seg_local_feats.shape([batch_size, max_points_per_space, 64])
         global_feature_vector, feature_transform, tnet_out, ix_maxpool, seg_local_feats  = self.base_pointnet(x)
 
         # Adapt the global feature vector to be concatenated
+        # global_feature_vector.shape at output -> ([batch_size, max_points_per_space, 1024])
         global_feature_vector = global_feature_vector.view(-1, 1, 1024).repeat(1, num_points, 1)
         
         # Concatenate global and local features (adding cols)
-        # x.shape([batch_size, num_points_per_object, 1088])
+        # x.shape([batch_size, max_points_per_space, 1088])
         x = torch.cat((seg_local_feats, global_feature_vector), dim = 2)
         
         x = x.transpose(2, 1)
@@ -233,13 +235,14 @@ class SegmentationPointNet(nn.Module):
     
         x = self.conv4(x)
         
-        # Input shape: x.shape(batch_size, num_classes, num_points_per_object)
-        # Output shape: x.shape(batch_size, num_points_per_object, num_classes)
+        # Input shape: x.shape(batch_size, num_classes, max_points_per_space)
+        # Output shape: x.shape(batch_size, max_points_per_space, num_classes)
         x = x.transpose(2, 1)
         
         # Apply log_softmax over the last dim (num_classes)
         preds = F.log_softmax(x, dim = -1)
         
+        # Output preds.shape(batch_size, max_points_per_space, num_classes)
         preds = x.view(-1, num_points, self.num_classes)
         
         # Returning the same values than ClassificationPointNet

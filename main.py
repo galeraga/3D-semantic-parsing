@@ -13,7 +13,13 @@ def task_welcome_msg(task = None):
     """
     """
     msg = "Starting {}-{} with: ".format(task, ''.join(args.goal))
-    msg += "{} points per object | ".format(hparams['num_points_per_object'])
+    
+    if "classification" in args.goal:
+        msg += "{} points per object | ".format(hparams['num_points_per_object'])
+    
+    if "segmentation" in args.goal:
+        msg += "{} points per room | ".format(hparams['max_points_per_space'])
+
     msg += "{} dimensions per object | ".format(hparams['dimensions_per_object'])
     msg += "{} batch_size | ".format(hparams['batch_size'])
     msg += "workers: {} |".format(hparams['num_workers'])

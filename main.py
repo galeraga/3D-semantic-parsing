@@ -112,7 +112,11 @@ def test_classification(model, dataloaders):
     # Test the model
     print("Testing data classification")
     for batch_idx, data in enumerate(tqdm(test_dataloader)):
-        points, target_labels = data
+        points, target_labels = data        
+                
+        points = points.to(device)
+        target_labels = target_labels.to(device)
+        
         preds, feature_transform, tnet_out, ix = model(points)
         
         # preds.shape([batch_size, num_classes])
@@ -177,11 +181,8 @@ def train(model, dataloaders):
                 preds, feature_transform, tnet_out, ix_maxpool = model(points)
 
                 # Why?  
-                identity = torch.eye(feature_transform.shape[-1])
+                identity = torch.eye(feature_transform.shape[-1]).to(device)
 
-                if torch.cuda.is_available():
-                    identity = identity.cuda()
-                
                 # Formula (2) in original paper (Lreg)
                 # TODO: According to the original paper, it should only be applied
                 # during the alignment of the feature space (with higher dimension (64))

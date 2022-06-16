@@ -14,8 +14,8 @@ def task_welcome_msg(task = None):
     """
     msg = "Starting {}-{} with: ".format(task, ''.join(args.goal))
     
-    if "classification" in args.goal:
-        msg += "{} points per object | ".format(hparams['num_points_per_object'])
+    
+    msg += "{} points per object | ".format(hparams['num_points_per_object'])
     
     if "segmentation" in args.goal:
         msg += "{} points per room | ".format(hparams['max_points_per_space'])
@@ -78,6 +78,14 @@ def create_dataloaders(ds):
     
     return train_dataloader, val_dataloader, test_dataloader
 
+
+@torch.no_grad()
+def test_segmentation(model, dataloaders):
+    """
+    Test the PointNet segmentation network
+    """
+    ...
+
 @torch.no_grad()
 def test_classification(model, dataloaders):
     """
@@ -137,9 +145,9 @@ def test_classification(model, dataloaders):
     mean_accuracy = (torch.FloatTensor(accuracies).sum()/len(accuracies))*100
     print("Average accuracy: {:.2f} ".format(float(mean_accuracy)))
                
-def train(model, dataloaders):
+def train_classification(model, dataloaders):
     """
-    Train the PointNet network
+    Train the PointNet network for classification goals
 
     Inputs:
         - model: the PointNet model class
@@ -187,6 +195,7 @@ def train(model, dataloaders):
                 preds, feature_transform, tnet_out, ix_maxpool = model(points)
 
                 # Why?  
+
                 identity = torch.eye(feature_transform.shape[-1]).to(device)
 
                 # Formula (2) in original paper (Lreg)
@@ -195,39 +204,38 @@ def train(model, dataloaders):
                 # than the spatial transformation matrix (3)
                 # With the regularization loss, the model optimization becomes more
                 # stable and achieves better performance
-                regularization_loss = torch.norm(
-                    identity - torch.bmm(feature_transform, feature_transform.transpose(2, 1)))
-                
-
-                # Loss: The negative log likelihood loss 
-                # It is useful to train a classification problem with C classes.
-                # torch.nn.functional.nll_loss(input, target, ...) 
-                # input – (N,C) (N: batch_size; C: num_classes) 
-                # target - (C)
-                # preds.shape[batch_size, num_classes]
-                # targets.shape[batch_size], but every item in the target tensor
-                # must be in the range of num_classes - 1 
-                # E.g: if num_classes = 2 -> target[i] < 2 {0, 1}
-
                 # A regularization loss (with weight 0.001) is added to the softmax
                 # classification loss to make the matrix close to ortoghonal
                 # (quoted from supplementary info from the original paper)
                 
-                if "classification" in args.goal: 
-                    loss = F.nll_loss(preds, targets) + 0.001 * regularization_loss
+                regularization_loss = torch.norm(
+                    identity - torch.bmm(feature_transform, feature_transform.transpose(2, 1)))
                 
-                if "segmentation" in args.goal: 
-                    # TODO: loss has to be defined for semantic segmentation
-                    # Loss functions for sem seg: https://arxiv.org/abs/2006.14822
-                    # Tversky Loss / Focal Tversky Loss seems to be the best...
-                    ...
-
+                # Loss: The negative log likelihood loss 
+                # It is useful to train a classification problem with C classes.
+                # torch.nn.functional.nll_loss(input, target, ...) 
+                # ----For classification:
+                # input – (N,C) (N: batch_size; C: num_classes) 
+                # target - (N)
+                # preds.shape[batch_size, num_classes]
+                # targets.shape[batch_size], but every item in the target tensor
+                # must be in the range of num_classes - 1 
+                # E.g: if num_classes = 2 -> target[i] < 2 {0, 1}
+                
+                # Why does the loss function return a single scalar for a batch?
+                # It returns, by default, the weighted mean of the output 
+                loss = F.nll_loss(preds, targets) + 0.001 * regularization_loss
+                
                 epoch_train_loss.append(loss.cpu().item())
             
                 loss.backward()
                 optimizer.step()
                 
-                preds = preds.data.max(1)[1]
+                # From the num_classes dimension (dim =1), find out the max value
+                # max() returns a tuple (max_value, idx_of_the_max_value)
+                # Take the index of the max value, since the object class 
+                # classification is based on the position of the max value
+                preds = preds.data.max(dim = 1)[1]
                 corrects = preds.eq(targets.data).cpu().sum()
                 accuracy = corrects.item() / float(hparams['batch_size'])
                 epoch_train_acc.append(accuracy)
@@ -246,13 +254,7 @@ def train(model, dataloaders):
                         
                 preds, feature_transform, tnet_out, ix = model(points)
                 
-                if "classification" in args.goal: 
-                    loss = F.nll_loss(preds, targets)
-
-                if "segmentation" in args.goal: 
-                    # TODO: loss has to be defined for semantic segmentation
-                    # Loss functions for sem seg: https://arxiv.org/abs/2006.14822
-                    ...
+                loss = F.nll_loss(preds, targets)
                 
                 epoch_val_loss.append(loss.cpu().item())
                 
@@ -288,10 +290,175 @@ def train(model, dataloaders):
             val_acc.append(np.mean(epoch_val_acc))
 
             # Log results to TensorBoard for every epoch
-            logger.writer.add_scalar("Loss/Training", train_loss[-1], epoch)
-            logger.writer.add_scalar("Loss/Validation", val_loss[-1], epoch)
-            logger.writer.add_scalar("Accuracy/Training", train_acc[-1], epoch)
-            logger.writer.add_scalar("Accuracy/Validation", val_acc[-1], epoch)
+            logger.writer.add_scalar(''.join(args.goal).capitalize() + " Classification Loss/Training", train_loss[-1], epoch)
+            logger.writer.add_scalar(''.join(args.goal).capitalize() + " Classification Loss/Validation", val_loss[-1], epoch)
+            logger.writer.add_scalar(''.join(args.goal).capitalize() + " Accuracy/Training", train_acc[-1], epoch)
+            logger.writer.add_scalar(''.join(args.goal).capitalize() + " Accuracy/Validation", val_acc[-1], epoch)
+
+def train_segmentation(model, dataloaders):
+    """
+    Train the PointNet network for semantic segmentation tasks
+
+    Inputs:
+        - model: the PointNet model class
+        - dataloaders: train, val and test
+
+    Outputs:
+        - None
+    """
+
+    # Task welcome message
+    task_welcome_msg(task = "train")
+    
+    # Get the proper dataloaders
+    train_dataloader = dataloaders[0]
+    val_dataloader = dataloaders[1]
+
+    # Aux training vars
+    train_loss = []
+    val_loss = []
+    train_acc = []
+    val_acc = []
+    best_loss= np.inf
+
+    optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
+
+    # To avoid MaxPool1d warning in GCP
+    with warnings.catch_warnings():
+        warnings.simplefilter("ignore")
+
+        for epoch in tqdm(range(hparams['epochs'])):
+            epoch_train_loss = []
+            epoch_train_acc = []
+
+            # training loop
+            for data in train_dataloader:
+                model = model.train()
+                
+                points, targets = data  
+                
+                points = points.to(device)
+                targets = targets.to(device)
+
+                optimizer.zero_grad()
+                
+                preds, feature_transform, tnet_out, ix_maxpool = model(points)
+
+                # Why?  
+
+                identity = torch.eye(feature_transform.shape[-1]).to(device)
+
+                # Formula (2) in original paper (Lreg)
+                # TODO: According to the original paper, it should only be applied
+                # during the alignment of the feature space (with higher dimension (64))
+                # than the spatial transformation matrix (3)
+                # With the regularization loss, the model optimization becomes more
+                # stable and achieves better performance
+                # A regularization loss (with weight 0.001) is added to the softmax
+                # classification loss to make the matrix close to ortoghonal
+                # (quoted from supplementary info from the original paper)    
+            
+                regularization_loss = torch.norm(
+                    identity - torch.bmm(feature_transform, feature_transform.transpose(2, 1)))
+                
+                # TODO: loss has to be defined for semantic segmentation   
+                # TODO: Is needed the same regularization loss that classification??
+                # Loss: The negative log likelihood loss 
+                # It is useful to train a classification problem with C classes.
+                # torch.nn.functional.nll_loss(input, target, ...) 
+                # ----For segmentation:
+                # (N: batch_size; C: num_classes) 
+                # input (predictions)– (N,C, d1, d2,...,dk)) 
+                # target - (N, d1, d2,...,dk)
+                # So shapes have to be:
+                # preds.shape[batch_size, num_classes, max_points_per_room]
+                # targets.shape[batch_size, max_points_per_room]
+              
+                # Changing shape of preds to match targets according to the
+                # above description
+                preds = torch.transpose(preds, 1, 2)
+
+                # Why does the loss function return a single scalar for a batch?
+                # It returns, by default, the weighted mean of the output 
+                # https://pytorch.org/docs/stable/generated/torch.nn.NLLLoss.html#torch.nn.NLLLoss
+                loss = F.nll_loss(preds, targets.long()) + 0.001 * regularization_loss
+
+                # epoch_train_loss.append(loss.cpu().item())
+                epoch_train_loss.append(loss.cpu().item())
+            
+                # https://discuss.pytorch.org/t/loss-backward-raises-error-grad-can-be-implicitly-created-only-for-scalar-outputs/12152
+                # loss.backward()
+                loss.backward()
+                
+                optimizer.step()
+                
+                # From the num_classes dimension (dim =1), find out the max value
+                # max() returns a tuple (max_value, idx_of_the_max_value)
+                # Take the index of the max value, since the object class 
+                # classification is based on the position of the max value
+                preds = preds.data.max(1)[1]
+                corrects = preds.eq(targets.data).cpu().sum()
+                accuracy = corrects.item() / preds.numel()
+                epoch_train_acc.append(accuracy)
+                
+
+            epoch_val_loss = []
+            epoch_val_acc = []
+
+            # validation loop
+            for batch_number, data in enumerate(val_dataloader):
+                model = model.eval()
+        
+                points, targets = data
+                points = points.to(device)
+                targets = targets.to(device)
+                        
+                preds, feature_transform, tnet_out, ix = model(points)
+
+                # TODO: loss has to be defined for semantic segmentation
+                # Loss functions for sem seg: https://arxiv.org/abs/2006.14822
+                preds = torch.transpose(preds, 1, 2)
+                loss = F.nll_loss(preds, targets.long()) + 0.001 * regularization_loss
+          
+                epoch_val_loss.append(loss.cpu().item())
+                
+                preds = preds.data.max(1)[1]
+                corrects = preds.eq(targets.data).cpu().sum()
+                accuracy = corrects.item() / preds.numel()
+                
+                epoch_val_acc.append(accuracy)
+
+
+            print('Epoch %s: train loss: %s, val loss: %f, train accuracy: %s,  val accuracy: %f'
+                    % (epoch,
+                        round(np.mean(epoch_train_loss), 4),
+                        round(np.mean(epoch_val_loss), 4),
+                        round(np.mean(epoch_train_acc), 4),
+                        round(np.mean(epoch_val_acc), 4)))
+
+            if np.mean(val_loss) < best_loss:
+                state = {
+                    'model': model.state_dict(),
+                    'optimizer': optimizer.state_dict()
+                }
+                torch.save(
+                    state, 
+                    os.path.join(eparams['pc_data_path'], 
+                        eparams["checkpoints_folder"],
+                        eparams["checkpoint_name"])
+                    )
+                best_loss=np.mean(val_loss)
+
+            train_loss.append(np.mean(epoch_train_loss))
+            val_loss.append(np.mean(epoch_val_loss))
+            train_acc.append(np.mean(epoch_train_acc))
+            val_acc.append(np.mean(epoch_val_acc))
+
+            # Log results to TensorBoard for every epoch
+            logger.writer.add_scalar(''.join(args.goal).capitalize() + " Loss/Training", train_loss[-1], epoch)
+            logger.writer.add_scalar(''.join(args.goal).capitalize() + " Loss/Validation", val_loss[-1], epoch)
+            logger.writer.add_scalar(''.join(args.goal).capitalize() + " Accuracy/Training", train_acc[-1], epoch)
+            logger.writer.add_scalar(''.join(args.goal).capitalize() + " Accuracy/Validation", val_acc[-1], epoch)
 
 
 if __name__ == "__main__":
@@ -335,7 +502,7 @@ if __name__ == "__main__":
           
         # Select the task to do
         if "train" in args.task:
-            train(model, dataloaders)
+            train_classification(model, dataloaders)
         
         if "test" in args.task:
             test_classification(model, dataloaders)
@@ -360,10 +527,10 @@ if __name__ == "__main__":
       
 
         if "train" in args.task:
-            train(model, dataloaders)
+            train_segmentation(model, dataloaders)
         
         if "test" in args.task:
-            ...
+            test_segmentation(model, dataloaders)
       
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.finish()

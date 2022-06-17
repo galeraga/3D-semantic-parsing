@@ -71,7 +71,7 @@ class S3DISDataset4Classification(torch.utils.data.Dataset):
                 usecols = cols_to_get 
                 )[cols_to_get]
 
-            obj = torch.tensor(obj_df.values, device = hparams["device"])
+            obj = torch.tensor(obj_df.values).to(hparams["device"])
 
             # Torch Dataloaders expects each tensor to be equal size
             # TODO: MAX_OBJ_POINTS has te be defined, based on point cloud analysis
@@ -198,7 +198,7 @@ class S3DISDataset4Segmentation(torch.utils.data.Dataset):
             header = None,
             )
         # Convert the whole room file to tensor
-        room = torch.tensor(space_df.values, device = hparams["device"])
+        room = torch.tensor(space_df.values).to(hparams["device"])
 
         # Since point cloud tensors will have different amount of points/row,
         # we need to set a common size for them all

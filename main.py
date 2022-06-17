@@ -4,10 +4,7 @@ PointNet implementation with S3DIS dataset
 
 from settings import * 
 import dataset 
-import model
-# from dataset import S3DISDataset4Classification, S3DISDataset4Segmentation 
-# from model import ClassificationPointNet, SegmentationPointNet
-
+import model    
 from tensorboardlogger import TensorBoardLogger 
 from summarizer import S3DIS_Summarizer
 
@@ -468,7 +465,7 @@ if __name__ == "__main__":
 
     # When choices are given in parser add_argument, 
     # the parser returns a list 
-    # goal -> either classification or segmentation
+    # goal -> either "classification" or "segmentation"
     goal = ''.join(args.goal)
     
     # Prepare to run on CUDA/CPU

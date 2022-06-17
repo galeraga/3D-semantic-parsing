@@ -283,7 +283,6 @@ class S3DIS_Summarizer():
             # Defining path for the folder where the semantic segmentaion
             # file is going to be saved
             # (e.g. Area_1\office_1\office_1_annotated.txt)
-
             path_to_space = os.path.join(self.path_to_data, 
                 area, 
                 space
@@ -329,6 +328,11 @@ class S3DIS_Summarizer():
                 # Let's read every object/class file
                 # TODO: Find out a faster way to compute the loop 
                 # (e.g, cudf lib, move to numpy to gpu, etc.)
+                # TODO: Quicker way: 
+                #   - get tha path to Area_N\Room_N\Annotations\
+                #   - Reads all files in a list comprehension and make torch.stack
+                #     torch.stack([torch.FloatTensor(i['img']) for i in batch])  
+                #   - Save the file
                 for i in tqdm(objects_df.index, desc = tqdm_msg):
                     # Get line by line info
                     summary_line = self.summary_df.iloc[i]

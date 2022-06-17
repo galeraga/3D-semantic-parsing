@@ -496,7 +496,7 @@ if __name__ == "__main__":
                                             hparams["dimensions_per_object"]
                                             )
     
-    # Define the dataset to call based on args.goal
+    # Dataset instance creation (goal-dependent) 
     # If args.goal == classification -> S3DISDataset4Classification
     # If args.goal == segmentation -> S3DISDataset4Segmentation
     ds_to_call = "S3DISDataset4" + goal.capitalize()  
@@ -508,6 +508,8 @@ if __name__ == "__main__":
     dataloaders = create_dataloaders(ds)
 
     # Model instance creation (goal-dependent)
+    # If args.goal == classification -> ClassificationPointNet
+    # If args.goal == segmentation -> SegmentationPointNet
     model_to_call = goal.capitalize() + "PointNet"
     model = getattr(model, model_to_call)(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object']).to(device)

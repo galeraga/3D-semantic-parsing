@@ -517,11 +517,9 @@ if __name__ == "__main__":
     # Select the task to do
     if "train" in args.task:
         locals()["train_" + goal](model, dataloaders)
-        # train_classification(model, dataloaders)
     
     if "test" in args.task:
         locals()["test_" + goal](model, dataloaders)
-        #test_classification(model, dataloaders)
-
+    
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.finish()

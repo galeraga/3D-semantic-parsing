@@ -121,11 +121,11 @@ if "medium" in args.load:
     hparams["num_points_per_object"] = 1024
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 10
-    hparams["max_points_per_space"] = 50000
+    hparams["max_points_per_space"] = 2000
 
 if "high" in args.load:
     hparams["num_points_per_object"] = 4096
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 50
-    hparams["max_points_per_space"] = 1000000
+    hparams["max_points_per_space"] = 4096
 

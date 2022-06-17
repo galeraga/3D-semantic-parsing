@@ -3,8 +3,11 @@ PointNet implementation with S3DIS dataset
 """
 
 from settings import * 
-from dataset import S3DISDataset4Classification, S3DISDataset4Segmentation 
-from model import ClassificationPointNet, SegmentationPointNet
+import dataset 
+import model
+# from dataset import S3DISDataset4Classification, S3DISDataset4Segmentation 
+# from model import ClassificationPointNet, SegmentationPointNet
+
 from tensorboardlogger import TensorBoardLogger 
 from summarizer import S3DIS_Summarizer
 
@@ -12,7 +15,7 @@ from summarizer import S3DIS_Summarizer
 def task_welcome_msg(task = None):
     """
     """
-    msg = "Starting {}-{} with: ".format(task, ''.join(args.goal))
+    msg = "Starting {}-{} with: ".format(task, goal)
     
     
     if "classification" in args.goal:
@@ -141,7 +144,7 @@ def test_classification(model, dataloaders):
         accuracy = corrects.item() / float(hparams['batch_size'])
         accuracies.append(accuracy)
         
-        logger.writer.add_scalar("Accuracy/Test", accuracy, batch_idx)
+        logger.writer.add_scalar(goal.capitalize() + " Accuracy/Test", accuracy, batch_idx)
     
     mean_accuracy = (torch.FloatTensor(accuracies).sum()/len(accuracies))*100
     print("Average accuracy: {:.2f} ".format(float(mean_accuracy)))
@@ -291,10 +294,10 @@ def train_classification(model, dataloaders):
             val_acc.append(np.mean(epoch_val_acc))
 
             # Log results to TensorBoard for every epoch
-            logger.writer.add_scalar(''.join(args.goal).capitalize() + " Classification Loss/Training", train_loss[-1], epoch)
-            logger.writer.add_scalar(''.join(args.goal).capitalize() + " Classification Loss/Validation", val_loss[-1], epoch)
-            logger.writer.add_scalar(''.join(args.goal).capitalize() + " Accuracy/Training", train_acc[-1], epoch)
-            logger.writer.add_scalar(''.join(args.goal).capitalize() + " Accuracy/Validation", val_acc[-1], epoch)
+            logger.writer.add_scalar(goal.capitalize() + " Loss/Training", train_loss[-1], epoch)
+            logger.writer.add_scalar(goal.capitalize() + " Loss/Validation", val_loss[-1], epoch)
+            logger.writer.add_scalar(goal.capitalize() + " Accuracy/Training", train_acc[-1], epoch)
+            logger.writer.add_scalar(goal.capitalize() + " Accuracy/Validation", val_acc[-1], epoch)
 
 def train_segmentation(model, dataloaders):
     """
@@ -455,22 +458,30 @@ def train_segmentation(model, dataloaders):
             val_acc.append(np.mean(epoch_val_acc))
 
             # Log results to TensorBoard for every epoch
-            logger.writer.add_scalar(''.join(args.goal).capitalize() + " Loss/Training", train_loss[-1], epoch)
-            logger.writer.add_scalar(''.join(args.goal).capitalize() + " Loss/Validation", val_loss[-1], epoch)
-            logger.writer.add_scalar(''.join(args.goal).capitalize() + " Accuracy/Training", train_acc[-1], epoch)
-            logger.writer.add_scalar(''.join(args.goal).capitalize() + " Accuracy/Validation", val_acc[-1], epoch)
+            logger.writer.add_scalar(goal.capitalize() + " Loss/Training", train_loss[-1], epoch)
+            logger.writer.add_scalar(goal.capitalize() + " Loss/Validation", val_loss[-1], epoch)
+            logger.writer.add_scalar(goal.capitalize() + " Accuracy/Training", train_acc[-1], epoch)
+            logger.writer.add_scalar(goal.capitalize() + " Accuracy/Validation", val_acc[-1], epoch)
 
 
 if __name__ == "__main__":
 
+    # When choices are given in parser add_argument, 
+    # the parser returns a list 
+    goal = ''.join(args.goal)
+    
     # Prepare to run on CUDA/CPU
     device = hparams['device']
 
     # Create a TensorBoard logger instance
     logger = TensorBoardLogger(args)
 
-    # Create the ground truth file
+    # Create the ground truth file for classification
     summary_file = S3DIS_Summarizer(eparams["pc_data_path"], logger)
+
+    # Create the ground truth files for semantic segmentation
+    if "segmentation" in args.goal:
+        summary_file.label_points_for_semantic_segmentation()
 
     # Log insights from the S3DIS dataset into TensorBoard
     logger.log_dataset_stats(summary_file)
@@ -480,60 +491,35 @@ if __name__ == "__main__":
     
     # Define the checkpoint name
     eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_{}_points_{}_dims.pth".format(
-                                            ''.join(args.goal),
+                                            goal,
                                             hparams["num_points_per_object"],
                                             hparams["dimensions_per_object"]
                                             )
+    
+    # Define the dataset to call based on args.goal
+    # If args.goal == classification -> S3DISDataset4Classification
+    # If args.goal == segmentation -> S3DISDataset4Segmentation
+    ds_to_call = "S3DISDataset4" + goal.capitalize()  
+    ds = getattr(dataset, ds_to_call)(eparams['pc_data_path'], transform = None)
+    print(ds)
+    
+    # Create the dataloaders
+    # dataloaders = (train_dataloader, validation_dataloader, test_dataloader)
+    dataloaders = create_dataloaders(ds)
 
-    # When choices are given in parser add_argument, the parser returns a list 
-    if "classification" in args.goal:
-        # Create the S3DIS dataset
-        ds = S3DISDataset4Classification(eparams['pc_data_path'], transform = None)
-        print(ds)
-        
-        # Create the dataloaders
-        # dataloaders = (train_dataloader, validation_dataloader, test_dataloader)
-        # TODO: Redefine the dataloaders based on task (classification, segmentation)
-        dataloaders = create_dataloaders(ds)
-
-        # Model instance creation (goal-dependent)
-        model = ClassificationPointNet(num_classes = hparams['num_classes'],
+    # Model instance creation (goal-dependent)
+    model_to_call = goal.capitalize() + "PointNet"
+    model = getattr(model, model_to_call)(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object']).to(device)
-          
-        # Select the task to do
-        if "train" in args.task:
-            train_classification(model, dataloaders)
-        
-        if "test" in args.task:
-            test_classification(model, dataloaders)
 
+    # Select the task to do
+    if "train" in args.task:
+        locals()["train_" + goal](model, dataloaders)
+        # train_classification(model, dataloaders)
+    
+    if "test" in args.task:
+        locals()["test_" + goal](model, dataloaders)
+        #test_classification(model, dataloaders)
 
-    if "segmentation" in args.goal:
-        # Create the files for semantic segmentation
-        summary_file.label_points_for_semantic_segmentation()
-      
-        # Create the S3DIS dataset
-        ds = S3DISDataset4Segmentation(eparams['pc_data_path'], transform = None)
-        print(ds)
-        
-        # Create the dataloaders
-        # dataloaders = (train_dataloader, validation_dataloader, test_dataloader)
-        # TODO: Redefine the dataloaders based on task (classification, segmentation)
-        dataloaders = create_dataloaders(ds)
-        
-        # Model instance creation (goal-dependent)
-        model = SegmentationPointNet(num_classes = hparams['num_classes'],
-                                   point_dimension = hparams['dimensions_per_object']).to(device)
-      
-
-        if "train" in args.task:
-            train_segmentation(model, dataloaders)
-        
-        if "test" in args.task:
-            test_segmentation(model, dataloaders)
-      
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.finish()
-    
-    
-

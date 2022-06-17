@@ -124,7 +124,6 @@ if "medium" in args.load:
     hparams["max_points_per_space"] = 50000
 
 if "high" in args.load:
-    hparams["num_workers"] = 2
     hparams["num_points_per_object"] = 4096
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 50

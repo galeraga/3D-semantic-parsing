@@ -232,18 +232,16 @@ class SegmentationPointNet(nn.Module):
         x = F.relu(self.bn1(self.conv1(x)))
         x = F.relu(self.bn2(self.conv2(x)))
         x = F.relu(self.bn3(self.conv3(x)))
-    
+
+        # Output x.shape(batch_size, num_classes, max_points_per_space)
         x = self.conv4(x)
         
-        # Input shape: x.shape(batch_size, num_classes, max_points_per_space)
-        # Output shape: x.shape(batch_size, max_points_per_space, num_classes)
-        x = x.transpose(2, 1)
-        
-        # Apply log_softmax over the last dim (num_classes)
-        preds = F.log_softmax(x, dim = -1)
-        
-        # Output preds.shape(batch_size, max_points_per_space, num_classes)
-        preds = x.view(-1, num_points, self.num_classes)
+        # Apply log_softmax over the num_classes dim
+        # Returns a Tensor of the same dimension and shape 
+        # as the input with values in the range [-inf, 0]
+        # NLL Loss will expect the shape:
+        # preds.shape[batch_size, num_classes, max_points_per_room]
+        preds = F.log_softmax(x, dim = 1)
         
         # Returning the same values than ClassificationPointNet
         # to keep compatatibility in main.py

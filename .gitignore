@@ -7,3 +7,4 @@ __pycache__/model.cpython-38.pyc
 __pycache__/tensorboard.cpython-38.pyc
 .gitignore
 __pycache__/tensorboardlogger.cpython-38.pyc
+.DS_Store

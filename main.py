@@ -15,7 +15,8 @@ def task_welcome_msg(task = None):
     msg = "Starting {}-{} with: ".format(task, ''.join(args.goal))
     
     
-    msg += "{} points per object | ".format(hparams['num_points_per_object'])
+    if "classification" in args.goal:
+        msg += "{} points per object | ".format(hparams['num_points_per_object'])
     
     if "segmentation" in args.goal:
         msg += "{} points per room | ".format(hparams['max_points_per_space'])
@@ -105,7 +106,7 @@ def test_classification(model, dataloaders):
     # If the checkpoint does not exist, train the model
     if not os.path.exists(model_checkpoint):
         print("The model does not seem already trained! Starting the training rigth now from scratch...")
-        train(model, dataloaders)
+        train_classification(model, dataloaders)
     
     # Loading the existing checkpoint
     print("Loading checkpoint {} ...".format(model_checkpoint))
@@ -235,12 +236,12 @@ def train_classification(model, dataloaders):
                 # max() returns a tuple (max_value, idx_of_the_max_value)
                 # Take the index of the max value, since the object class 
                 # classification is based on the position of the max value
+                # https://pytorch.org/docs/stable/generated/torch.max.html
                 preds = preds.data.max(dim = 1)[1]
                 corrects = preds.eq(targets.data).cpu().sum()
-                accuracy = corrects.item() / float(hparams['batch_size'])
+                accuracy = corrects.item() / preds.numel()
                 epoch_train_acc.append(accuracy)
                 
-
             epoch_val_loss = []
             epoch_val_acc = []
 
@@ -258,9 +259,9 @@ def train_classification(model, dataloaders):
                 
                 epoch_val_loss.append(loss.cpu().item())
                 
-                preds = preds.data.max(1)[1]
+                preds = preds.data.max(dim = 1)[1]
                 corrects = preds.eq(targets.data).cpu().sum()
-                accuracy = corrects.item() / float(hparams['batch_size'])
+                accuracy = corrects.item() / preds.numel()
                 epoch_val_acc.append(accuracy)
 
 
@@ -335,6 +336,16 @@ def train_segmentation(model, dataloaders):
             for data in train_dataloader:
                 model = model.train()
                 
+                # TODO: Insert Clara's code here
+                # split_the_room_into_blocks(data) -> list_of_blocks
+                # for each block in list_of_block:
+                #   points, targets = block
+                #   points = points.to(device)
+                #   targets = targets.to(device)
+                #   optimizer.zero_grad()
+                #   model(block)
+                #   Move the rest of the code (accuracy, etc) within the for loop
+                
                 points, targets = data  
                 
                 points = points.to(device)
@@ -345,7 +356,6 @@ def train_segmentation(model, dataloaders):
                 preds, feature_transform, tnet_out, ix_maxpool = model(points)
 
                 # Why?  
-
                 identity = torch.eye(feature_transform.shape[-1]).to(device)
 
                 # Formula (2) in original paper (Lreg)
@@ -372,12 +382,7 @@ def train_segmentation(model, dataloaders):
                 # target - (N, d1, d2,...,dk)
                 # So shapes have to be:
                 # preds.shape[batch_size, num_classes, max_points_per_room]
-                # targets.shape[batch_size, max_points_per_room]
               
-                # Changing shape of preds to match targets according to the
-                # above description
-                preds = torch.transpose(preds, 1, 2)
-
                 # Why does the loss function return a single scalar for a batch?
                 # It returns, by default, the weighted mean of the output 
                 # https://pytorch.org/docs/stable/generated/torch.nn.NLLLoss.html#torch.nn.NLLLoss
@@ -386,8 +391,6 @@ def train_segmentation(model, dataloaders):
                 # epoch_train_loss.append(loss.cpu().item())
                 epoch_train_loss.append(loss.cpu().item())
             
-                # https://discuss.pytorch.org/t/loss-backward-raises-error-grad-can-be-implicitly-created-only-for-scalar-outputs/12152
-                # loss.backward()
                 loss.backward()
                 
                 optimizer.step()
@@ -396,7 +399,8 @@ def train_segmentation(model, dataloaders):
                 # max() returns a tuple (max_value, idx_of_the_max_value)
                 # Take the index of the max value, since the object class 
                 # classification is based on the position of the max value
-                preds = preds.data.max(1)[1]
+                # https://pytorch.org/docs/stable/generated/torch.max.html
+                preds = preds.data.max(dim = 1)[1]
                 corrects = preds.eq(targets.data).cpu().sum()
                 accuracy = corrects.item() / preds.numel()
                 epoch_train_acc.append(accuracy)
@@ -415,17 +419,13 @@ def train_segmentation(model, dataloaders):
                         
                 preds, feature_transform, tnet_out, ix = model(points)
 
-                # TODO: loss has to be defined for semantic segmentation
-                # Loss functions for sem seg: https://arxiv.org/abs/2006.14822
-                preds = torch.transpose(preds, 1, 2)
                 loss = F.nll_loss(preds, targets.long()) + 0.001 * regularization_loss
           
                 epoch_val_loss.append(loss.cpu().item())
                 
-                preds = preds.data.max(1)[1]
+                preds = preds.data.max(dim = 1)[1]
                 corrects = preds.eq(targets.data).cpu().sum()
-                accuracy = corrects.item() / preds.numel()
-                
+                accuracy = corrects.item() / preds.numel()       
                 epoch_val_acc.append(accuracy)
 
 

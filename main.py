@@ -171,6 +171,7 @@ def train_classification(model, dataloaders):
     train_acc = []
     val_acc = []
     best_loss= np.inf
+    
 
     optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
 
@@ -466,7 +467,9 @@ if __name__ == "__main__":
     # When choices are given in parser add_argument, 
     # the parser returns a list 
     # goal -> either "classification" or "segmentation"
+    # task -> either "train" or "test"
     goal = ''.join(args.goal)
+    task = ''.join(args.task)
     
     # Prepare to run on CUDA/CPU
     device = hparams['device']
@@ -512,12 +515,10 @@ if __name__ == "__main__":
     model = getattr(model, model_to_call)(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object']).to(device)
 
-    # Select the task to do
-    if "train" in args.task:
-        locals()["train_" + goal](model, dataloaders)
-    
-    if "test" in args.task:
-        locals()["test_" + goal](model, dataloaders)
+
+    # Carry out the the task to do
+    # (e.g, train_classification(), test_segmentation())
+    locals()[task + "_" + goal](model, dataloaders)
     
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.finish()

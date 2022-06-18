@@ -29,12 +29,14 @@ There're **272 rooms** (or spaces) dsitributed among all areas, and every room c
 
 The folder structure of the S3DIS dataset is the following one:
 
-Area_N\Space_X\space_x.txt 
+Area_N\Space_X\space_x.txt (
 Area_N\Space_X\Annotations\object_1.txt
 ...
 Area_N\Space_X\Annotations\object_Y.txt
 
 More info about the S3DIS dataset can be found at: http://buildingparser.stanford.edu/dataset.html 
+
+From this original S3DIS dataset, two custom datasets have been created
 
 
 

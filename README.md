@@ -29,17 +29,19 @@ There're **272 rooms** (or spaces) dsitributed among all areas, and every room c
 
 The folder structure of the S3DIS dataset is the following one:
 ```
-Area_N\Space_X\space_x.txt (the non-annotated file with the point cloud for this space)
-|-------------\Annotations\object_1.txt (the file with the point cloud for object_1 that can be found in Space_X)
-.
-.
-.
-|-------------------------\object_Y.txt (the file with the point cloud for object_Y that can be found in Space_X)
+Area_N\
+  |- Space_X\
+      |- space_x.txt (the non-annotated file with the point cloud for this space)
+      |- Annotations\
+          |- object_1.txt (the file with the point cloud for object_1 that can be found in Space_X)
+          |- ...
+          |- object_Y.txt (the file with the point cloud for object_Y that can be found in Space_X)
+```  
 
 More info about the S3DIS dataset can be found at: http://buildingparser.stanford.edu/dataset.html 
 
 From this original S3DIS dataset, two custom datasets have been created
-```
+
 
 
 ### Subsection 1

@@ -18,16 +18,25 @@ This project'll be focus on implementing only **object classification** and **sc
 This is section1 
 
 ## The dataset
-The **3D Semantic Parsing of Large-Scale Indoor Spaces (S3DIS)** dataset is going to be used in order to work with the PointNet architecture. The dataset contains point clouds from 3 differnt buildings, distributed in 6 areas:
+The **3D Semantic Parsing of Large-Scale Indoor Spaces (S3DIS)** dataset is going to be used in order to work with the PointNet architecture. The dataset contains point clouds from **3 different buildings**, distributed in **6 areas**:
 
 - Building 1: Area_1, Area_3, Area_6 
 - Building 2: Area_2, Area_4 
 - Building 3: Area_5 
 
-Each area includes several rooms or spaces, an the folder structure of the S3DIS dataset is the following one:
+There're **272 rooms** (or spaces) dsitributed among all areas, and every room can have up to **14 different objects**. These object can be classified either as **movable** (boards, bookcases, chairs, tables and sofas) or **structural** (ceilings, doors, floors, walls, beams, columns, windows and stairs). If an object doesn't belong to any of the previous catagories, it's classied as clutter. 
 
-Area_N\Space_X\
-               
+
+The folder structure of the S3DIS dataset is the following one:
+
+Area_N\Space_X\space_x.txt 
+Area_N\Space_X\Annotations\object_1.txt
+...
+Area_N\Space_X\Annotations\object_Y.txt
+
+More info about the S3DIS dataset can be found at: http://buildingparser.stanford.edu/dataset.html 
+
+
 
 ### Subsection 1
 This is subsection 1.1 

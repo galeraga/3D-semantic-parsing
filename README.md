@@ -12,13 +12,13 @@ PointNet provides a unified deep learning architecture for the following applica
 2) Shape part segmentation
 3) Scene semantic parsing
 
-In this project, we'll be focus on implementing only **object classification** and **scene semantic parsing**. As a dataset, we'll use the **S3DIS dataset**, where every point also includes color info by default, in addition to its spatial coordinates (xyzrgb).
+This project'll be focus on implementing only **object classification** and **scene semantic parsing**. As a dataset, the **S3DIS dataset** is going to be used, where every point includes both its spatial coordinates and its color info (xyzrgb).
 
 ## Main goals
 This is section1 
 
 ## The dataset
-3D Semantic Parsing of Large-Scale Indoor Spaces (S3DIS)
+The 3D Semantic Parsing of Large-Scale Indoor Spaces (S3DIS)
 
 ### Subsection 1
 This is subsection 1.1 

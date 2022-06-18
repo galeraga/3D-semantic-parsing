@@ -14,7 +14,6 @@ def task_welcome_msg(task = None):
     """
     msg = "Starting {}-{} with: ".format(task, goal)
     
-    
     if "classification" in args.goal:
         msg += "{} points per object | ".format(hparams['num_points_per_object'])
     
@@ -165,14 +164,15 @@ def train_classification(model, dataloaders):
     train_dataloader = dataloaders[0]
     val_dataloader = dataloaders[1]
 
-    # Aux training vars
+    # Aux vars for grand totals
     train_loss = []
     val_loss = []
     train_acc = []
     val_acc = []
     best_loss= np.inf
+    total_train_time = []
+    total_val_time = []
     
-
     optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
 
     # To avoid MaxPool1d warning in GCP
@@ -180,8 +180,10 @@ def train_classification(model, dataloaders):
         warnings.simplefilter("ignore")
 
         for epoch in tqdm(range(hparams['epochs'])):
+            # Aux vars per epoch
             epoch_train_loss = []
             epoch_train_acc = []
+            epoch_train_start_time = datetime.datetime.now()
 
             # training loop
             for data in train_dataloader:
@@ -243,8 +245,13 @@ def train_classification(model, dataloaders):
                 accuracy = corrects.item() / preds.numel()
                 epoch_train_acc.append(accuracy)
                 
+            epoch_train_end_time = datetime.datetime.now()
+            train_time_per_epoch = (epoch_train_end_time - epoch_train_start_time).seconds
+            total_train_time.append(train_time_per_epoch)
+
             epoch_val_loss = []
             epoch_val_acc = []
+            epoch_val_start_time = datetime.datetime.now()
 
             # validation loop
             for batch_number, data in enumerate(val_dataloader):
@@ -265,13 +272,19 @@ def train_classification(model, dataloaders):
                 accuracy = corrects.item() / preds.numel()
                 epoch_val_acc.append(accuracy)
 
+            epoch_val_end_time = datetime.datetime.now()
+            val_time_per_epoch = (epoch_val_end_time - epoch_val_start_time).seconds
+            total_val_time.append(val_time_per_epoch)
 
-            print('Epoch %s: train loss: %s, val loss: %f, train accuracy: %s,  val accuracy: %f'
+            print('Epoch %s: train loss: %s, val loss: %f, train accuracy: %s,  val accuracy: %f, time(secs): %s'
                     % (epoch,
                         round(np.mean(epoch_train_loss), 4),
                         round(np.mean(epoch_val_loss), 4),
                         round(np.mean(epoch_train_acc), 4),
-                        round(np.mean(epoch_val_acc), 4)))
+                        round(np.mean(epoch_val_acc), 4),
+                        train_time_per_epoch + val_time_per_epoch
+                        )
+                    )
 
             if np.mean(val_loss) < best_loss:
                 state = {
@@ -296,6 +309,15 @@ def train_classification(model, dataloaders):
             logger.writer.add_scalar(goal.capitalize() + " Loss/Validation", val_loss[-1], epoch)
             logger.writer.add_scalar(goal.capitalize() + " Accuracy/Training", train_acc[-1], epoch)
             logger.writer.add_scalar(goal.capitalize() + " Accuracy/Validation", val_acc[-1], epoch)
+            logger.writer.add_scalar(goal.capitalize() + " Time/Training", total_train_time[-1], epoch)
+            logger.writer.add_scalar(goal.capitalize() + " Time/Validation", total_val_time[-1], epoch)
+        
+        print("Total time (seconds) for {}ing {}: {} secs ".format( 
+                    task,
+                    goal,
+                    sum(total_train_time) + sum(total_val_time))
+                    )
+
 
 def train_segmentation(model, dataloaders):
     """
@@ -316,12 +338,14 @@ def train_segmentation(model, dataloaders):
     train_dataloader = dataloaders[0]
     val_dataloader = dataloaders[1]
 
-    # Aux training vars
+    # Aux vars for grand totals
     train_loss = []
     val_loss = []
     train_acc = []
     val_acc = []
     best_loss= np.inf
+    total_train_time = []
+    total_val_time = []
 
     optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
 
@@ -332,6 +356,7 @@ def train_segmentation(model, dataloaders):
         for epoch in tqdm(range(hparams['epochs'])):
             epoch_train_loss = []
             epoch_train_acc = []
+            epoch_train_start_time = datetime.datetime.now()
 
             # training loop
             for data in train_dataloader:
@@ -407,8 +432,13 @@ def train_segmentation(model, dataloaders):
                 epoch_train_acc.append(accuracy)
                 
 
+            epoch_train_end_time = datetime.datetime.now()
+            train_time_per_epoch = (epoch_train_end_time - epoch_train_start_time).seconds
+            total_train_time.append(train_time_per_epoch)
+
             epoch_val_loss = []
             epoch_val_acc = []
+            epoch_val_start_time = datetime.datetime.now()
 
             # validation loop
             for batch_number, data in enumerate(val_dataloader):
@@ -429,13 +459,19 @@ def train_segmentation(model, dataloaders):
                 accuracy = corrects.item() / preds.numel()       
                 epoch_val_acc.append(accuracy)
 
+            epoch_val_end_time = datetime.datetime.now()
+            val_time_per_epoch = (epoch_val_end_time - epoch_val_start_time).seconds
+            total_val_time.append(val_time_per_epoch)
 
-            print('Epoch %s: train loss: %s, val loss: %f, train accuracy: %s,  val accuracy: %f'
-                    % (epoch,
-                        round(np.mean(epoch_train_loss), 4),
-                        round(np.mean(epoch_val_loss), 4),
-                        round(np.mean(epoch_train_acc), 4),
-                        round(np.mean(epoch_val_acc), 4)))
+            print('Epoch %s: train loss: %s, val loss: %f, train accuracy: %s,  val accuracy: %f, time(secs): %s'
+                % (epoch,
+                    round(np.mean(epoch_train_loss), 4),
+                    round(np.mean(epoch_val_loss), 4),
+                    round(np.mean(epoch_train_acc), 4),
+                    round(np.mean(epoch_val_acc), 4),
+                    train_time_per_epoch + val_time_per_epoch
+                    )
+                )
 
             if np.mean(val_loss) < best_loss:
                 state = {
@@ -460,6 +496,15 @@ def train_segmentation(model, dataloaders):
             logger.writer.add_scalar(goal.capitalize() + " Loss/Validation", val_loss[-1], epoch)
             logger.writer.add_scalar(goal.capitalize() + " Accuracy/Training", train_acc[-1], epoch)
             logger.writer.add_scalar(goal.capitalize() + " Accuracy/Validation", val_acc[-1], epoch)
+            logger.writer.add_scalar(goal.capitalize() + " Time/Training", total_train_time[-1], epoch)
+            logger.writer.add_scalar(goal.capitalize() + " Time/Validation", total_val_time[-1], epoch)
+        
+        print("Total time (seconds) for {}ing {}: {} secs ".format( 
+                    task,
+                    goal,
+                    sum(total_train_time) + sum(total_val_time))
+                    )
+
 
 
 if __name__ == "__main__":

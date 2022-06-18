@@ -1,6 +1,3 @@
-
-from email import header
-from genericpath import exists
 from settings import *
 
 class S3DIS_Summarizer():
@@ -276,7 +273,7 @@ class S3DIS_Summarizer():
         print("Checking whether point labeling has to be performed...")
         
         for i, (idx, row) in enumerate(unique_area_space_df.iterrows()):         
-            # Get the proper area ans space
+            # Get the proper area and space
             area = row["Area"]
             space = row["Space"]
             

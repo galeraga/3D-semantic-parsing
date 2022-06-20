@@ -44,7 +44,10 @@ From this original S3DIS dataset, two custom datasets have been created to feed 
 
 #### S3DISDataset4Classification
 
-This is the dataset used for classification.
+This is the dataset that is going to be used in conjunction with the **classification** network of the PointNet architecture. 
+
+- The object files (object_1, object_2,...object_Y) located inside the "Annotations" folder are going to be used as the **input data**.
+- Labels: 
 
 #### S3DISDataset4Segmentation
 

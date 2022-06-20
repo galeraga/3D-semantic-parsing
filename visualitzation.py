@@ -1,5 +1,6 @@
 from settings import *
 import model
+import main
 
 def infer(dataset,
           model,
@@ -20,8 +21,10 @@ def infer(dataset,
     point_cloud_file(txt):
         The pointcloud that we want to infer saved in a .txt
     shuffle_points(bool, Default = False):
+        Not implemented.
         This allows to make a permutation between the points.
     plot_tNet_out(bool, Default = True):
+        Not implemented.
         Plots the tNet
     return_indices_maxpool(bool, Defalut = False):
         If True returns also the indices of the maxpool operation
@@ -56,29 +59,44 @@ def infer(dataset,
 
 
 
-# Plot 7 samples
-for SAMPLE in range(7):
+def tnet_compare(num_samples, dataset, subdataset):
+    '''
+    This function plots the initial pointcloud and the pointcloud represented in the canonical space (the space found by the T-Net).
+    The point of the function is to have a better understanding of what the T-Net is doing.
 
-    fig = plt.figure(figsize=[12,6])
-    ax = fig.add_subplot(1, 2, 1, projection='3d')
+    Parameters:
+    -----------
+    num_samples(int):
+        The number of samples that we want to plot.
+    dataset(pandas):
+        The global dataset that we use to train the whole network. This is needed for the infer function.
+    subdataset(pandas):
+        This subdataset is the dataset where we will extract all the pointclouds samples that we want to plot.
+        Usually, for the sake of rigurosity, it is used the test set.
+    '''
+    # Plot 7 samples
+    for SAMPLE in range(num_samples):
 
-    # plot input sample
-    pc = test_dataset[SAMPLE][0].numpy()
-    label = test_dataset[SAMPLE][1]
-    sc = ax.scatter(pc[:,0], pc[:,1], pc[:,2], c=pc[:,0] ,s=50, marker='o', cmap="viridis", alpha=0.7)
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    ax.set_zlim3d(-1, 1)
-    ax.title.set_text(f'Input point cloud - Target: {label}')
+        fig = plt.figure(figsize=[12,6]) # height and width, DO NOT CHANGE.
 
-    # plot transformation
-    ax = fig.add_subplot(1, 2, 2, projection='3d')
-    preds, tnet_out = infer(dataset_3d, model,test_dataset[SAMPLE])
-    points=tnet_out
-    sc = ax.scatter(points[0,0,:], points[0,1,:], points[0,2,:], c=points[0,0,:] ,s=50, marker='o', cmap="viridis", alpha=0.7)
-    ax.title.set_text(f'Output of "Input Transform" Detected: {preds}')
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    plt.savefig(f'figures/Tnet-out-{label}.png',dpi=100)
+        ax = fig.add_subplot(1, 2, 1, projection='3d')
 
-    #print('Detected class: %s' % preds)
+        # plot input sample
+        pc = subdataset[SAMPLE][0].numpy()
+        label = subdataset[SAMPLE][1]
+        sc = ax.scatter(pc[:,0], pc[:,1], pc[:,2], c=pc[:,0] ,s=50, marker='o', cmap="viridis", alpha=0.7)
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_zlim3d(-1, 1)
+        ax.title.set_text(f'Input point cloud - Target: {label}')
+
+        # plot transformation
+        ax = fig.add_subplot(1, 2, 2, projection='3d')
+        preds, tnet_out = infer(dataset, model,subdataset[SAMPLE])
+        points=tnet_out
+        sc = ax.scatter(points[0,0,:], points[0,1,:], points[0,2,:], c=points[0,0,:] ,s=50, marker='o', cmap="viridis", alpha=0.7)
+        ax.title.set_text(f'Output of "Input Transform" Detected: {preds}')
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        plt.savefig(f'figures/Tnet-out-{label}.png',dpi=100)
+        #print('Detected class: %s' % preds)

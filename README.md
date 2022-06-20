@@ -45,14 +45,6 @@ From this original S3DIS dataset, two custom datasets have been created to feed 
 
 #### S3DISDataset4Segmentation
 
-### Subsection 1
-This is subsection 1.1 
-
-#### Subsection 1.1.1
-This is subsection 1.1.1 
-
-## Repository Structure
-This is section1 
 
 ## Related Work
 

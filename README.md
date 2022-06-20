@@ -41,10 +41,14 @@ Area_N\
 More info about the S3DIS dataset can be found at: http://buildingparser.stanford.edu/dataset.html 
 
 From this original S3DIS dataset, two custom datasets have been created to feed the dataloaders, depending on the desired goal:
+
 #### S3DISDataset4Classification
+
+This is the dataset used for classification.
 
 #### S3DISDataset4Segmentation
 
+This is the dataset used for semantic segmentation.
 
 ## Related Work
 

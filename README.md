@@ -3,7 +3,7 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
 
 ## Abstract
 A point cloud is a type of 3D geometric data structure, based on unordered set of vectors.
-Each point is a vector of its (z, y, z) coordinate plus extra feature channels such as color, normal, etc.
+Each point is a vector of its (x, y, z) coordinate plus extra feature channels such as color, normal, etc.
 
 PointNet: Respects invariance of input points and no voxel grids are needed
 
@@ -55,7 +55,7 @@ Area_N\
 ```  
 
 - ` object_Y.txt` is a file containing the point cloud of this particular object that belongs to Space_X (e.g., objects *chair_1.txt, chair_2.txt* or *table_1.txt* from an space/room called *office_1*). This point cloud file has 6 columns (non-normalized XYXRGB values).
-- ` space_x.txt` is a non-annotated point cloud file containing the sum of of all the point cloud object files (object_1, object_2, ...) located within the `Annotations` folder (e.g., the space file called *Area_1\office_1\office_1.txt* contains the sum of the object files *chair_1.txt, chair_2.txt* and the rest of all the object files located inside the `Annotations` directory). As a consequence, the space/room point cloud file has only 6 columns too (non-normalized XYXRGB values).
+- ` space_x.txt` is a non-annotated point cloud file containing the sum of of all the point cloud object files (object_1, object_2, ...) located within the `Annotations` folder (e.g., the space file called *Area_1\office_1\office_1.txt* contains the sum of the object files *chair_1.txt, chair_2.txt* and the rest of all the object files located inside the `Annotations` directory). As a consequence, the space/room point cloud file has only 6 columns too (non-normalized XYZRGB values).
 
 Comprehensive information about the original S3DIS dataset can be found at: http://buildingparser.stanford.edu/dataset.html 
 

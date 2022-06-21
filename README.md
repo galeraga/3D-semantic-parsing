@@ -12,10 +12,17 @@ PointNet provides a unified deep learning architecture for the following applica
 2) Shape part segmentation
 3) Scene semantic parsing
 
-This project'll be focus on implementing only **object classification** and **scene semantic parsing**. As a dataset, the **S3DIS dataset** is going to be used, where every point includes both its spatial coordinates and its color info (xyzrgb).
+This project'll be focus on implementing only **object classification** and **scene semantic parsing** (no shape part segementation is carried out). As a dataset, the **S3DIS dataset** is going to be used, where every point includes both its spatial coordinates and its color info (xyzrgb).
 
 ## Main goals
-This is section1 
+The main goal is to implement a PointNet architecture in Pytorch that uses the S3DIS dataset in order to perform object classification and indoor scene semantic segmentation. 
+
+The following considerations will be of particular interest:
+- How color impacts object detection and semantic segmenttion
+- Goal 2
+- Goal 3
+- Goal 4
+- Goal 5
 
 ## The dataset
 The **3D Semantic Parsing of Large-Scale Indoor Spaces (S3DIS)** dataset is going to be used in order to work with the PointNet architecture. The dataset contains point clouds from **3 different buildings**, distributed in **6 areas**:
@@ -40,7 +47,10 @@ Area_N\
 
 More info about the S3DIS dataset can be found at: http://buildingparser.stanford.edu/dataset.html 
 
-From this original S3DIS dataset, two custom datasets have been created to feed the dataloaders, depending on the desired goal:
+From this original S3DIS dataset:
+
+- A ground truth file (called s3dis_summary.csv) has been created to speed up the process to get to the point cloud files, avoiding recurrent operating system folder traversals.  
+- Two custom datasets have been created to feed the dataloaders, depending on the desired goal (S3DISDataset4Classification and S3DISDataset4Segmentation). 
 
 #### S3DISDataset4Classification
 

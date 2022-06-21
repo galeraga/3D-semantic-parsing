@@ -66,12 +66,12 @@ A CSV file is generated to host the following information:
 |:-------------:|:-------------:|:------------:|:--------:|:---------:|:-------------:|:------------:|:---------:|:------------:|
 | Area_N        | Space_X       | Space        | [0-10]   | Object Y  |  Integer      | Object       | [0-13]    |    Good/Bad
 
-Columns intertrepation:
+Columns interpretation:
 - Area: Any of the available 6 areas (Area_1, Area_2, Area_3, Area_4, Area_5, Area_6). 
 - Space: Any of the available 272 spaces (office_1, hallway_2,...).
 - Space Label: Text string/label to identify any of the 11 different room types (WCs, conference rooms, copy rooms, hallways, offices, pantries, auditoriums, storage rooms, lounges, lobbies and open spaces).
 - Space ID: A dict-mapping for any of the 11 space labels.
-- Object: Any of the available 9832 objects distributed among the different rooms (board_1, bookcase_1, chair_1, chair_2, table_1,...).
+- Object: Any of the available 9832 objects distributed among all the different rooms (board_1, bookcase_1, chair_1, chair_2, table_1,...).
 - Object Points: Number of points this particular object point cloud file has.
 - Object Label: Text string/label to identify any of the 14 different object types (boards, bookcases, chairs, tables, sofas, ceilings, doors, floors, walls, beams, columns, windows, stairs and clutter).
 - Object ID: A dict-mapping for any of the 14 object labels.

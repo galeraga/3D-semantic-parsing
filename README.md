@@ -116,19 +116,21 @@ Area_N\
 
 ## The model
 
-### TransformationNet ###
+### TransformationNet
 
-### BasePointNet ###
+<img width="980" alt="image" src="https://user-images.githubusercontent.com/76537012/174836557-f1a113cd-8953-4e54-bfff-da6a03be40e2.png">
+
+### BasePointNet
 
 <img width="962" alt="image" src="https://user-images.githubusercontent.com/76537012/174834124-c25dbcfe-2c46-4616-88dd-af417c0975ee.png">
 
 
-### ClassificationPointNet ###
+### ClassificationPointNet
 
 <img width="980" alt="image" src="https://user-images.githubusercontent.com/76537012/174834793-8c03b4b5-933e-447b-afbb-146bb861bd13.png">
 
 
-### SegmentationPointNet ###
+### SegmentationPointNet
 
 <img width="980" alt="image" src="https://user-images.githubusercontent.com/76537012/174835726-32d68eaa-6196-4f1c-a545-8cfa61a28298.png">
 

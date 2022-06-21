@@ -100,8 +100,8 @@ parser.add_argument("--load",
                     action = "store",
                     nargs = 1,
                     default = "low",
-                    choices = ["low", "medium", "high"],
-                    help = "Either low, medium or high")
+                    choices = ["toy", "low", "medium", "high"],
+                    help = "Either toy, low, medium or high")
 
 # Get parser args to decide what the program has to do
 args = parser.parse_args()
@@ -112,6 +112,14 @@ args = parser.parse_args()
 # be aware that excessive worker creation might get DataLoader running 
 # slow or even freeze, lower the worker number to avoid potential 
 # slowness/freeze if necessary.
+
+# Toy is for testing code in a very quick way, where
+# getting the most of the model is NOT the goal
+if "toy" in args.load:
+    hparams["num_points_per_object"] = 10
+    hparams["dimensions_per_object"] = 3
+    hparams["epochs"] = 3
+    hparams["max_points_per_space"] = 10
 
 if "low" in args.load:
     hparams["num_points_per_object"] = 100

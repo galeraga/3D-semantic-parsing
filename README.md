@@ -114,7 +114,19 @@ Area_N\
 ```  
 
 
+## The model
 
+###TransformationNet (picture showing the T-Net)###
+
+###BasePointNet###
+
+<img width="962" alt="image" src="https://user-images.githubusercontent.com/76537012/174834124-c25dbcfe-2c46-4616-88dd-af417c0975ee.png">
+
+
+###ClassificationPointNet###
+
+
+###SegmentationPointNet###
 
 ## Related Work
 

@@ -247,5 +247,3 @@ class SegmentationPointNet(nn.Module):
         # to keep compatatibility in main.py
         return preds, feature_transform, tnet_out, ix_maxpool
 
-
-

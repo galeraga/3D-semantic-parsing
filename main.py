@@ -183,6 +183,7 @@ def train_classification(model, dataloaders):
         for epoch in tqdm(range(hparams['epochs'])):
             epoch_train_loss = []
             epoch_train_acc = []
+            tnet_out_list = [] 
 
             # training loop
             for data in train_dataloader:
@@ -196,6 +197,8 @@ def train_classification(model, dataloaders):
                 optimizer.zero_grad()
                 
                 preds, feature_transform, tnet_out, ix_maxpool = model(points)
+                
+            
 
                 # Why?  
 
@@ -243,7 +246,8 @@ def train_classification(model, dataloaders):
                 corrects = preds.eq(targets.data).cpu().sum()
                 accuracy = corrects.item() / preds.numel()
                 epoch_train_acc.append(accuracy)
-                
+                tnet_out_list.append(tnet_out)
+
             epoch_val_loss = []
             epoch_val_acc = []
 
@@ -523,3 +527,17 @@ if __name__ == "__main__":
     
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.finish()
+
+    # GUARRADA PER BORRAR DESPRES I PROVAR COSES ----------------------------------------------------------------------------
+    original_ds_length = len(ds)
+    training_ds_length = round(0.8*original_ds_length)
+    validation_ds_length = round(0.1*original_ds_length)
+    test_ds_length = round(0.1*original_ds_length)
+    split_criteria = [training_ds_length, validation_ds_length, test_ds_length]
+ 
+    train_dataset, val_dataset, test_dataset = torch.utils.data.dataset.random_split(ds,
+                                                split_criteria,
+                                                generator=torch.Generator().manual_seed(1))
+
+    tnet_compare(model, ds)
+    # -----------------------------------------------------------------------------------------------------------------------

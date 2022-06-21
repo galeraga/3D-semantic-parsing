@@ -44,14 +44,17 @@ From this original S3DIS dataset, two custom datasets have been created to feed 
 
 #### S3DISDataset4Classification
 
-This is the dataset that is going to be used in conjunction with the **classification** network of the PointNet architecture. 
+This is the dataset used in conjunction with the **classification** network of the PointNet architecture. 
 
-- **Inout data**: The object files (object_1, object_2,...object_Y) located inside the "Annotations" folder are going to be used as the input data.
-- **Labels**: 
+- **Input data**: The object files (object_1, object_2,...object_Y) located inside the "Annotations" folder are going to be used as the input data.
+- **Labels**: The name of the file (e.g, chair_1.txt) is used to get the proper object label.
 
 #### S3DISDataset4Segmentation
 
-This is the dataset used for semantic segmentation.
+This is the dataset used for **semantic segmentation**. 
+
+-**Input data**:
+-**Labels**:
 
 ## Related Work
 

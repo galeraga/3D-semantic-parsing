@@ -17,6 +17,8 @@ import random
 from tqdm import tqdm
 import warnings
 from torch.utils.tensorboard import SummaryWriter
+import matplotlib.pyplot as plt
+
 
 building_distribution = {
     'Building 1': ["Area_1", "Area_3", "Area_6"], 
@@ -26,7 +28,7 @@ building_distribution = {
 
 # Environment (file system and so on) params
 eparams = {
-    'pc_data_path': "/Users/jgalera/datasets/S3DIS/aligned",
+    'pc_data_path': "C:/Users/marcc/OneDrive/Escritorio/PROJECTE/S3DIS_ANTIC/Stanford3dDataset_v1.2_Aligned_Version",
     'pc_file_extension': ".txt",
     'pc_file_extension_rgb_norm': "_rgb_norm.txt",
     'pc_file_extension_sem_seg_suffix': "_annotated",
@@ -122,7 +124,7 @@ if "toy" in args.load:
 if "low" in args.load:
     hparams["num_points_per_object"] = 100
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 5
+    hparams["epochs"] = 1 #5 
     hparams["max_points_per_space"] = 1000
 
 if "medium" in args.load:

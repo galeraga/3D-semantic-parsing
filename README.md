@@ -39,6 +39,9 @@ The basic **dataset statistics** are:
   - **structural** (ceilings, doors, floors, walls, beams, columns, windows and stairs). 
   - **clutter** (if an object doesn't belong to any of the previous catagories)
 
+More **advanced statistics** can be found after a more detailed analysis:
+
+<img width="1043" alt="image" src="https://user-images.githubusercontent.com/76537012/174793841-01903c11-10c2-425c-a6d5-c0a25391ccc0.png">
 
 The **folder structure** of the S3DIS dataset is the following one:
 ```
@@ -51,7 +54,7 @@ Area_N\
           |- object_Y.txt (the file with the point cloud for object_Y that can be found in Space_X)
 ```  
 
-More detailed information about the S3DIS dataset can be found at: http://buildingparser.stanford.edu/dataset.html 
+Comprehensive information about the original S3DIS dataset can be found at: http://buildingparser.stanford.edu/dataset.html 
 
 From this original S3DIS dataset:
 
@@ -76,7 +79,6 @@ Columns interpretation:
 - Object Label: Text string/label to identify any of the 14 different object types (boards, bookcases, chairs, tables, sofas, ceilings, doors, floors, walls, beams, columns, windows, stairs and clutter).
 - Object ID: A dict-mapping for any of the 14 object labels.
 - Health Status: Either "good" or "bad" (to avoid processing corrupted point cloud files)
-
 
 
 #### S3DISDataset4Classification

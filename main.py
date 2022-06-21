@@ -7,6 +7,7 @@ import dataset
 import model    
 from tensorboardlogger import TensorBoardLogger 
 from summarizer import S3DIS_Summarizer
+from visualitzation import tnet_compare
 
 
 def task_welcome_msg(task = None):
@@ -183,6 +184,7 @@ def train_classification(model, dataloaders):
             # Aux vars per epoch
             epoch_train_loss = []
             epoch_train_acc = []
+            tnet_out_list = []
             epoch_train_start_time = datetime.datetime.now()
 
             tqdm_desc = "{}ing epoch ({}/{})".format(task.capitalize(), epoch, hparams['epochs'])
@@ -198,6 +200,8 @@ def train_classification(model, dataloaders):
                 optimizer.zero_grad()
                 
                 preds, feature_transform, tnet_out, ix_maxpool = model(points)
+                
+            
 
                 # Why?  
                 identity = torch.eye(feature_transform.shape[-1]).to(device)
@@ -246,6 +250,8 @@ def train_classification(model, dataloaders):
                 corrects = preds.eq(targets.data).cpu().sum()
                 accuracy = corrects.item() / preds.numel()
                 epoch_train_acc.append(accuracy)
+                tnet_out_list.append(tnet_out)
+
                 
             epoch_train_end_time = datetime.datetime.now()
             train_time_per_epoch = (epoch_train_end_time - epoch_train_start_time).seconds
@@ -572,3 +578,17 @@ if __name__ == "__main__":
     
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.finish()
+
+    # GUARRADA PER BORRAR DESPRES I PROVAR COSES ----------------------------------------------------------------------------
+    original_ds_length = len(ds)
+    training_ds_length = round(0.8*original_ds_length)
+    validation_ds_length = round(0.1*original_ds_length)
+    test_ds_length = round(0.1*original_ds_length)
+    split_criteria = [training_ds_length, validation_ds_length, test_ds_length]
+ 
+    train_dataset, val_dataset, test_dataset = torch.utils.data.dataset.random_split(ds,
+                                                split_criteria,
+                                                generator=torch.Generator().manual_seed(1))
+
+    tnet_compare(model, ds)
+    # -----------------------------------------------------------------------------------------------------------------------

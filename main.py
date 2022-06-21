@@ -179,14 +179,15 @@ def train_classification(model, dataloaders):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
 
-        for epoch in tqdm(range(hparams['epochs'])):
+        for epoch in range(1, hparams['epochs'] + 1):
             # Aux vars per epoch
             epoch_train_loss = []
             epoch_train_acc = []
             epoch_train_start_time = datetime.datetime.now()
 
+            tqdm_desc = "{}ing epoch ({}/{})".format(task.capitalize(), epoch, hparams['epochs'])
             # training loop
-            for data in train_dataloader:
+            for data in tqdm(train_dataloader, desc = tqdm_desc):
                 model = model.train()
                 
                 points, targets = data  
@@ -199,7 +200,6 @@ def train_classification(model, dataloaders):
                 preds, feature_transform, tnet_out, ix_maxpool = model(points)
 
                 # Why?  
-
                 identity = torch.eye(feature_transform.shape[-1]).to(device)
 
                 # Formula (2) in original paper (Lreg)
@@ -240,6 +240,8 @@ def train_classification(model, dataloaders):
                 # Take the index of the max value, since the object class 
                 # classification is based on the position of the max value
                 # https://pytorch.org/docs/stable/generated/torch.max.html
+                # Similar to torch.argmax, that returns the second value
+                # returned by torch.max()
                 preds = preds.data.max(dim = 1)[1]
                 corrects = preds.eq(targets.data).cpu().sum()
                 accuracy = corrects.item() / preds.numel()
@@ -253,8 +255,9 @@ def train_classification(model, dataloaders):
             epoch_val_acc = []
             epoch_val_start_time = datetime.datetime.now()
 
+            tqdm_desc = "{} epoch ({}/{})".format("Validating", epoch, hparams['epochs'])
             # validation loop
-            for batch_number, data in enumerate(val_dataloader):
+            for data in tqdm(val_dataloader, desc = tqdm_desc):
                 model = model.eval()
         
                 points, targets = data
@@ -353,13 +356,14 @@ def train_segmentation(model, dataloaders):
     with warnings.catch_warnings():
         warnings.simplefilter("ignore")
 
-        for epoch in tqdm(range(hparams['epochs'])):
+        for epoch in range(1, hparams['epochs'] +1):
             epoch_train_loss = []
             epoch_train_acc = []
             epoch_train_start_time = datetime.datetime.now()
 
+            tqdm_desc = "{}ing epoch ({}/{})".format(task.capitalize(), epoch, hparams['epochs'])
             # training loop
-            for data in train_dataloader:
+            for data in tqdm(train_dataloader, desc = tqdm_desc):
                 model = model.train()
                 
                 # TODO: Insert Clara's code here
@@ -440,8 +444,9 @@ def train_segmentation(model, dataloaders):
             epoch_val_acc = []
             epoch_val_start_time = datetime.datetime.now()
 
+            tqdm_desc = "{} epoch ({}/{})".format("Validating", epoch, hparams['epochs'])
             # validation loop
-            for batch_number, data in enumerate(val_dataloader):
+            for data in tqdm(val_dataloader, desc = tqdm_desc):
                 model = model.eval()
         
                 points, targets = data

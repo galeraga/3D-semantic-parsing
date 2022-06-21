@@ -43,7 +43,7 @@ More **advanced statistics** can be found after a more detailed analysis:
 
 <img width="1043" alt="image" src="https://user-images.githubusercontent.com/76537012/174793841-01903c11-10c2-425c-a6d5-c0a25391ccc0.png">
 
-The **folder structure** of the S3DIS dataset is the following one:
+The original **folder structure** of the S3DIS dataset is the following one:
 ```
 Area_N\
   |- space_X\

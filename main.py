@@ -7,6 +7,7 @@ import dataset
 import model    
 from tensorboardlogger import TensorBoardLogger 
 from summarizer import S3DIS_Summarizer
+from visualitzation import tnet_compare
 
 
 def task_welcome_msg(task = None):

@@ -1,9 +1,7 @@
 from settings import *
 import model
-import main
 
-def infer(dataset,
-          model,
+def infer(model,
           point_cloud_file,
           shuffle_points=False,
           plot_tNet_out=True,
@@ -14,8 +12,6 @@ def infer(dataset,
 
     Parameters
     ----------
-    dataset(pandas):
-        The dataset that we will input.
     model(idk):
         The model that we have previously trained.
     point_cloud_file(txt):
@@ -36,7 +32,7 @@ def infer(dataset,
     tnet_out(idk):
         
     '''
-    num_classes = dataset.NUM_CLASSIFICATION_CLASSES
+    #num_classes = dataset.NUM_CLASSIFICATION_CLASSES
     points, label = point_cloud_file
     
     if torch.cuda.is_available():
@@ -59,20 +55,23 @@ def infer(dataset,
 
 
 
-def tnet_compare(num_samples, dataset, subdataset):
+def tnet_compare(model, subdataset, num_samples = 7):
     '''
     This function plots the initial pointcloud and the pointcloud represented in the canonical space (the space found by the T-Net).
     The point of the function is to have a better understanding of what the T-Net is doing.
 
     Parameters:
     -----------
-    num_samples(int):
-        The number of samples that we want to plot.
-    dataset(pandas):
-        The global dataset that we use to train the whole network. This is needed for the infer function.
+    model(idk):
+        The model that we will pass.
     subdataset(pandas):
         This subdataset is the dataset where we will extract all the pointclouds samples that we want to plot.
         Usually, for the sake of rigurosity, it is used the test set.
+    num_samples(int):
+        The number of samples that we want to plot.
+    Returns:
+    --------
+    VOID.
     '''
     # Plot 7 samples
     for SAMPLE in range(num_samples):
@@ -92,11 +91,12 @@ def tnet_compare(num_samples, dataset, subdataset):
 
         # plot transformation
         ax = fig.add_subplot(1, 2, 2, projection='3d')
-        preds, tnet_out = infer(dataset, model,subdataset[SAMPLE])
+        preds, tnet_out = infer(model,subdataset[SAMPLE])
         points=tnet_out
         sc = ax.scatter(points[0,0,:], points[0,1,:], points[0,2,:], c=points[0,0,:] ,s=50, marker='o', cmap="viridis", alpha=0.7)
         ax.title.set_text(f'Output of "Input Transform" Detected: {preds}')
         ax.set_xlabel('x')
         ax.set_ylabel('y')
-        plt.savefig(f'figures/Tnet-out-{label}.png',dpi=100)
+        plt.savefig(f'C:/Users/marcc/OneDrive/Escritorio/Tnet-out-{label}.png',dpi=100)
         #print('Detected class: %s' % preds)
+

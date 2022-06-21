@@ -125,6 +125,8 @@ Area_N\
 
 ###ClassificationPointNet###
 
+<img width="980" alt="image" src="https://user-images.githubusercontent.com/76537012/174834793-8c03b4b5-933e-447b-afbb-146bb861bd13.png">
+
 
 ###SegmentationPointNet###
 

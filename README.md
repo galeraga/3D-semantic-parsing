@@ -34,7 +34,7 @@ The **basic dataset statistics** are:
   - Building 2: Area_2, Area_4 
   - Building 3: Area_5 
 - There're **11 different room types** (WCs, conference rooms, copy rooms, hallways, offices, pantries, auditoriums, storage rooms, lounges, lobbies and open spaces) for a grand total of  **272 rooms** (or spaces) diitributed among all areas.  
-- Every room can have up to **14 different object types**. These object can be classified as:
+- Every room can have up to **14 different object types**. These objects can be classified as:
   - **movable** (boards, bookcases, chairs, tables and sofas)  
   - **structural** (ceilings, doors, floors, walls, beams, columns, windows and stairs). 
   - **clutter** (if an object doesn't belong to any of the previous catagories)

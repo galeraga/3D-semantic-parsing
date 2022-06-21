@@ -118,17 +118,17 @@ Area_N\
 
 ###TransformationNet (picture showing the T-Net)###
 
-###BasePointNet###
+### BasePointNet ###
 
 <img width="962" alt="image" src="https://user-images.githubusercontent.com/76537012/174834124-c25dbcfe-2c46-4616-88dd-af417c0975ee.png">
 
 
-###ClassificationPointNet###
+### ClassificationPointNet ###
 
 <img width="980" alt="image" src="https://user-images.githubusercontent.com/76537012/174834793-8c03b4b5-933e-447b-afbb-146bb861bd13.png">
 
 
-###SegmentationPointNet###
+### SegmentationPointNet ###
 
 ## Related Work
 

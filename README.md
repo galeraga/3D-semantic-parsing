@@ -27,7 +27,7 @@ The following considerations will be of particular interest:
 ## The dataset
 The **3D Semantic Parsing of Large-Scale Indoor Spaces (S3DIS)** dataset is going to be used in order to work with the PointNet architecture. 
 
-The basic **dataset statistics** are:
+The **basic dataset statistics** are:
 
 - It contains point clouds from **3 different buildings**, distributed in **6 areas**:
   - Building 1: Area_1, Area_3, Area_6 

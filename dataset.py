@@ -164,7 +164,6 @@ class S3DISDataset4Segmentation(torch.utils.data.Dataset):
     def __len__(self):
         """
         """
-        
         return len(self.unique_area_space_df) -1 
 
     def __getitem__(self, idx):

@@ -28,7 +28,7 @@ building_distribution = {
 
 # Environment (file system and so on) params
 eparams = {
-    'pc_data_path': "C:/Users/marcc/OneDrive/Escritorio/PROJECTE/S3DIS_ANTIC/Stanford3dDataset_v1.2_Aligned_Version",
+    'pc_data_path': "/Users/jgalera/datasets/S3DIS/aligned",
     'pc_file_extension': ".txt",
     'pc_file_extension_rgb_norm': "_rgb_norm.txt",
     'pc_file_extension_sem_seg_suffix': "_annotated",
@@ -50,6 +50,7 @@ hparams = {
     'num_workers': 0,
     'num_points_per_object': 0,
     'max_points_per_space': 0,
+    'max_points_per_sliding_window': 0,
     'dimensions_per_object': 0,
     'epochs': 0,
 }
@@ -120,22 +121,26 @@ if "toy" in args.load:
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 3
     hparams["max_points_per_space"] = 10
+    hparams["max_points_per_sliding_window"] = 10
 
 if "low" in args.load:
     hparams["num_points_per_object"] = 100
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 1 #5 
     hparams["max_points_per_space"] = 1000
+    hparams["max_points_per_sliding_window"] = 100
 
 if "medium" in args.load:
     hparams["num_points_per_object"] = 1024
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 10
     hparams["max_points_per_space"] = 2000
+    hparams["max_points_per_sliding_window"] = 1024
 
 if "high" in args.load:
     hparams["num_points_per_object"] = 4096
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 50
     hparams["max_points_per_space"] = 4096
+    hparams["max_points_per_sliding_window"] = 4096
 

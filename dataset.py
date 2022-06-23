@@ -1,8 +1,50 @@
 
-from tensorboard import summary
+#from tensorboard import summary
 from settings import *
 
-import summarizer
+#import summarizer
+
+# Helper class
+class PointSampler():
+    """
+    Utility class to downsampling/upsamplng a point cloud
+    in order to make all point clouds the same size
+    """
+    def __init__(self, point_cloud, max_points):
+        """
+        Args:
+            point_cloud: torch file
+            max_points: The max amount of points the point cloud must have
+        """
+        self.point_cloud = point_cloud
+        self.max_points = max_points
+
+    def sample(self):
+
+        # Check if the point cloud is already a tensor
+        if not torch.is_tensor(self.point_cloud):
+            self.point_cloud = torch.tensor(self.point_cloud)
+
+        # Since point cloud tensors will have different amount of points/row,
+        # we need to set a common size for them all
+        # Torch Dataloaders expects each tensor to be equal size
+        if(len(self.point_cloud) > self.max_points):   
+            # Sample points 
+            # Shuffle the index (torch.randperm(4) -> tensor([2, 1, 0, 3]))
+            idxs = torch.randperm(len(self.point_cloud))[:self.max_points]
+            self.point_cloud = self.point_cloud[idxs]
+        
+        else:
+            # Duplicate points
+            point_cloud_len = len(self.point_cloud)
+            padding_points = self.max_points - point_cloud_len     
+            for _ in range(padding_points):     
+                duplicated_point_cloud_points = torch.unsqueeze(self.point_cloud[random.randint(0, point_cloud_len - 1)], dim = 0)
+                self.point_cloud = torch.cat((self.point_cloud, duplicated_point_cloud_points), dim = 0)
+        
+        return self.point_cloud
+
+
 
 class S3DISDataset4Classification(torch.utils.data.Dataset):
     """
@@ -71,37 +113,12 @@ class S3DISDataset4Classification(torch.utils.data.Dataset):
                 usecols = cols_to_get 
                 )[cols_to_get]
 
+            # Convert the Pandas DataFrame to tensor
             obj = torch.tensor(obj_df.values).to(hparams["device"])
 
-            # Torch Dataloaders expects each tensor to be equal size
-            # TODO: MAX_OBJ_POINTS has te be defined, based on point cloud analysis
-            if(len(obj) > hparams['num_points_per_object']):   
-                # Sample points 
-                # Shuffle the index (torch.randperm(4) -> tensor([2, 1, 0, 3]))
-                idxs = torch.randperm(len(obj))[:hparams['num_points_per_object']]
-                obj = obj[idxs]
-            
-            else:
-                # Duplicate points
-                obj_len = len(obj)
-                padding_points = hparams['num_points_per_object'] - obj_len     
-                for _ in range(padding_points):     
-                    duplicated_obj_points = torch.unsqueeze(obj[random.randint(0, obj_len - 1)], dim = 0)
-                    obj = torch.cat((obj, duplicated_obj_points), dim = 0)
-            
-            if self.transform:
-                obj = self.transform(obj)
+            # Make all the point clouds equal size
+            obj = PointSampler(obj, hparams['num_points_per_object']).sample()
 
-            # Get the labels dict
-            # {0: 'openspace', 1: 'pantry', ... , 10: 'lounge'}
-            # {0: 'bookcase', 1: 'door', 2: 'ceiling', ... , 13: 'floor'}
-            
-            #object_labels_dict = summary.get_labels()[1]
-            # Get the key from the value dict
-            #obj_label = [k for k,v in object_labels_dict if v == obj_label]
-            # Convert the label key to tensor
-            #obj_label = torch.tensor(obj_label)
-            
             return obj, torch.tensor(obj_label_id)
     
     def __str__(self) -> str:
@@ -199,26 +216,9 @@ class S3DISDataset4Segmentation(torch.utils.data.Dataset):
         # Convert the whole room file to tensor
         room = torch.tensor(space_df.values).to(hparams["device"])
 
-        # Since point cloud tensors will have different amount of points/row,
-        # we need to set a common size for them all
-        # Torch Dataloaders expects each tensor to be equal size
-        if(len(room) > hparams['max_points_per_space']):   
-            # Sample points 
-            # Shuffle the index (torch.randperm(4) -> tensor([2, 1, 0, 3]))
-            idxs = torch.randperm(len(room))[:hparams['max_points_per_space']]
-            room = room[idxs]
-        
-        else:
-            # Duplicate points
-            room_len = len(room)
-            padding_points = hparams['max_points_per_space'] - room_len     
-            for _ in range(padding_points):     
-                duplicated_room_points = torch.unsqueeze(room[random.randint(0, room_len - 1)], dim = 0)
-                room = torch.cat((room, duplicated_room_points), dim = 0)
-        
-        if self.transform:
-            room = self.transform(room)
-        
+        # Make all the point clouds equal size
+        room = PointSampler(room, hparams['max_points_per_space']).sample()
+
         # The amount of cols to return per room will depend on whether or not
         # we're taking the color into account
         # room -> [x y x r g b label] (7 cols)
@@ -244,3 +244,103 @@ class S3DISDataset4Segmentation(torch.utils.data.Dataset):
         msg = '\n'.join(msg_list)
         
         return str(msg)
+
+# TODO: The new dataset for semantic segmenation. It will replace the above one,
+# once the Clara's sliding windows mehtod will be finished 
+class S3DISDataset4Segmentation_(torch.utils.data.Dataset):
+    """
+    S3DIS dataset for segmentation goals.
+    
+    It works with sliding blocks
+
+    From the XXX method, there's a folder containing all the pre-processed 
+    sliding block for all the spaces/rooms in the dataset. 
+    
+    The folder is located in XXX and has the following name and contents:
+
+    \root_dir\sliding_windows_overlap_ZZZ\Area_N_Space_X_Block_Y
+
+    where:
+    - ZZZ indicates the overlap percentage between consecutive 
+        windows (050 -> 50%, 075 ->75%, 100 ->100% )
+    
+    - Block_Y: XXX
+
+    """
+    
+    def __init__(self, root_dir, transform = None):
+        """
+        Args:
+            root_dir (string): Directory with all the pre-processed 
+                sliding windows (the output from XXX method)
+            transform (callable, optional): Optional transform 
+                to be applied on a sample.
+        """
+        
+        self.root_dir = root_dir
+        self.transform = transform
+        
+        # Get a list of all the sliding windows
+        
+        self.all_sliding_windows = ...
+
+    def __len__(self):
+        """
+        """
+        return len(self.all_sliding_windows) 
+
+    def __getitem__(self, idx):
+        """
+        In order to follow the original paper implmenetation, the size of this
+        method output will be based on the task type:
+
+        - If task == train, only 4096 points will be returned per sliding windows
+        - If task == test, all the points in the proper sliding window will be returned
+
+        """
+
+        if torch.is_tensor(idx):
+            idx = idx.tolist()
+
+        # Get the proper sliding window name
+        sliding_window_name = self.all_sliding_windows[idx]
+
+        # Fetch the sliding window file, if necessary
+        path_to_sliding_window_file = os.path.join(self.root_dir, sliding_window_name)
+
+        # Open the sliding window file
+        sliding_window = None
+
+        # Convert the sliding window to torch, if necessary
+        sliding_window = torch.tensor(sliding_window).to(hparams["device"])
+
+        # For training:
+        #   - We set the max points per sliding windows as per original paper (4096)
+        # For testing:
+        #   - If we're in a batch mode, we limit the amount of points per room to
+        #     make all the rooms equal size
+        max_points_per_sliding_window = hparams['max_points_per_sliding_window'] if "train" in args.task else hparams['max_points_per_space']
+        
+        sliding_window = PointSampler(sliding_window, max_points_per_sliding_window)
+
+        # TODO: sliding_window -> [x y x r g b label] (7 cols) (HOW MANY COLUMNS IT WILL HAVE)
+        # The amount of cols to return per room will depend on whether or not
+        # we're taking the color into account
+        sliding_window_points = sliding_window[ :, :hparams["dimensions_per_object"]]
+        point_labels = sliding_window[ :, -1]
+        
+        return sliding_window_points, point_labels
+    
+
+    def __str__(self) -> str:
+        """
+        """
+
+        msg_list = []
+        msg_list.append(80 * "-")
+        msg_list.append("S3DIS DATASET INFORMATION")
+        msg_list.append(80 * "-")
+        msg = '\n'.join(msg_list)
+        
+        return str(msg)
+

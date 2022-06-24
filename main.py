@@ -97,11 +97,14 @@ def test_segmentation(model, dataloaders):
     """
     Test the PointNet classification network
     """
-    # Enter evaluation mode
-    model.eval()
-   
     # Task welcome message
     task_welcome_msg(task = "test")
+ 
+    # Enter evaluation mode
+    model.eval()
+
+    # Aux test vars
+    accuracies = []
     
     # Path to the checkpoint file
     model_checkpoint = os.path.join(
@@ -122,16 +125,13 @@ def test_segmentation(model, dataloaders):
                 map_location = torch.device(hparams["device"]))
     model.load_state_dict(state['model'])  
 
-    # Select the proper dataloader
-    # test_dataloader = dataloaders[2]
-
     # TODO: Select randomly a whole room to test
     # 1.- Pick randomly one of the available sliding windows
     # 2.- Get the Area_N Space_X from this randomly selected sliding window
     # 3.- Get all the sliding windows from Area_N Space_X
     # 4.- Join all the sliding windows into a single (torch) file    
     
-    # Temp solution to test the segmentation
+    # Temp solution to test the segmentation (test area selected by hand)
     path_to_room_file = os.path.join(eparams['pc_data_path'], "Area_1", "office_1", "office_1_annotated.txt")
     print("Reading room X file from CSV to NumPy array")
     data = np.genfromtxt(path_to_room_file, 
@@ -145,8 +145,7 @@ def test_segmentation(model, dataloaders):
     # The amount of cols to return per room will depend on whether or not
     # we're taking the color into account
     # room -> [x y x r g b label] (7 cols)
-    print("Getting data and labels")
-    
+    print("Getting data and labels")  
     points = data[ :, :hparams["dimensions_per_object"]].to(device)
     target_labels = data[ :, -1].to(device)
     
@@ -154,29 +153,45 @@ def test_segmentation(model, dataloaders):
     # since we're going to process a single room only
     points = points.unsqueeze(dim = 0)
     
-    # Aux test vars
-    accuracies = []
-    
     # Test the model
     print("Testing data classification")    
     preds, feature_transform, tnet_out, ix = model(points)
-    
+
+    # Select the objects we want to display on the plot
+    # get_labels() returns (space_dict, object_dict)
+    # {'ceiling': 0, 'clutter': 1, ...}
+    # According to the sumary file, movable objects are: 
+    # 'chair':8 | 'board': 6 | 'bookcase': 7 | 'chair': 8 | 'table': 9 | 'sofa': 11
+    # table is selected by hand because seems to be the only object detected 
+    # with 4096 points per room (until training with sliding window is deployed)
+    segmentation_target_object = "table"
+    segmentation_target_object_id = summary_file.get_labels()[1][segmentation_target_object]
+ 
     # Model input: points.shape([batch_size, room_points, dimensons_per_point)]
     # Model output: preds.shape([batch_size, num_classes, room_points])
-    # TODO: From preds, get the indexes in dim = 2 that matches
-    # the object class we want to display
-    # These indexes in dim = 1 in preds should be a map of the the indexes in
-    # dim = 1 in points
+    # Model output after argmax: preds.shape[batch_size, room_points]
     
-
-    # preds.shape([batch_size, num_classes])
+    # Output preds.shape([batch_size, room_points])
     preds = preds.data.max(1)[1]
     
-    # TODO: Remove this temp debugging
-    torch. set_printoptions(profile="full")
-    with open('kk_temp.txt', 'w') as f:
-        print(preds, file = f)
-    torch. set_printoptions(profile="default")
+    # Get the indices of preds that match the object_id
+    # From preds after argmax, get the indexes in dim = 1 that match
+    # the object class (segmentation_target_object_id) we want to display
+    # These indexes in dim = 1 in preds (after argmax) should be a mapping 
+    # of the the indexes in dim = 1 in points
+    # Tricky method:
+    # - torch.where() returns 1. where condition is met, 0. elsewhere 
+    # - torch.nonzero() returns a tensor containing the indices of all non-zero elements of ones_mask
+    # - torch.index_select() returns a new tensor which indexes the input tensor along 
+    #   dimension dim using the entries in indices
+    ones_mask = torch.where(preds == segmentation_target_object_id, 1., 0.).squeeze(dim = 0)
+    indices = torch.nonzero(ones_mask).squeeze(dim = 1)
+    points = points.squeeze(dim = 0)
+    points_to_display = torch.index_select(points, 0, indices)
+
+    # TODO: Insert Lluis' code here for visualization
+    # points is the whole room points
+    # lluis_code(points, points_to_display) 
     
     corrects = preds.eq(target_labels.data).cpu().sum()
     accuracy = corrects.item() / preds.numel()

@@ -132,7 +132,7 @@ def test_segmentation(model, dataloaders):
     # 4.- Join all the sliding windows into a single (torch) file    
     
     # Temp solution to test the segmentation
-    path_to_room_file = os.path.join(eparams['pc_data_path'], "Area_1", "pantry_1", "pantry_1_annotated.txt")
+    path_to_room_file = os.path.join(eparams['pc_data_path'], "Area_1", "office_1", "office_1_annotated.txt")
     print("Reading room X file from CSV to NumPy array")
     data = np.genfromtxt(path_to_room_file, 
                 dtype = float, 
@@ -238,7 +238,7 @@ def test_classification(model, dataloaders):
         preds = preds.data.max(1)[1]
         
         corrects = preds.eq(target_labels.data).cpu().sum()
-        accuracy = corrects.item() / float(hparams['batch_size'])
+        accuracy = corrects.item() / preds.numel()
         accuracies.append(accuracy)
         
         logger.writer.add_scalar(goal.capitalize() + " Accuracy/Test", accuracy, batch_idx)

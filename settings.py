@@ -54,11 +54,11 @@ hparams = {
     'dimensions_per_object': 0,
     'epochs': 0,
 }
-
 # Some useful info when running with GPUs in pytorch
 # torch.cuda.device_count() -> 1 (in our current GCP scenario)
 # torch.cuda.get_device_name(0) -> 'Tesla K80' (0 is de device_id from our availbale GPU)
 hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
+
 
 # Creating the checkpoint folder
 checkpoint_folder = os.path.join(eparams["pc_data_path"], eparams["checkpoints_folder"])
@@ -144,3 +144,7 @@ if "high" in args.load:
     hparams["max_points_per_space"] = 4096
     hparams["max_points_per_sliding_window"] = 4096
 
+# Set the device to CPU to avoid running out of memory in GCP GPU
+# when testing segmentation with a whole space/room
+if ("segmentation" in args.goal) and ("test" in args.tak) and ("OS_IMAGE_FAMILY" in os.environ.keys()):
+    hparams['device'] =  'cpu'

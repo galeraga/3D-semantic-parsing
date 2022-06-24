@@ -147,10 +147,8 @@ def test_segmentation(model, dataloaders):
     # room -> [x y x r g b label] (7 cols)
     print("Getting data and labels")
     
-    # Avoiding moving data and point .to(device) to prevent running out 
-    # of memory in GCP
-    points = data[ :, :hparams["dimensions_per_object"]]
-    target_labels = data[ :, -1]
+    points = data[ :, :hparams["dimensions_per_object"]].to(device)
+    target_labels = data[ :, -1].to(device)
     
     # Unsquezze the data tensor to give it the depth of batch_size = 1,
     # since we're going to process a single room only

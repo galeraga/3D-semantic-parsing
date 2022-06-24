@@ -2,6 +2,7 @@
 PointNet implementation with S3DIS dataset
 """
 
+from numpy import double
 from settings import * 
 import dataset 
 import model    
@@ -20,6 +21,7 @@ def task_welcome_msg(task = None):
     
     if "segmentation" in args.goal:
         msg += "{} points per room | ".format(hparams['max_points_per_space'])
+        msg += "{} points per sliding window | ".format(hparams['max_points_per_sliding_window'])
 
     msg += "{} dimensions per object | ".format(hparams['dimensions_per_object'])
     msg += "{} batch_size | ".format(hparams['batch_size'])
@@ -85,7 +87,105 @@ def test_segmentation(model, dataloaders):
     """
     Test the PointNet segmentation network
     """
-    ...
+    # TODO: Two test segmentation flavours:
+    # 1.- If a single room is tested, we can take ALL the points for that single room
+    # since no data is going to be used from the dataloader (dataloaders
+    # expect all items be equal size). If we use dataloaders, all rooms 
+    # in the dataloader must have the same amount of points
+    # 2.- If we test a high number of rooms, dataloaders should be used, so
+    # we have to limit/equal the number of points for all the rooms to be the same
+    """
+    Test the PointNet classification network
+    """
+    # Enter evaluation mode
+    model.eval()
+   
+    # Task welcome message
+    task_welcome_msg(task = "test")
+    
+    # Path to the checkpoint file
+    model_checkpoint = os.path.join(
+            eparams['pc_data_path'], 
+            eparams['checkpoints_folder'], 
+            eparams["checkpoint_name"]
+            )
+    
+    # If the checkpoint does not exist, train the model
+    if not os.path.exists(model_checkpoint):
+        print("The model does not seem already trained! Starting the training rigth now from scratch...")
+        train_classification(model, dataloaders)
+    
+    # Loading the existing checkpoint
+    print("Loading checkpoint {} ...".format(model_checkpoint))
+    state = torch.load(
+                model_checkpoint, 
+                map_location = torch.device(hparams["device"]))
+    model.load_state_dict(state['model'])  
+
+    # Select the proper dataloader
+    # test_dataloader = dataloaders[2]
+
+    # TODO: Select randomly a whole room to test
+    # 1.- Pick randomly one of the available sliding windows
+    # 2.- Get the Area_N Space_X from this randomly selected sliding window
+    # 3.- Get all the sliding windows from Area_N Space_X
+    # 4.- Join all the sliding windows into a single (torch) file    
+    
+    # Temp solution to test the segmentation
+    path_to_room_file = os.path.join(eparams['pc_data_path'], "Area_1", "pantry_1", "pantry_1_annotated.txt")
+    print("Reading room X file from CSV to NumPy array")
+    data = np.genfromtxt(path_to_room_file, 
+                dtype = float, 
+                skip_header = 1, 
+                delimiter = '', 
+                names = None) 
+    print("Converting NumPy array to Pytorch tensor")
+    data = torch.from_numpy(data).float()
+    
+    # The amount of cols to return per room will depend on whether or not
+    # we're taking the color into account
+    # room -> [x y x r g b label] (7 cols)
+    print("Getting data and labels")
+    points = data[ :, :hparams["dimensions_per_object"]].to(device)
+    target_labels = data[ :, -1].to(device)
+    
+    # Unsquezze the data tensor to give it the depth of batch_size = 1,
+    # since we're going to process a single room only
+    points = points.unsqueeze(dim = 0)
+    
+    # Aux test vars
+    accuracies = []
+    
+    # Test the model
+    print("Testing data classification")    
+    preds, feature_transform, tnet_out, ix = model(points)
+    
+    # Model input: points.shape([batch_size, room_points, dimensons_per_point)]
+    # Model output: preds.shape([batch_size, num_classes, room_points])
+    # TODO: From preds, get the indexes in dim = 2 that matches
+    # the object class we want to display
+    # These indexes in dim = 1 in preds should be a map of the the indexes in
+    # dim = 1 in points
+    
+
+    # preds.shape([batch_size, num_classes])
+    preds = preds.data.max(1)[1]
+    
+    # TODO: Remove this temp debugging
+    torch. set_printoptions(profile="full")
+    with open('kk_temp.txt', 'w') as f:
+        print(preds, file = f)
+    torch. set_printoptions(profile="default")
+    
+    corrects = preds.eq(target_labels.data).cpu().sum()
+    accuracy = corrects.item() / preds.numel()
+    accuracies.append(accuracy)
+    
+    logger.writer.add_scalar(goal.capitalize() + " Accuracy/Test", accuracy)
+
+    mean_accuracy = (torch.FloatTensor(accuracies).sum()/len(accuracies))*100
+    print("Average accuracy: {:.2f} ".format(float(mean_accuracy)))
+    
 
 @torch.no_grad()
 def test_classification(model, dataloaders):
@@ -579,3 +679,4 @@ if __name__ == "__main__":
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.finish()
     tnet_compare(model, ds)
+

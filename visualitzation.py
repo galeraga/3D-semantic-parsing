@@ -104,6 +104,10 @@ def tnet_compare(model, subdataset, num_samples = 7):
         ax.title.set_text(f'Output of "Input Transform" Detected: {preds}')
         ax.set_xlabel('x')
         ax.set_ylabel('y')
-        plt.savefig(f'C:/Users/marcc/OneDrive/Escritorio/Tnet-out-{label}.png',dpi=100)
+        
+        # Saving the plot
+        png_file_name = "Tnet-out-{}.png".format(label)
+        png_path = os.path.join(eparams["pc_data_path"], png_file_name)
+        plt.savefig(png_path, dpi=100)
         #print('Detected class: %s' % preds)
 

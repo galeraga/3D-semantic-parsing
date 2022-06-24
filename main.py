@@ -678,3 +678,5 @@ if __name__ == "__main__":
     
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.finish()
+    tnet_compare(model, ds)
+

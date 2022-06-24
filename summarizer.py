@@ -20,7 +20,7 @@ class S3DIS_Summarizer():
             "Object ID", 
             "Health Status"
         ]
-
+    
     def __init__(self, path_to_data, logger, rebuild = False, check_consistency = False):
         """
         Inspect the dataset to get the following info:
@@ -154,7 +154,6 @@ class S3DIS_Summarizer():
                     # points per object, object label, object ID, health status)
                     summary_line.append((area, space, space_label, space_idx, object, 
                         points_per_object, object_label, object_idx,  "Unknown"))
-
 
         # Save the data into the CSV summary file
         self.summary_df = pd.DataFrame(summary_line)
@@ -390,35 +389,22 @@ class S3DIS_Summarizer():
             self.__init__(self.path_to_data, rebuild = True)
         
         # Define the sets and dicts to be used 
-        spaces_set = set()
-        objects_set = set()
-        space_labels = dict()
-        object_labels = dict()
+        spaces_dict = dict()
+        objects_dict = dict()
 
-        # Open the CSV summary file
-        summary = os.path.join(self.path_to_data, eparams['s3dis_summary_file'])
-                
-        # Process each line in the summary file
-        with open(summary) as f:
-            for idx,line in enumerate(f):
-                # Skip the first row (since it contain the header and no data)
-                if idx != 0:
-                    # Split the line, based on the tab separator
-                    line = line.split("\t")       
-                    # Add the space to the set             
-                    spaces_set.add(line[4])                    
-                    # Add the object to the set
-                    # Remove the new line char at the end of every line for objects
-                    objects_set.add(line[5].strip("\n"))
+        # Get Object IDs and labels to build a dict
+        # {'celing': 0, 'clutter':1,...}
+        unique_objects_df = self.summary_df[["Object ID", "Object Label"]].drop_duplicates(ignore_index=True) 
+        for row in unique_objects_df.iterrows():
+            objects_dict[row[1][1]] = row[1][0]
+        
+        # Get Space IDs and labels to build a dict
+        # {'WC': 0, 'conferenceRoom':1,...}
+        unique_spaces_df = self.summary_df[["Space ID", "Space Label"]].drop_duplicates(ignore_index=True) 
+        for row in unique_spaces_df.iterrows():
+            spaces_dict[row[1][1]] = row[1][0] 
 
-        # Create the idx-to-label dicts
-        for idx, space in enumerate(spaces_set):
-            space_labels[idx] = space
-    
-        for idx, object in enumerate(objects_set):
-            object_labels[idx] = object
-
-        return space_labels, object_labels
+        return spaces_dict, objects_dict
 
         
     def get_stats(self):

@@ -35,9 +35,13 @@ def infer(model,
     #num_classes = dataset.NUM_CLASSIFICATION_CLASSES
     points, label = point_cloud_file
     
-    if torch.cuda.is_available():
-        points = points.cuda()
-        model.cuda()
+    points = points.to(hparams["device"])
+    label = label.to(hparams["device"])
+    
+    # We ran out of memory in GCP GPU, so all tensors have to be on the same device
+    #if torch.cuda.is_available():
+    #    points = points.cuda()
+    #    model.cuda()
 
     points = points.unsqueeze(dim=0)
     model = model.eval()

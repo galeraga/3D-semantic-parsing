@@ -146,5 +146,6 @@ if "high" in args.load:
 
 # Set the device to CPU to avoid running out of memory in GCP GPU
 # when testing segmentation with a whole space/room
-if ("segmentation" in args.goal) and ("test" in args.tak) and ("OS_IMAGE_FAMILY" in os.environ.keys()):
+if ("segmentation" in args.goal) and ("test" in args.task) and ("OS_IMAGE_FAMILY" in os.environ.keys()):
     hparams['device'] =  'cpu'
+    

@@ -81,7 +81,10 @@ def tnet_compare(model, subdataset, num_samples = 7):
         ax = fig.add_subplot(1, 2, 1, projection='3d')
 
         # plot input sample
-        pc = subdataset[SAMPLE][0].numpy()
+        # Changed to solve the error "can't convert cuda:0 device type tensor 
+        # to numpy. Use Tensor.cpu() to copy the tensor to host memory first"
+        # in GCP
+        pc = subdataset[SAMPLE][0].cpu().numpy()
         label = subdataset[SAMPLE][1]
         sc = ax.scatter(pc[:,0], pc[:,1], pc[:,2], c=pc[:,0] ,s=50, marker='o', cmap="viridis", alpha=0.7)
         ax.set_xlabel('x')

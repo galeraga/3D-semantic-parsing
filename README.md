@@ -135,6 +135,71 @@ Area_N\
 <img width="980" alt="image" src="https://user-images.githubusercontent.com/76537012/174835726-32d68eaa-6196-4f1c-a545-8cfa61a28298.png">
 
 
+### The data flow and model size
+
+model input((hparams['batch_size'], hparams['max_points_per_space'], hparams['dimensions_per_object']))
+batch_size = 32
+max_poinys_per_space = 4096
+dimensions_per_object = 3
+
+For segmentation:
+```
+==========================================================================================
+Layer (type:depth-idx)                   Output Shape              Param #
+==========================================================================================
+SegmentationPointNet                     [32, 14, 4096]            --
+├─BasePointNet: 1-1                      [32, 1024]                --
+│    └─TransformationNet: 2-1            [32, 3, 3]                --
+│    │    └─Conv1d: 3-1                  [32, 64, 4096]            256
+│    │    └─BatchNorm1d: 3-2             [32, 64, 4096]            128
+│    │    └─Conv1d: 3-3                  [32, 128, 4096]           8,320
+│    │    └─BatchNorm1d: 3-4             [32, 128, 4096]           256
+│    │    └─Conv1d: 3-5                  [32, 1024, 4096]          132,096
+│    │    └─BatchNorm1d: 3-6             [32, 1024, 4096]          2,048
+│    │    └─Linear: 3-7                  [32, 512]                 524,800
+│    │    └─BatchNorm1d: 3-8             [32, 512]                 1,024
+│    │    └─Linear: 3-9                  [32, 256]                 131,328
+│    │    └─BatchNorm1d: 3-10            [32, 256]                 512
+│    │    └─Linear: 3-11                 [32, 9]                   2,313
+│    └─Conv1d: 2-2                       [32, 64, 4096]            256
+│    └─BatchNorm1d: 2-3                  [32, 64, 4096]            128
+│    └─TransformationNet: 2-4            [32, 64, 64]              --
+│    │    └─Conv1d: 3-12                 [32, 64, 4096]            4,160
+│    │    └─BatchNorm1d: 3-13            [32, 64, 4096]            128
+│    │    └─Conv1d: 3-14                 [32, 128, 4096]           8,320
+│    │    └─BatchNorm1d: 3-15            [32, 128, 4096]           256
+│    │    └─Conv1d: 3-16                 [32, 1024, 4096]          132,096
+│    │    └─BatchNorm1d: 3-17            [32, 1024, 4096]          2,048
+│    │    └─Linear: 3-18                 [32, 512]                 524,800
+│    │    └─BatchNorm1d: 3-19            [32, 512]                 1,024
+│    │    └─Linear: 3-20                 [32, 256]                 131,328
+│    │    └─BatchNorm1d: 3-21            [32, 256]                 512
+│    │    └─Linear: 3-22                 [32, 4096]                1,052,672
+│    └─Conv1d: 2-5                       [32, 128, 4096]           8,320
+│    └─BatchNorm1d: 2-6                  [32, 128, 4096]           256
+│    └─Conv1d: 2-7                       [32, 1024, 4096]          132,096
+│    └─BatchNorm1d: 2-8                  [32, 1024, 4096]          2,048
+├─Conv1d: 1-2                            [32, 512, 4096]           557,568
+├─BatchNorm1d: 1-3                       [32, 512, 4096]           1,024
+├─Conv1d: 1-4                            [32, 256, 4096]           131,328
+├─BatchNorm1d: 1-5                       [32, 256, 4096]           512
+├─Conv1d: 1-6                            [32, 128, 4096]           32,896
+├─BatchNorm1d: 1-7                       [32, 128, 4096]           256
+├─Conv1d: 1-8                            [32, 14, 4096]            1,806
+==========================================================================================
+Total params: 3,528,919
+Trainable params: 3,528,919
+Non-trainable params: 0
+Total mult-adds (G): 150.75
+==========================================================================================
+Input size (MB): 1.57
+Forward/backward pass size (MB): 9545.98
+Params size (MB): 14.12
+Estimated Total Size (MB): 9561.66
+==========================================================================================
+
+
+
 ## Related Work
 
 ## Contributors

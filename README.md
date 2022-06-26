@@ -39,7 +39,7 @@ The **basic dataset statistics** are:
   - **structural** (ceilings, doors, floors, walls, beams, columns, windows and stairs). 
   - **clutter** (if an object doesn't belong to any of the previous catagories)
 
-More **advanced statistics** can be found after a more detailed analysis:
+More **advanced statistics** can be found after a slightly deeper analysis:
 
 |<img width="1040" alt="image" src="https://user-images.githubusercontent.com/76537012/175812289-8b537a96-cb85-425e-a47c-5120a31baf9b.png">|
 |---|

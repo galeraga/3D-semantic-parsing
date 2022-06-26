@@ -1,23 +1,28 @@
 """
 File use to store global vars and required libraries among modules
 """
-
+# General imports
 import os
 import argparse
 import datetime
+import sys
+import logging
+import random
+from tqdm import tqdm
+import warnings
+
+# Math and DL imports
+import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-import sys
-import logging
-import numpy as np
-import random
-from tqdm import tqdm
-import warnings
+
+# Visualization imports
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
+# from torchinfo import summary
 
 
 building_distribution = {
@@ -35,6 +40,7 @@ eparams = {
     'already_rgb_normalized_suffix': "_rgb_norm",
     's3dis_summary_file': "s3dis_summary.csv",
     "checkpoints_folder": "checkpoints",
+    "tnet_outputs": "tnet_outputs",
     'tensorboard_log_dir': "runs/pointnet_with_s3dis",
 }
 
@@ -65,6 +71,11 @@ checkpoint_folder = os.path.join(eparams["pc_data_path"], eparams["checkpoints_f
 
 if not os.path.exists(checkpoint_folder):
     os.makedirs(checkpoint_folder)
+
+tnet_outputs_folder = os.path.join(eparams["pc_data_path"], eparams["tnet_outputs"])
+# Creating the folder to store the tnet outputs for visualization
+if not os.path.exists(tnet_outputs_folder):
+    os.makedirs(tnet_outputs_folder)
 
 # Parser definition
 parser_desc = "Provides convenient out-of-the-box options to train or test "
@@ -148,4 +159,3 @@ if "high" in args.load:
 # when testing segmentation with a whole space/room
 if ("segmentation" in args.goal) and ("test" in args.task) and ("OS_IMAGE_FAMILY" in os.environ.keys()):
     hparams['device'] =  'cpu'
-    

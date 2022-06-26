@@ -280,7 +280,7 @@ class S3DISDataset4Segmentation_(torch.utils.data.Dataset):
         self.root_dir = root_dir
         self.transform = transform
         
-        # Get a list of all the sliding windows
+        # Get a sorted list of all the sliding windows
         
         self.all_sliding_windows = ...
 

@@ -143,7 +143,7 @@ red squared section of the pictures below from the original paper.
 
 Using the torchinfo library, detailed information about the PointNet architecture implementation can be gathered.   
 
-If the model input is set to (hparams['batch_size'], hparams['max_points_per_space_or_object'], hparams['dimensions_per_object']), where: 
+If the model input is set to (batch_size, max_points_per_space_or_object, dimensions_per_object), where: 
 
 - batch_size = 32
 - max_points_per_space_or_object = 4096
@@ -264,6 +264,12 @@ Params size (MB): 14.12
 Estimated Total Size (MB): 9561.66
 ==========================================================================================
 ```
+
+## Main Conclusions
+
+Segmentation:
+
+- When very few points are used (i.e., 100 points per space), only walls are learned to be detected
 
 ## Related Work
 

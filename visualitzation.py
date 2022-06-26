@@ -107,7 +107,7 @@ def tnet_compare(model, subdataset, num_samples = 7):
         
         # Saving the plot
         png_file_name = "Tnet-out-{}.png".format(label)
-        png_path = os.path.join(eparams["pc_data_path"], png_file_name)
+        png_path = os.path.join(tnet_outputs_folder, png_file_name)
         plt.savefig(png_path, dpi=100)
         #print('Detected class: %s' % preds)
 

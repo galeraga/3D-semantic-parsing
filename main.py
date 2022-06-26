@@ -161,7 +161,7 @@ def test_segmentation(model, dataloaders):
     # get_labels() returns (space_dict, object_dict)
     # {'ceiling': 0, 'clutter': 1, ...}
     # According to the sumary file, movable objects are: 
-    # 'chair':8 | 'board': 6 | 'bookcase': 7 | 'chair': 8 | 'table': 9 | 'sofa': 11
+    # 'chair':8 | 'board': 6 | 'bookcase': 7 | 'table': 9 | 'sofa': 11
     # table is selected by hand because seems to be the only object detected 
     # with 4096 points per room (until training with sliding window is deployed)
     segmentation_target_object = "table"
@@ -191,7 +191,7 @@ def test_segmentation(model, dataloaders):
 
     # TODO: Insert Lluis' code here for visualization
     # points is the whole room points
-    # lluis_code(points, points_to_display) 
+    # lluis_code(data, segmentation_target_object_id, points_to_display) 
     
     corrects = preds.eq(target_labels.data).cpu().sum()
     accuracy = corrects.item() / preds.numel()
@@ -688,6 +688,9 @@ if __name__ == "__main__":
                                    point_dimension = hparams['dimensions_per_object']).to(device)
 
 
+    # Print info about the model with torchinfo
+    # summary(model, input_size=(hparams['batch_size'], hparams['max_points_per_space'], hparams['dimensions_per_object']))
+    
     # Carry out the the task to do
     # (e.g, train_classification(), test_segmentation())
     locals()[task + "_" + goal](model, dataloaders)

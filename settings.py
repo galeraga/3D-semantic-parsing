@@ -137,7 +137,7 @@ if "toy" in args.load:
 if "low" in args.load:
     hparams["num_points_per_object"] = 100
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 1 #5 
+    hparams["epochs"] = 5 #5 
     hparams["max_points_per_space"] = 1000
     hparams["max_points_per_sliding_window"] = 100
 

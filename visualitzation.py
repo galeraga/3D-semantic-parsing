@@ -129,14 +129,6 @@ def tnet_compare_in_site(model, sample, preds, tnet_out):
     --------
     VOID.
     '''
-
-    '''
-    Things to implements:
-
-    1.- Need to plot with only the pointcloud
-    2.- Remove everything refered to infer (we already have what we want)
-    
-    '''
     # Plot 7 samples
     fig = plt.figure(figsize=[12,6]) # height and width, DO NOT CHANGE.
 

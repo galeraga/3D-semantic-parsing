@@ -579,21 +579,3 @@ if __name__ == "__main__":
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.finish()
     #tnet_compare(model, ds)
-
-    # GUARRADA PER BORRAR DESPRES I PROVAR COSES ----------------------------------------------------------------------------
-    original_ds_length = len(ds)
-    training_ds_length = round(0.8*original_ds_length)
-    validation_ds_length = round(0.1*original_ds_length)
-    test_ds_length = round(0.1*original_ds_length)
-    split_criteria = [training_ds_length, validation_ds_length, test_ds_length]
-
-    train_dataset, val_dataset, test_dataset = torch.utils.data.dataset.random_split(ds,
-                                                split_criteria,
-                                                generator=torch.Generator().manual_seed(1))
-
-    #tnet_compare(model, ds)
-
-    sample = ds[0]
-    preds, tnet_out = infer(model, sample)
-    tnet_compare_in_site(model, sample, preds, tnet_out)
-    # ----------------------------------------------------------------------------------------------------------------------- 

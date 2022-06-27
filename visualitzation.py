@@ -12,8 +12,8 @@ def infer(model,
 
     Parameters
     ----------
-    model(idk):
-        The model that we have previously trained.
+    model(model of the network):
+        The model that we will pass.
     point_cloud_file(txt):
         The pointcloud that we want to infer saved in a .txt
     shuffle_points(bool, Default = False):
@@ -27,10 +27,11 @@ def infer(model,
 
     Returns
     -------
-    preds(idk):
-        The model prediction given a pointcloud
-    tnet_out(idk):
-        
+    preds(numpy array):
+        An array with the predictions of our pointCloud. Each number represents the class.
+    tnet_out(numpy array):
+        An array with the points of our pointCloud multiplicated by the output of the T-Net.
+        In other words the points displayed in a canonic way. 
     '''
     #num_classes = dataset.NUM_CLASSIFICATION_CLASSES
     points, label = point_cloud_file
@@ -66,7 +67,7 @@ def tnet_compare(model, subdataset, num_samples = 7):
 
     Parameters:
     -----------
-    model(idk):
+    model(model of the network):
         The model that we will pass.
     subdataset(pandas):
         This subdataset is the dataset where we will extract all the pointclouds samples that we want to plot.
@@ -118,24 +119,18 @@ def tnet_compare_in_site(model, sample, preds, tnet_out):
 
     Parameters:
     -----------
-    model(idk):
+    model(model of the network):
         The model that we will pass.
-    subdataset(pandas):
-        This subdataset is the dataset where we will extract all the pointclouds samples that we want to plot.
-        Usually, for the sake of rigurosity, it is used the test set.
-    num_samples(int):
-        The number of samples that we want to plot.
+    sample(tuple):
+        The sample is the object of the dataset that we want to visualize.
+    preds(numpy array):
+        An array with the predictions of our pointCloud. Each number represents the class.
+    tnet_out(numpy array):
+        An array with the points of our pointCloud multiplicated by the output of the T-Net.
+        In other words the points displayed in a canonic way.
     Returns:
     --------
     VOID.
-    '''
-
-    '''
-    Things to implements:
-
-    1.- Need to plot with only the pointcloud
-    2.- Remove everything refered to infer (we already have what we want)
-    
     '''
     # Plot 7 samples
     fig = plt.figure(figsize=[12,6]) # height and width, DO NOT CHANGE.

@@ -35,9 +35,13 @@ def infer(model,
     #num_classes = dataset.NUM_CLASSIFICATION_CLASSES
     points, label = point_cloud_file
     
-    if torch.cuda.is_available():
-        points = points.cuda()
-        model.cuda()
+    points = points.to(hparams["device"])
+    label = label.to(hparams["device"])
+    
+    # We ran out of memory in GCP GPU, so all tensors have to be on the same device
+    #if torch.cuda.is_available():
+    #    points = points.cuda()
+    #    model.cuda()
 
     points = points.unsqueeze(dim=0)
     model = model.eval()
@@ -81,7 +85,10 @@ def tnet_compare(model, subdataset, num_samples = 7):
         ax = fig.add_subplot(1, 2, 1, projection='3d')
 
         # plot input sample
-        pc = subdataset[SAMPLE][0].numpy()
+        # Changed to solve the error "can't convert cuda:0 device type tensor 
+        # to numpy. Use Tensor.cpu() to copy the tensor to host memory first"
+        # in GCP
+        pc = subdataset[SAMPLE][0].cpu().numpy()
         label = subdataset[SAMPLE][1]
         sc = ax.scatter(pc[:,0], pc[:,1], pc[:,2], c=pc[:,0] ,s=50, marker='o', cmap="viridis", alpha=0.7)
         ax.set_xlabel('x')
@@ -97,7 +104,11 @@ def tnet_compare(model, subdataset, num_samples = 7):
         ax.title.set_text(f'Output of "Input Transform" Detected: {preds}')
         ax.set_xlabel('x')
         ax.set_ylabel('y')
-        plt.savefig(f'C:/Users/marcc/OneDrive/Escritorio/Tnet-out-{label}.png',dpi=100)
+        
+        # Saving the plot
+        png_file_name = "Tnet-out-{}.png".format(label)
+        png_path = os.path.join(tnet_outputs_folder, png_file_name)
+        plt.savefig(png_path, dpi=100)
         #print('Detected class: %s' % preds)
 
 

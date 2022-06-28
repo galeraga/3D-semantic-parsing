@@ -217,7 +217,7 @@ class S3DIS_Summarizer():
 
     def label_points_for_semantic_segmentation(self):
         """
-        Create a single annotated file (per room/space) for semantic segmenation
+        Create a single annotated file (per room/space) for semantic segmentation
 
         Method outlook:
 
@@ -378,8 +378,8 @@ class S3DIS_Summarizer():
         and objects (table, chairs,...) within an Area 
         
         Output:
-            space_labels: A dict containing {0: space_0, 1: space_1, ... }
-            object_labels: A dict containing {0: object_0, 1: object_1, ... }
+            space_labels: A dict containing {space_0: 0, space_1: 1 ... }
+            object_labels: A dict containing {object_0: 0, object_1:1, ... }
         """
         
         if not os.path.exists(self.path_to_summary_file):
@@ -492,3 +492,235 @@ class S3DIS_Summarizer():
         # We sum all the Points of summary['Object'] that have similar names.
         summary_objects = summary.groupby(summary['Object'].str.split('_').str[0]).sum()
         print(summary_objects)
+
+    
+    def create_sliding_windows(self, rebuild = False): 
+        """
+        Creates the CSV files that will store all the sliding windows used in 
+        the semantic segmentation training.
+
+        Sliding window parameters are user-defined and read from settings.py.
+        These params are: 
+        
+        w: width of the sliding window
+        d: depth of the sliding window
+        h: height of the sliding window
+        o: overlapping of consecutives sliding window
+        
+        All sliding windows are created by splitting the proper room annotated
+        file (\Area_N\Space_X\space_x_annotated.txt) according to the 
+        user-defined params.
+
+        In order to simplify dataset management, all the sliding windows for all
+        the available rooms are saved into a single folder:
+        
+        Area_N
+        sliding_windows
+        ├── w_X_d_Y_h_Z_o_T
+        ├── w_P_d_Q_h_R_o_S
+        ├── ...  
+        """
+
+        # Create the folder to store the sliding windows with chosen params
+        # The folder will follow this convention: w_X_d_Y_h_Z_o_T
+        # path_to_root_sliding_windows_folder is set in settings.py
+        chosen_params = 'w' + str(hparams['win_width']) 
+        chosen_params += '_d' + str(hparams['win_depth'])
+        chosen_params += '_h' + str(hparams['win_height']) 
+        chosen_params + '_o' + str(hparams['overlap']) 
+        
+        path_to_current_sliding_windows_folder = os.path.join(
+                        path_to_root_sliding_windows_folder, chosen_params)
+                
+        if not os.path.exists(path_to_current_sliding_windows_folder):
+            os.makedirs(path_to_current_sliding_windows_folder)
+
+        # Remove all existing sliding windows for the chosen params, if required
+        if rebuild == True: 
+            print("Removing contents from folder ", path_to_current_sliding_windows_folder)
+            for f in tqdm(os.listdir(path_to_current_sliding_windows_folder)):
+                os.remove(os.path.join(path_to_current_sliding_windows_folder, f))
+
+
+        # Get unique area-space combinations from summary_df
+        # in order to know the exact number of spaces (around 272) 
+        unique_area_space_df = self.summary_df[["Area", "Space"]].drop_duplicates()     
+        
+        # Create sliding windows for every unique area-space combination
+        print("Creating sliding windows for:")
+        progress_bar = tqdm(unique_area_space_df.iterrows(), total = len(unique_area_space_df))
+        
+        for (idx, row) in progress_bar:
+            # Get the proper area and space
+            area = row["Area"]
+            space = row["Space"]
+            
+            # Update the info provided in the progess bar
+            progress_bar.set_description(area + "_" + space)
+
+            # Create the sliding windows
+            self.create_sliding_windows_for_a_single_room(area, space, path_to_current_sliding_windows_folder)
+        
+    
+    def create_sliding_windows_for_a_single_room(self, area, space, folder):
+        """
+        """
+
+        # For comodity's sake, put the sliding windows params in local vars
+        win_width = hparams['win_width']
+        win_depth = hparams['win_depth']
+        win_height = hparams['win_height']
+        overlap = hparams['overlap']
+        overlap_fc = 100 - overlap
+    
+        # Open the proper annotated file
+        # (e.g. Area_1\office_1\office_1_annotated.txt)
+        path_to_space = os.path.join(self.path_to_data, 
+            area, 
+            space
+            )
+        
+        sem_seg_file = space + eparams["pc_file_extension_sem_seg_suffix"] + eparams["pc_file_extension"]     
+        
+        path_to_room_annotated_file = os.path.join(path_to_space, sem_seg_file)
+        
+        data = np.genfromtxt(path_to_room_annotated_file, 
+                    dtype = float, 
+                    skip_header = 1, 
+                    delimiter = '', 
+                    names = None) 
+    
+        # TODO: Check conversion to float and torch tensor
+        # data = torch.from_numpy(data).float()
+        # data_arr=data.to_numpy()
+        # data_arr = data
+        
+        # Get the data and labels tensors
+        data_points = data[ :, :hparams["dimensions_per_object"]]
+        point_labels = data[ :, -1] 
+
+        # Create column vectors for each X, Y, Z coordinates
+        abs_x = data_points[ :, 0]
+        abs_y = data_points[ :, 1]
+        abs_z = data_points[ :, 2]
+        
+        '''
+        # FOR DEBUGGING PLOT X_Y ROOM SCATTER
+                fig = plt.figure()
+                ax = fig.add_subplot()
+                ax.scatter(tri_points[:,0].tolist(), tri_points[:,1].tolist())
+        '''    
+        
+        # Find roommax_x, roommax_y, roommin_x, roommin_y, roommin_z from all points in room. 
+        # Origin will be (roomin_x, roommin_y, roommin_z)
+        roommax_x = max(abs_x)
+        roommax_y = max(abs_y)
+        roommin_x = min(abs_x)
+        roommin_y = min(abs_y)
+        roommin_z = min(abs_z)
+                
+        # Variables of window are the 4 corners of the windows in X-Y. 
+        # These are defined by the combinations of the x and y max and 
+        # min values of each window where: 
+        #   - (winmin_x winmin_y) --> origin of window
+        #   - winmax_x = winmin_x + win_width --> max values of x
+        #   - winmax_y = winmin_y + win_depth --> max values of y
+        
+        # Slide window on x until winmax_x>roommax_x and on y until winmax_y>roommax_y
+
+        # Define vectors of origins
+        # winmax_z is defined but not used since we don't care about the height
+        # (we take all points in Z)
+        winmin_xvec = np.arange(roommin_x, roommax_x, overlap_fc/100*win_width)
+        winmin_yvec = np.arange(roommin_y, roommax_y, overlap_fc/100*win_depth)
+        winmin_z = roommin_z
+        winmax_z = roommin_z + win_height 
+
+        # normalized point matrix inside window, with origin on the window's origin 
+        # (not the absolute origin), and column for window count
+        # points_win=np.zeros([1,tri_points.shape[1]+1]) 
+        # label matrix for points inside window, same order as points_win
+        # labels_win=[] 
+
+        # ID the number of the window with more than 0 points in the room, 
+        # to separate one window from the other
+        win_count = 0
+
+        # For each possible origin of each window in the room, find the points 
+        # "trapped" inside it and transform them to relative normalized coordinate
+        for (winmin_x,winmin_y) in itertools.product(winmin_xvec, winmin_yvec):
+            
+            # Define the maximum values of x and y in that window   
+            winmax_x = winmin_x + win_width
+            winmax_y = winmin_y + win_depth
+            
+            # Get the entire room point cloud from where we will select the window points 
+            tri_points_aux = data_points
+            labels_aux = point_labels
+            
+            # Select only points that are inside the defined x limits for the specific window
+            # point_sel is a True/False Matrix
+            point_sel = np.array((tri_points_aux[:,0] > winmin_x) & (tri_points_aux[:,0] < winmax_x)) 
+            tri_points_aux = tri_points_aux[point_sel,:]
+            labels_aux = labels_aux[point_sel]
+
+            # Select only points that are inside the defined y limits for the specific window
+            point_sel = np.array((tri_points_aux[:,1] > winmin_y) & (tri_points_aux[:,1] < winmax_y))
+            tri_points_aux = np.array(tri_points_aux[point_sel])
+            labels_aux = labels_aux[point_sel]
+            
+            # If there are no points in the defined window, ignore the window
+            if tri_points_aux.size != 0: 
+                
+                # tri_point_aux is now the matrix containing only the 3D points 
+                # inside the prism window in absolute coordenates
+                # Take each vector separately
+                abs_x_win = tri_points_aux[:, 0]
+                abs_y_win = tri_points_aux[:, 1]
+                abs_z_win = tri_points_aux[:, 2]
+                
+                # Transform coordinates to relative (with respect to window origin, 
+                # not absolute origin) and normalize with win_width, win_depth and win_height
+                # rel_x, rel_y, rel_z are vectors
+                rel_x = (abs_x_win-winmin_x)/win_width 
+                rel_y = (abs_y_win-winmin_y)/win_depth 
+                rel_z = (abs_z_win-winmin_z)/win_height
+
+                tri_points_rel = np.copy(tri_points_aux)
+                
+                # Put the relative and normalized points inside a matrix with the color information
+                # tri_points aux is a matrix with relative as well as rgb info
+                tri_points_rel[:,0] = rel_x 
+                tri_points_rel[:,1] = rel_y
+                tri_points_rel[:,2] = rel_z
+
+                # Convert to 1D array else it won't work
+                labels_aux.shape=(len(labels_aux), 1) 
+                
+                # Create matrix with: 
+                # - 3 relative normalized points, then 
+                # - 3 colors, then 
+                # - 3 absolute coordinates, then
+                # - 1 window identifier, then 
+                # - 1 label
+                tri_points_out = np.concatenate((tri_points_rel, tri_points_aux[:,0:3], np.full((len(rel_x),1), win_count), labels_aux), axis = 1)
+
+                # Convert the NumPy matrix to a float torch tensor
+                tri_points_out = torch.from_numpy(tri_points_out).float()
+                
+                # Save the torch tensor as a file
+                # Common PyTorch convention is to save tensors using .pt 
+                # file extension
+                sliding_window_name = area + '_' + space + "_" 
+                sliding_window_name += "win" + str(win_count) + ".pt"
+                torch.save(tri_points_out, os.path.join(folder, sliding_window_name))
+
+                # Update the number of sliding windows
+                win_count += 1
+        
+                
+
+
+   
+
+    

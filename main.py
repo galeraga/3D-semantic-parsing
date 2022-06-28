@@ -655,6 +655,7 @@ if __name__ == "__main__":
     # Create the ground truth files for semantic segmentation
     if "segmentation" in args.goal:
         summary_file.label_points_for_semantic_segmentation()
+        summary_file.create_sliding_windows()
 
     # Log insights from the S3DIS dataset into TensorBoard
     logger.log_dataset_stats(summary_file)

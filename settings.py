@@ -10,6 +10,7 @@ import logging
 import random
 from tqdm import tqdm
 import warnings
+import itertools
 
 # Math and DL imports
 import numpy as np
@@ -42,6 +43,7 @@ eparams = {
     "checkpoints_folder": "checkpoints",
     "tnet_outputs": "tnet_outputs",
     'tensorboard_log_dir': "runs/pointnet_with_s3dis",
+    'sliding_windows_folder': "sliding_windows"
 }
 
 # Checking if the script is running in GCP
@@ -59,23 +61,30 @@ hparams = {
     'max_points_per_sliding_window': 0,
     'dimensions_per_object': 0,
     'epochs': 0,
+    'win_width': 1,
+    'win_depth': 1,
+    'win_height': 3,
+    'overlap': 0, #percentage, 0-95%, 100 will create an infinite loop
 }
+
 # Some useful info when running with GPUs in pytorch
 # torch.cuda.device_count() -> 1 (in our current GCP scenario)
 # torch.cuda.get_device_name(0) -> 'Tesla K80' (0 is de device_id from our availbale GPU)
 hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 
-# Creating the checkpoint folder
+# Creating aux folders to store checkpoints, tnet ouputs and sliding windows
 checkpoint_folder = os.path.join(eparams["pc_data_path"], eparams["checkpoints_folder"])
-
 if not os.path.exists(checkpoint_folder):
     os.makedirs(checkpoint_folder)
 
 tnet_outputs_folder = os.path.join(eparams["pc_data_path"], eparams["tnet_outputs"])
-# Creating the folder to store the tnet outputs for visualization
 if not os.path.exists(tnet_outputs_folder):
     os.makedirs(tnet_outputs_folder)
+ 
+path_to_root_sliding_windows_folder = os.path.join(eparams["pc_data_path"], eparams['sliding_windows_folder'])
+if not os.path.exists(path_to_root_sliding_windows_folder):
+    os.makedirs(path_to_root_sliding_windows_folder)
 
 # Parser definition
 parser_desc = "Provides convenient out-of-the-box options to train or test "

@@ -94,7 +94,7 @@ class TensorBoardLogger():
             # Mean points per space/room
             self.writer.add_scalar("S3DIS Dataset/Mean points per room type", 
                 space_labels_df["Object Points"].sum()/len(already_visited_space), 
-                idx + 1
+                idx
                 )
 
         #-----------------------

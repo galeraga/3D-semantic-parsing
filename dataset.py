@@ -135,7 +135,7 @@ class S3DISDataset4Classification(torch.utils.data.Dataset):
         return str(msg)
 
 
-class S3DISDataset4Segmentation(torch.utils.data.Dataset):
+class S3DISDataset4Segmentation_old(torch.utils.data.Dataset):
     """
     S3DIS dataset for segmentation goals
     """
@@ -247,47 +247,52 @@ class S3DISDataset4Segmentation(torch.utils.data.Dataset):
 
 # TODO: The new dataset for semantic segmenation. It will replace the above one,
 # once the Clara's sliding windows mehtod will be finished 
-class S3DISDataset4Segmentation_(torch.utils.data.Dataset):
+class S3DISDataset4Segmentation(torch.utils.data.Dataset):
     """
     S3DIS dataset for segmentation goals.
     
-    It works with sliding blocks
+    It works with sliding blocks/windows.
 
-    From the XXX method, there's a folder containing all the pre-processed 
+    From the S3DIS_Summarizer.create_sliding_windows() method, 
+    there's a folder containing all the pre-processed 
     sliding block for all the spaces/rooms in the dataset. 
     
-    The folder is located in XXX and has the following name and contents:
+    Naming guideline:
 
-    \root_dir\sliding_windows_overlap_ZZZ\Area_N_Space_X_Block_Y
+    Area_N
+    sliding_windows
+    ├── w_X_d_Y_h_Z_o_T
+        ├── Area_N_Space_J_winK.pt
 
-    where:
-    - ZZZ indicates the overlap percentage between consecutive 
-        windows (050 -> 50%, 075 ->75%, 100 ->100% )
-    
-    - Block_Y: XXX
-
+    where:    
+    w_X: width of the sliding window
+    d_Y: depth of the sliding window
+    h_Z: height of the sliding window
+    o_T: overlapping of consecutives sliding window
+    winK: sequential ID of the sliding window
     """
     
     def __init__(self, root_dir, transform = None):
         """
         Args:
             root_dir (string): Directory with all the pre-processed 
-                sliding windows (the output from XXX method)
+                sliding windows 
             transform (callable, optional): Optional transform 
                 to be applied on a sample.
         """
         
         self.root_dir = root_dir
         self.transform = transform
-        
+
         # Get a sorted list of all the sliding windows
-        
-        self.all_sliding_windows = ...
+        # Get only Pytorch files, in case other file types exist
+        self.all_sliding_windows = sorted(
+            [f for f in os.listdir(path_to_current_sliding_windows_folder) if ".pt" in f])
 
     def __len__(self):
         """
         """
-        return len(self.all_sliding_windows) 
+        return len(self.all_sliding_windows)
 
     def __getitem__(self, idx):
         """
@@ -296,7 +301,6 @@ class S3DISDataset4Segmentation_(torch.utils.data.Dataset):
 
         - If task == train, only 4096 points will be returned per sliding windows
         - If task == test, all the points in the proper sliding window will be returned
-
         """
 
         if torch.is_tensor(idx):
@@ -306,26 +310,33 @@ class S3DISDataset4Segmentation_(torch.utils.data.Dataset):
         sliding_window_name = self.all_sliding_windows[idx]
 
         # Fetch the sliding window file, if necessary
-        path_to_sliding_window_file = os.path.join(self.root_dir, sliding_window_name)
+        path_to_sliding_window_file = os.path.join(
+                    path_to_current_sliding_windows_folder, 
+                    sliding_window_name)
 
-        # Open the sliding window file
-        sliding_window = None
-
-        # Convert the sliding window to torch, if necessary
-        sliding_window = torch.tensor(sliding_window).to(hparams["device"])
+        # Open the sliding window file (they're saved as torch)
+        sliding_window = torch.load(path_to_sliding_window_file,
+                     map_location = torch.device(hparams["device"]))
 
         # For training:
         #   - We set the max points per sliding windows as per original paper (4096)
         # For testing:
         #   - If we're in a batch mode, we limit the amount of points per room to
         #     make all the rooms equal size
+        #   - If we're not in a batch mode, no dataset is used (to room to test 
+        #     is directly selected in the )
         max_points_per_sliding_window = hparams['max_points_per_sliding_window'] if "train" in args.task else hparams['max_points_per_space']
         
-        sliding_window = PointSampler(sliding_window, max_points_per_sliding_window)
+        sliding_window = PointSampler(sliding_window, max_points_per_sliding_window).sample()
 
-        # TODO: sliding_window -> [x y x r g b label] (7 cols) (HOW MANY COLUMNS IT WILL HAVE)
         # The amount of cols to return per room will depend on whether or not
         # we're taking the color into account
+        # Sliding window cols: (x_rel y_rel z_rel R G B x y z win_ID label)
+        # - 3 relative normalized points (x_rel y_rel z_rel)
+        # - 3 colors (R G B)
+        # - 3 absolute coordinates (x y z)
+        # - 1 sliding window identifier (win_ID)
+        # - 1 point label for that point (label)
         sliding_window_points = sliding_window[ :, :hparams["dimensions_per_object"]]
         point_labels = sliding_window[ :, -1]
         

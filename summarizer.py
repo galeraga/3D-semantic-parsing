@@ -263,15 +263,16 @@ class S3DIS_Summarizer():
 
         # Get unique area-space combinations from summary_df
         # in order to know the exact number of spaces (around 272)
-        unique_area_space_df = self.summary_df[["Area", "Space"]].drop_duplicates()     
-        
-        # Aux vars to keep track of the labeling progress
-        total_unique_spaces = len(unique_area_space_df)
-        processed_spaces = 0
+        unique_area_space_df = self.summary_df[["Area", "Space"]].drop_duplicates(ignore_index=True)     
 
-        print("Checking whether point labeling has to be performed...")
+        # Define the process bar to display when processing files
+        progress_bar = tqdm(unique_area_space_df.iterrows(), total = len(unique_area_space_df))
+       
+        # Start processing files    
+        print("Checking whether point labeling has to be performed.")
+        print("Start time: ", datetime.datetime.now())
         
-        for i, (idx, row) in enumerate(unique_area_space_df.iterrows()):         
+        for (idx, row) in progress_bar:         
             # Get the proper area and space
             area = row["Area"]
             space = row["Space"]
@@ -279,85 +280,67 @@ class S3DIS_Summarizer():
             # Defining path for the folder where the semantic segmentaion
             # file is going to be saved
             # (e.g. Area_1\office_1\office_1_annotated.txt)
-            path_to_space = os.path.join(self.path_to_data, 
-                area, 
-                space
-                )
-            
-            path_to_objs = os.path.join(path_to_space,
-                "Annotations"
-                )
-                
+            path_to_space = os.path.join(self.path_to_data, area, space)
+            path_to_objs = os.path.join(path_to_space, "Annotations")
             sem_seg_file = space + eparams["pc_file_extension_sem_seg_suffix"] + eparams["pc_file_extension"]
             path_to_sem_seg_file = os.path.join(path_to_space, sem_seg_file)
             
             # Checking if the semantic segmentation file already exists
             # for this space within this area
             if os.path.exists(path_to_sem_seg_file):
-                processed_spaces += 1
-                msg = "({}/{}) Skipping generation ".format(processed_spaces, total_unique_spaces)
-                msg += "of the semantic segmentation file"
-                msg += " {}_{} (file {} already exists)".format(
-                        area, 
-                        space,
-                        sem_seg_file)
-                print(msg)
+                msg = "Processing file {}_{}: Skipped".format(area, space)
+                progress_bar.set_description(msg)
             
             # Create the semantic segmentation file   
             else:
-                # Update the processed rooms counter
-                processed_spaces += 1
-
-                # Let's start creating an empty semantic segmentation dataframe
-                sem_seg_df = pd.DataFrame()
-                       
+    
                 # Get all the objects that belong to that concrete area and space
                 # (NOTE: from the summary_df!)
                 objects_df = self.summary_df[(self.summary_df["Area"] == area) &
                     (self.summary_df["Space"] == space)]
 
-                # Define the message to print with tqdm
-                tqdm_msg = "({}/{}) Generating file ".format(processed_spaces, total_unique_spaces) 
-                tqdm_msg += "for semantic segmentation "
-                tqdm_msg += "in {}_{}".format(area, space)
-
                 # Let's read every object/class file
-                # TODO: Find out a faster way to compute the loop 
-                # (e.g, cudf lib, move to numpy to gpu, etc.)
-                # TODO: Quicker way: 
-                #   - get tha path to Area_N\Room_N\Annotations\
-                #   - Reads all files in a list comprehension and make torch.stack
-                #     torch.stack([torch.FloatTensor(i['img']) for i in batch])  
-                #   - Save the file
-                for i in tqdm(objects_df.index, desc = tqdm_msg):
+                # idx starts from 0 to len(objects_df.index)
+                # i preserves the index from summary_df (41, 73,...)
+                for idx, i in enumerate(objects_df.index):
+                    
                     # Get line by line info
                     summary_line = self.summary_df.iloc[i]
 
                     # Get the proper info from each line
                     obj_file = summary_line["Object"]
                     obj_label_id = summary_line["Object ID"]
+
+                    # Update the progress bar message
+                    msg = "Processing file {}_{}: {}/{} ({})".format(area, 
+                                space, idx+1, len(objects_df), obj_file)
+                    progress_bar.set_description(msg)
                     
                     try:
-                        # Let's try to open the file as np.float32      
+                        # Let's try to open the file as a Numpy array   
                         path_to_obj = os.path.join(path_to_objs, obj_file)
-                        obj_df = pd.read_csv(path_to_obj, 
-                            sep = " ", 
-                            header = None,
-                            dtype = np.float32)
-                        
-                        # Adding the new col with the proper label
-                        # https://stackoverflow.com/questions/42473098/add-column-to-pandas-without-headers
-                        obj_df[len(obj_df.columns)] = obj_label_id
+                        obj_data = np.genfromtxt(path_to_obj, 
+                            delimiter = ' ', 
+                            names = None) 
 
-                        # Save the semantic segmentation file
-                        sem_seg_df = pd.concat([sem_seg_df, obj_df])
-                        sem_seg_df.to_csv(path_to_sem_seg_file, index = False, sep = "\t")
-                                                                     
+                        # Create a vector col copying the object_label_id as many
+                        # times as rows in the object data
+                        label_col = np.array([obj_label_id for _ in obj_data])
+
+                        # Stack/concatenate the label to all the points for this object
+                        sem_seg_data = np.column_stack((obj_data, label_col))
+                        
+                        # Save the semantic segmentation file as a Numpy txt file
+                        with open(path_to_sem_seg_file, 'a') as f:
+                            np.savetxt(f, sem_seg_data, fmt ="%4.3f")
+                                                                        
                     except:    
                         # Write error on logger
                         msg = "The following file seems to be corrupted: {} ".format(path_to_obj)
                         self.logger.writer.add_text("Summarizer/Error", msg)
-                 
+        
+        progress_bar.close()
+        print("End time: ", datetime.datetime.now())       
 
     def report_health_issues(self):
         """
@@ -496,7 +479,7 @@ class S3DIS_Summarizer():
     
     def create_sliding_windows(self, rebuild = False): 
         """
-        Creates the CSV files that will store all the sliding windows used in 
+        Creates the files that will store all the sliding windows used in 
         the semantic segmentation training.
 
         Sliding window parameters are user-defined and read from settings.py.
@@ -507,40 +490,38 @@ class S3DIS_Summarizer():
         h: height of the sliding window
         o: overlapping of consecutives sliding window
         
-        All sliding windows are created by splitting the proper room annotated
-        file (\Area_N\Space_X\space_x_annotated.txt) according to the 
-        user-defined params.
+        All sliding windows are created by splitting the prevously created 
+        annotated room file (\Area_N\Space_X\space_x_annotated.txt), according 
+        to the user-defined params.
 
         In order to simplify dataset management, all the sliding windows for all
-        the available rooms are saved into a single folder:
+        the available rooms are saved into a single folder and will be saved
+        as Pytorch tensors:
         
         Area_N
         sliding_windows
         ├── w_X_d_Y_h_Z_o_T
-        ├── w_P_d_Q_h_R_o_S
-        ├── ...  
+            ├── Area_N_Space_J_winK.pt
+
+        where:    
+        w_X: width of the sliding window
+        d_Y: depth of the sliding window
+        h_Z: height of the sliding window
+        o_T: overlapping of consecutives sliding window
+        winK: sequential ID of the sliding window
         """
 
-        # Create the folder to store the sliding windows with chosen params
-        # The folder will follow this convention: w_X_d_Y_h_Z_o_T
-        # path_to_root_sliding_windows_folder is set in settings.py
-        chosen_params = 'w' + str(hparams['win_width']) 
-        chosen_params += '_d' + str(hparams['win_depth'])
-        chosen_params += '_h' + str(hparams['win_height']) 
-        chosen_params + '_o' + str(hparams['overlap']) 
-        
-        path_to_current_sliding_windows_folder = os.path.join(
-                        path_to_root_sliding_windows_folder, chosen_params)
-                
-        if not os.path.exists(path_to_current_sliding_windows_folder):
-            os.makedirs(path_to_current_sliding_windows_folder)
-
         # Remove all existing sliding windows for the chosen params, if required
-        if rebuild == True: 
+        if rebuild == True:
             print("Removing contents from folder ", path_to_current_sliding_windows_folder)
             for f in tqdm(os.listdir(path_to_current_sliding_windows_folder)):
                 os.remove(os.path.join(path_to_current_sliding_windows_folder, f))
 
+        # If files do exist, skip creating sliding windows
+        # Caution: If the sliding window creation process is somehow interrupted,
+        # torch files have to be removed manually
+        if len([f for f in os.listdir(path_to_current_sliding_windows_folder) if ".pt" in f]) != 0:
+            return
 
         # Get unique area-space combinations from summary_df
         # in order to know the exact number of spaces (around 272) 
@@ -557,7 +538,7 @@ class S3DIS_Summarizer():
             
             # Update the info provided in the progess bar
             progress_bar.set_description(area + "_" + space)
-
+            
             # Create the sliding windows
             self.create_sliding_windows_for_a_single_room(area, space, path_to_current_sliding_windows_folder)
         
@@ -566,7 +547,7 @@ class S3DIS_Summarizer():
         """
         """
 
-        # For comodity's sake, put the sliding windows params in local vars
+        # For comfortability's sake, put the sliding windows params in local vars
         win_width = hparams['win_width']
         win_depth = hparams['win_depth']
         win_height = hparams['win_height']
@@ -575,13 +556,8 @@ class S3DIS_Summarizer():
     
         # Open the proper annotated file
         # (e.g. Area_1\office_1\office_1_annotated.txt)
-        path_to_space = os.path.join(self.path_to_data, 
-            area, 
-            space
-            )
-        
         sem_seg_file = space + eparams["pc_file_extension_sem_seg_suffix"] + eparams["pc_file_extension"]     
-        
+        path_to_space = os.path.join(self.path_to_data, area, space)    
         path_to_room_annotated_file = os.path.join(path_to_space, sem_seg_file)
         
         data = np.genfromtxt(path_to_room_annotated_file, 
@@ -590,12 +566,7 @@ class S3DIS_Summarizer():
                     delimiter = '', 
                     names = None) 
     
-        # TODO: Check conversion to float and torch tensor
-        # data = torch.from_numpy(data).float()
-        # data_arr=data.to_numpy()
-        # data_arr = data
-        
-        # Get the data and labels tensors
+        # Get the data and labels arrays
         data_points = data[ :, :hparams["dimensions_per_object"]]
         point_labels = data[ :, -1] 
 
@@ -631,6 +602,8 @@ class S3DIS_Summarizer():
         # Define vectors of origins
         # winmax_z is defined but not used since we don't care about the height
         # (we take all points in Z)
+        # np.arange returns evenly spaced values within a given interval
+        # np.arange(start, stop, step)
         winmin_xvec = np.arange(roommin_x, roommax_x, overlap_fc/100*win_width)
         winmin_yvec = np.arange(roommin_y, roommax_y, overlap_fc/100*win_depth)
         winmin_z = roommin_z
@@ -648,6 +621,8 @@ class S3DIS_Summarizer():
 
         # For each possible origin of each window in the room, find the points 
         # "trapped" inside it and transform them to relative normalized coordinate
+        # itertools.product('ABCD', repeat=2) returns:
+        # AA AB AC AD BA BB BC BD CA CB CC CD DA DB DC DD
         for (winmin_x,winmin_y) in itertools.product(winmin_xvec, winmin_yvec):
             
             # Define the maximum values of x and y in that window   
@@ -715,8 +690,9 @@ class S3DIS_Summarizer():
                 sliding_window_name += "win" + str(win_count) + ".pt"
                 torch.save(tri_points_out, os.path.join(folder, sliding_window_name))
 
-                # Update the number of sliding windows
+                # Update the sliding window ID
                 win_count += 1
+                
         
                 
 

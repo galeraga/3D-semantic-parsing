@@ -50,6 +50,13 @@ def create_dataloaders(ds):
     training_ds_length = round(0.8*original_ds_length)
     validation_ds_length = round(0.1*original_ds_length)
     test_ds_length = round(0.1*original_ds_length)
+    
+    # Correct rounding errors 
+    delta = original_ds_length - (training_ds_length + validation_ds_length + test_ds_length)
+    if delta != 0:
+        training_ds_length = training_ds_length + delta
+
+        
 
     split_criteria = [training_ds_length, validation_ds_length, test_ds_length]
     

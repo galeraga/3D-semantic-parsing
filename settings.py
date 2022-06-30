@@ -1,6 +1,9 @@
 """
 File use to store global vars and required libraries among modules
 """
+#------------------------------------------------------------------------------
+# IMPORTS
+#------------------------------------------------------------------------------
 # General imports
 import os
 import argparse
@@ -32,6 +35,9 @@ building_distribution = {
     'Building 3': ["Area_5"], 
 }
 
+#------------------------------------------------------------------------------
+# ENVIRONMENT AND MODEL PARAMETERS
+#------------------------------------------------------------------------------
 # Environment (file system and so on) params
 eparams = {
     'pc_data_path': "/Users/jgalera/datasets/S3DIS/aligned",
@@ -45,10 +51,6 @@ eparams = {
     'tensorboard_log_dir': "runs/pointnet_with_s3dis",
     'sliding_windows_folder': "sliding_windows"
 }
-
-# Checking if the script is running in GCP
-if "OS_IMAGE_FAMILY" in os.environ.keys():
-    eparams['pc_data_path'] = "/home/s3disuser/data"
 
 # Model hyperparameters
 hparams = {
@@ -67,25 +69,48 @@ hparams = {
     'overlap': 0, #percentage, 0-95%, 100 will create an infinite loop
 }
 
+# Checking if the script is running in GCP
+if "OS_IMAGE_FAMILY" in os.environ.keys():
+    eparams['pc_data_path'] = "/home/s3disuser/data"
+
 # Some useful info when running with GPUs in pytorch
 # torch.cuda.device_count() -> 1 (in our current GCP scenario)
 # torch.cuda.get_device_name(0) -> 'Tesla K80' (0 is de device_id from our availbale GPU)
 hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
 
-
-# Creating aux folders to store checkpoints, tnet ouputs and sliding windows
+#------------------------------------------------------------------------------
+# AUX FOLDER CREATION
+#------------------------------------------------------------------------------
+# To store checkpoints
 checkpoint_folder = os.path.join(eparams["pc_data_path"], eparams["checkpoints_folder"])
 if not os.path.exists(checkpoint_folder):
     os.makedirs(checkpoint_folder)
 
+# To store tnet ouputs
 tnet_outputs_folder = os.path.join(eparams["pc_data_path"], eparams["tnet_outputs"])
 if not os.path.exists(tnet_outputs_folder):
     os.makedirs(tnet_outputs_folder)
- 
+
+# To store sliding windows 
 path_to_root_sliding_windows_folder = os.path.join(eparams["pc_data_path"], eparams['sliding_windows_folder'])
 if not os.path.exists(path_to_root_sliding_windows_folder):
     os.makedirs(path_to_root_sliding_windows_folder)
 
+# The folder will follow this convention: w_X_d_Y_h_Z_o_T
+chosen_params = 'w' + str(hparams['win_width']) 
+chosen_params += '_d' + str(hparams['win_depth'])
+chosen_params += '_h' + str(hparams['win_height']) 
+chosen_params += '_o' + str(hparams['overlap']) 
+
+path_to_current_sliding_windows_folder = os.path.join(
+                path_to_root_sliding_windows_folder, chosen_params)
+
+if not os.path.exists(path_to_current_sliding_windows_folder):
+    os.makedirs(path_to_current_sliding_windows_folder)
+
+#------------------------------------------------------------------------------
+# PARSER DEFINITION AND DEFAULT SETTINGS
+#------------------------------------------------------------------------------
 # Parser definition
 parser_desc = "Provides convenient out-of-the-box options to train or test "
 parser_desc += "a PointNet model based on S3DIS dataset"
@@ -141,14 +166,14 @@ if "toy" in args.load:
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 3
     hparams["max_points_per_space"] = 10
-    hparams["max_points_per_sliding_window"] = 10
+    hparams["max_points_per_sliding_window"] = 512
 
 if "low" in args.load:
     hparams["num_points_per_object"] = 100
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 5 #5 
     hparams["max_points_per_space"] = 1000
-    hparams["max_points_per_sliding_window"] = 100
+    hparams["max_points_per_sliding_window"] = 512
 
 if "medium" in args.load:
     hparams["num_points_per_object"] = 1024

@@ -373,21 +373,44 @@ class S3DIS_Summarizer():
         
         # Define the sets and dicts to be used 
         spaces_dict = dict()
-        objects_dict = dict()
+        all_objects_dict = dict()
+        movable_objects_dict = dict()
+        structural_objects_dict = dict()
 
         # Get Object IDs and labels to build a dict
         # {'celing': 0, 'clutter':1,...}
         unique_objects_df = self.summary_df[["Object ID", "Object Label"]].drop_duplicates(ignore_index=True) 
         for row in unique_objects_df.iterrows():
-            objects_dict[row[1][1]] = row[1][0]
+            all_objects_dict[row[1][1]] = row[1][0]
         
         # Get Space IDs and labels to build a dict
         # {'WC': 0, 'conferenceRoom':1,...}
+        # Created for convenience, but not used
         unique_spaces_df = self.summary_df[["Space ID", "Space Label"]].drop_duplicates(ignore_index=True) 
         for row in unique_spaces_df.iterrows():
             spaces_dict[row[1][1]] = row[1][0] 
 
-        return spaces_dict, objects_dict
+        # Create a dict only for movable objects for their values to be
+        # in the expected range from the loss function
+        idx = 0
+        for k in all_objects_dict:
+            if k in movable_objects_set:
+                movable_objects_dict[k] = idx
+                idx += 1
+
+        # Create a dict only for structural objects for the same reason
+        idx = 0
+        for k in all_objects_dict:
+            if k in structural_objects_set:
+                structural_objects_dict[k] = idx
+                idx += 1
+        
+        # Create a dict of dicts in order to have these mappings in a single place
+        all_dicts = dict(all = all_objects_dict, 
+                        movable = movable_objects_dict, 
+                        structural = structural_objects_dict)
+
+        return all_dicts
 
         
     def get_stats(self):

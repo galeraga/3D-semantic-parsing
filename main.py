@@ -2,7 +2,7 @@
 PointNet implementation with S3DIS dataset
 """
 
-from numpy import double
+# from numpy import double
 from settings import * 
 import dataset 
 import model    
@@ -13,24 +13,27 @@ from visualitzation import tnet_compare
 
 def task_welcome_msg(task = None):
     """
+    Info message to be displayed when training/testing by epoch
     """
-    msg = "Starting {}-{} with: ".format(task, goal)
+
+    msg = "Starting {}-{} with:".format(task, goal)
+    msg += "\n- {} classes".format(hparams['num_classes'])
     
     if "classification" in args.goal:
-        msg += "{} points per object | ".format(hparams['num_points_per_object'])
+        msg += "\n- {} points per object ".format(hparams['num_points_per_object'])
     
     if "segmentation" in args.goal:
-        msg += "{} points per room | ".format(hparams['max_points_per_space'])
-        msg += "{} points per sliding window | ".format(hparams['max_points_per_sliding_window'])
+        msg += "\n- {} points per room ".format(hparams['max_points_per_space'])
+        msg += "\n- {} points per sliding window ".format(hparams['max_points_per_sliding_window'])
 
-    msg += "{} dimensions per object | ".format(hparams['dimensions_per_object'])
-    msg += "{} batch_size | ".format(hparams['batch_size'])
-    msg += "workers: {} |".format(hparams['num_workers'])
+    msg += "\n- {} dimensions per object ".format(hparams['dimensions_per_object'])
+    msg += "\n- {} batch_size ".format(hparams['batch_size'])
+    msg += "\n- {} workers ".format(hparams['num_workers'])
     
     if hparams['device'] == "cpu":
-        msg += " device: {}".format(hparams['device'])
+        msg += "\n- device: {}".format(hparams['device'])
     else:
-        msg += " device: {} ({}x {})".format(hparams['device'],
+        msg += "\n- device: {} ({}x {})".format(hparams['device'],
                                         torch.cuda.device_count(),
                                         torch.cuda.get_device_name(0)
                                         )
@@ -55,8 +58,6 @@ def create_dataloaders(ds):
     delta = original_ds_length - (training_ds_length + validation_ds_length + test_ds_length)
     if delta != 0:
         training_ds_length = training_ds_length + delta
-
-        
 
     split_criteria = [training_ds_length, validation_ds_length, test_ds_length]
     
@@ -659,6 +660,12 @@ if __name__ == "__main__":
     # Create the ground truth file for classification
     summary_file = S3DIS_Summarizer(eparams["pc_data_path"], logger)
 
+    # Get the dicts we'll use to translate:
+    #  - from all the objects ID we have in the summary file [0-13]
+    #  - to a subset of object IDs: movable [0-5], structural [0-8]
+    # when not working with all the num_classes
+    all_dicts = summary_file.get_labels()
+
     # Create the ground truth files for semantic segmentation
     if "segmentation" in args.goal:
         summary_file.label_points_for_semantic_segmentation()
@@ -671,17 +678,18 @@ if __name__ == "__main__":
     logger.log_hparams(hparams)
     
     # Define the checkpoint name
-    eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_{}_points_{}_dims.pth".format(
+    eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_{}_points_{}_dims_{}_num_classes.pth".format(
                                             goal,
                                             hparams["num_points_per_object"],
-                                            hparams["dimensions_per_object"]
+                                            hparams["dimensions_per_object"],
+                                            hparams["num_classes"],
                                             )
     
     # Dataset instance creation (goal-dependent) 
     # If goal == classification -> S3DISDataset4Classification
     # If goal == segmentation -> S3DISDataset4Segmentation
     ds_to_call = "S3DISDataset4" + goal.capitalize()  
-    ds = getattr(dataset, ds_to_call)(eparams['pc_data_path'], transform = None)
+    ds = getattr(dataset, ds_to_call)(eparams['pc_data_path'], all_dicts, transform = None)
     print(ds)
     
     # Create the dataloaders
@@ -694,7 +702,6 @@ if __name__ == "__main__":
     model_to_call = goal.capitalize() + "PointNet"
     model = getattr(model, model_to_call)(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object']).to(device)
-
 
     # Print info about the model with torchinfo
     # summary(model, input_size=(hparams['batch_size'], hparams['max_points_per_space'], hparams['dimensions_per_object']))

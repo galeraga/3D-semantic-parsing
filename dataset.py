@@ -4,7 +4,23 @@ from settings import *
 
 #import summarizer
 
-# Helper class
+#------------------------------------------------------------------------------
+# Helper classes and methods, shared among classification and segmentation goals
+#------------------------------------------------------------------------------
+
+def get_summary_file():
+    """
+    Returns a Panda Dataframe for the summary file
+    """
+    summary_df = pd.read_csv(
+                os.path.join(eparams['pc_data_path'], eparams['s3dis_summary_file']), 
+                header = None, 
+                skiprows=1,
+                sep = "\t"
+            )
+    return summary_df
+
+
 class PointSampler():
     """
     Utility class to downsampling/upsamplng a point cloud
@@ -44,14 +60,67 @@ class PointSampler():
         
         return self.point_cloud
 
+class AdaptNumClasses():
+    """
+    Adapts the point_labels tensor to have only the proper classes:
+    
+    movable objects: 5 + clutter
+    structural objects: 8 + clutter
+    all objects: 13 + clutter
 
+    movable_objects = set("board", "bookcase", "chair", "table", "sofa", "clutter")
+    structural_objects = set("ceiling", "door", "floor", "wall", "beam", "column", "window", "stairs", "clutter")
+
+
+    """
+    def __init__(self, point_labels, all_dicts):
+        """
+        Args:
+            point_labels: torch column vector
+        """
+        self.point_labels = point_labels
+        self.all_dicts = all_dicts
+        # Get the vector type in order to keep them when replacing
+        
+    def adapt(self):
+        """
+        Assign a clutter label (object_ID: 1) to any point not intended to be trained
+        """
+        # According to the sumary file: 
+        # 'all': {'ceiling': 0, 'clutter': 1, 'door': 2, 'floor': 3, 'wall': 4, 'beam': 5, 'board': 6, 'bookcase': 7, 'chair': 8, 'table': 9, 'column': 10, 'sofa': 11, 'window': 12, 'stairs': 13}, 
+        # 'movable': {'clutter': 0, 'board': 1, 'bookcase': 2, 'chair': 3, 'table': 4, 'sofa': 5}, 
+        # 'structural': {'ceiling': 0, 'clutter': 1, 'door': 2, 'floor': 3, 'wall': 4, 'beam': 5, 'column': 6, 'window': 7, 'stairs': 8}}
+        
+        target_objects = ''.join(args.objects)       
+        from_dict = self.all_dicts["all"]
+        to_dict = self.all_dicts[target_objects]
+        
+        # Remapping is only needed when working with movable or structural objects
+        if target_objects != "all":
+            for i in range(len(self.point_labels)):            
+                    # Get the textual label of the point from the "old/from" dict
+                    textual_label = ''.join([k for k,v in from_dict.items() if v == self.point_labels[i]])
+                    
+                    # If the object is not defined in the "new/to" dict, flag it as clutter
+                    if textual_label not in to_dict.keys():
+                        self.point_labels[i] = to_dict["clutter"]
+                    
+                    # Remap/translate the rest of the objects
+                    else:
+                        self.point_labels[i] = to_dict[textual_label]
+
+         
+        return self.point_labels
+#------------------------------------------------------------------------------
+# Datasets
+#------------------------------------------------------------------------------
 
 class S3DISDataset4Classification(torch.utils.data.Dataset):
     """
     S3DIS dataset for classification goals
     """
     
-    def __init__(self, root_dir, transform = None):
+    def __init__(self, root_dir, all_objects_dict,  transform = None):
         """
         Args:
             root_dir (string): Directory with all the point cluouds 
@@ -63,12 +132,7 @@ class S3DISDataset4Classification(torch.utils.data.Dataset):
         self.root_dir = root_dir
         self.transform = transform
         # The ground truth file    
-        self.summary_df = pd.read_csv(
-                os.path.join(self.root_dir, eparams['s3dis_summary_file']), 
-                header = None, 
-                skiprows=1,
-                sep = "\t"
-            )
+        self.summary_df = get_summary_file()
 
     def __len__(self):
         """
@@ -272,17 +336,19 @@ class S3DISDataset4Segmentation(torch.utils.data.Dataset):
     winK: sequential ID of the sliding window
     """
     
-    def __init__(self, root_dir, transform = None):
+    def __init__(self, root_dir, all_objects_dict, transform = None):
         """
         Args:
             root_dir (string): Directory with all the pre-processed 
                 sliding windows 
+            all_objects_dict: dict containing the mapping object_ID <-> object_name    
             transform (callable, optional): Optional transform 
                 to be applied on a sample.
         """
         
         self.root_dir = root_dir
         self.transform = transform
+        self.all_objects_dict = all_objects_dict
 
         # Get a sorted list of all the sliding windows
         # Get only Pytorch files, in case other file types exist
@@ -340,6 +406,14 @@ class S3DISDataset4Segmentation(torch.utils.data.Dataset):
         sliding_window_points = sliding_window[ :, :hparams["dimensions_per_object"]]
         point_labels = sliding_window[ :, -1]
         
+        # Adapt the labels to num classes
+        # By default, points in the sliding windows have all labels (14)
+        # We must adapt the point_labels tensor to have only the proper classes:
+        # movable objects: 5 + clutter
+        # structural objects: 8 + clutter
+        # all objects: 13 + clutter
+        point_labels = AdaptNumClasses(point_labels, self.all_objects_dict).adapt()
+
         return sliding_window_points, point_labels
     
 

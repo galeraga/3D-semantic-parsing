@@ -28,6 +28,11 @@ from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
 # from torchinfo import summary
 
+#------------------------------------------------------------------------------
+# S3DIS DATASET SPECIFIC INFORMATION
+#------------------------------------------------------------------------------
+movable_objects_set = {"board", "bookcase", "chair", "table", "sofa", "clutter"}
+structural_objects_set = {"ceiling", "door", "floor", "wall", "beam", "column", "window", "stairs", "clutter"}
 
 building_distribution = {
     'Building 1': ["Area_1", "Area_3", "Area_6"], 
@@ -149,6 +154,16 @@ parser.add_argument("--load",
                     choices = ["toy", "low", "medium", "high"],
                     help = "Either toy, low, medium or high")
 
+parser.add_argument("--objects",
+                    "-o",
+                    metavar = "objects",
+                    type = str,
+                    action = "store",
+                    nargs = 1,
+                    default = "movable",
+                    choices = ["movable", "structural", "all"],
+                    help = "Target objects: either movable, structural or all")
+
 # Get parser args to decide what the program has to do
 args = parser.parse_args()
 
@@ -157,7 +172,7 @@ args = parser.parse_args()
 # which is smaller than what this DataLoader is going to create. Please
 # be aware that excessive worker creation might get DataLoader running 
 # slow or even freeze, lower the worker number to avoid potential 
-# slowness/freeze if necessary.
+# slowness/freeze if necessary"
 
 # Toy is for testing code in a very quick way, where
 # getting the most of the model is NOT the goal
@@ -188,6 +203,16 @@ if "high" in args.load:
     hparams["epochs"] = 50
     hparams["max_points_per_space"] = 4096
     hparams["max_points_per_sliding_window"] = 4096
+
+# Select the number of classes to work with
+if "movable" in args.objects:
+    hparams["num_classes"] = len(movable_objects_set)
+
+if "structural" in args.objects:
+    hparams["num_classes"] = len(structural_objects_set)
+
+if "all" in args.objects:
+    hparams["num_classes"] = len(structural_objects_set.union(movable_objects_set))
 
 # Set the device to CPU to avoid running out of memory in GCP GPU
 # when testing segmentation with a whole space/room

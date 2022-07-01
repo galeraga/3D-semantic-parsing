@@ -58,20 +58,30 @@ eparams = {
 }
 
 # Model hyperparameters
+# None values are set later, based on environment or load profile
 hparams = {
+    'epochs': None,
     'batch_size': 32,
     'learning_rate': 0.001,
-    'num_classes': 14,
-    'num_workers': 0,
-    'num_points_per_object': 0,
-    'max_points_per_space': 0,
-    'max_points_per_sliding_window': 0,
-    'dimensions_per_object': 0,
-    'epochs': 0,
+    'num_classes': None,
+    'num_workers': None,
+    # Max amount of points to sample when classifying objects (not used in segmentation)
+    # Mainly used to make all the elements of the classification dataset equal size
+    'num_points_per_object': None,
+    # Max amount of points to sample per room/space for semantic segmentation
+    # (not used in classification)
+    # Mainly used when testing semantic segmentation, since
+    # to make all the elements of the segmentation dataset equal size when
+    # sliding windows are NOT used 
+    'max_points_per_space': None,
+    'max_points_per_sliding_window': None,
+    # Cols to use from the point cloud files (either 3 (xyz) or 6 (xyzrgb))
+    'dimensions_per_object': None,
+    # Params to create sliding windows
     'win_width': 1,
     'win_depth': 1,
     'win_height': 3,
-    'overlap': 0, #percentage, 0-95%, 100 will create an infinite loop
+    'overlap': 0, # Percentage, 0-95%, 100 will create an infinite loop
 }
 
 # Checking if the script is running in GCP
@@ -82,6 +92,10 @@ if "OS_IMAGE_FAMILY" in os.environ.keys():
 # torch.cuda.device_count() -> 1 (in our current GCP scenario)
 # torch.cuda.get_device_name(0) -> 'Tesla K80' (0 is de device_id from our availbale GPU)
 hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
+
+# Num workers bigger than 0 doesn't work with GPUs (coding parallelization required)
+max_workers = 4
+hparams['num_workers'] = max_workers if hparams['device'] == 'cpu' else 0
 
 #------------------------------------------------------------------------------
 # AUX FOLDER CREATION
@@ -186,7 +200,7 @@ if "toy" in args.load:
 if "low" in args.load:
     hparams["num_points_per_object"] = 100
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 5 #5 
+    hparams["epochs"] = 5
     hparams["max_points_per_space"] = 1000
     hparams["max_points_per_sliding_window"] = 512
 

@@ -17,7 +17,7 @@ def task_welcome_msg(task = None):
     """
 
     msg = "Starting {}-{} with:".format(task, goal)
-    msg += "\n- {} classes".format(hparams['num_classes'])
+    msg += "\n- {} classes ({})".format(hparams['num_classes'], all_dicts[''.join(args.objects)])
     
     if "classification" in args.goal:
         msg += "\n- {} points per object ".format(hparams['num_points_per_object'])
@@ -356,7 +356,8 @@ def train_classification(model, dataloaders):
                 
                 # Why does the loss function return a single scalar for a batch?
                 # It returns, by default, the weighted mean of the output 
-                loss = F.nll_loss(preds, targets) + 0.001 * regularization_loss
+                targets = targets.squeeze(dim = -1)
+                loss = F.nll_loss(preds, targets.long()) + 0.001 * regularization_loss
                 
                 epoch_train_loss.append(loss.cpu().item())
             
@@ -396,7 +397,10 @@ def train_classification(model, dataloaders):
                         
                 preds, feature_transform, tnet_out, ix = model(points)
                 
-                loss = F.nll_loss(preds, targets)
+                # loss = F.nll_loss(preds, targets)
+                targets = targets.squeeze(dim = -1)
+                loss = F.nll_loss(preds, targets.long()) + 0.001 * regularization_loss
+                
                 
                 epoch_val_loss.append(loss.cpu().item())
                 
@@ -712,5 +716,5 @@ if __name__ == "__main__":
     
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.finish()
-    tnet_compare(model, ds)
+    #tnet_compare(model, ds)
 

@@ -84,16 +84,36 @@ class AdaptNumClasses():
         
     def adapt(self):
         """
-        Assign a clutter label (object_ID: 1) to any point not intended to be trained
+        Assign a clutter label (object_ID: 1) to any point not intended to be
+        trained and remap the object IDs to values expected by the loss function
+
+        From the summary file, these are the available dicts:
+        'all': {'ceiling': 0, 'clutter': 1, 'door': 2, 'floor': 3, 'wall': 4, 'beam': 5, 'board': 6, 'bookcase': 7, 'chair': 8, 'table': 9, 'column': 10, 'sofa': 11, 'window': 12, 'stairs': 13}, 
+        'movable': {'clutter': 0, 'board': 1, 'bookcase': 2, 'chair': 3, 'table': 4, 'sofa': 5}, 
+        'structural': {'ceiling': 0, 'clutter': 1, 'door': 2, 'floor': 3, 'wall': 4, 'beam': 5, 'column': 6, 'window': 7, 'stairs': 8}}
+        
+        The 'all' dict is computed during summary file creation, whereas 
+        'movable' and 'structural' are created afterwards in method get_labels() 
+        from summarizer.py
+
+        Example on how remapping works for a chair:
+        - From summary_file, chair has object_ID = 8
+        - If working only with movable objects, the 'movable' dict has valur 3 for chair
+        - So the new object_ID for chair when working with movable objects must 
+          be 3 for the loss function to have all values between [0, len(movable)].
+          A value of 8 is not supported by the loss function when working with 
+          movable objects only. All values must be in the range from 0 - len(dict)
         """
-        # According to the sumary file: 
-        # 'all': {'ceiling': 0, 'clutter': 1, 'door': 2, 'floor': 3, 'wall': 4, 'beam': 5, 'board': 6, 'bookcase': 7, 'chair': 8, 'table': 9, 'column': 10, 'sofa': 11, 'window': 12, 'stairs': 13}, 
-        # 'movable': {'clutter': 0, 'board': 1, 'bookcase': 2, 'chair': 3, 'table': 4, 'sofa': 5}, 
-        # 'structural': {'ceiling': 0, 'clutter': 1, 'door': 2, 'floor': 3, 'wall': 4, 'beam': 5, 'column': 6, 'window': 7, 'stairs': 8}}
         
         target_objects = ''.join(args.objects)       
         from_dict = self.all_dicts["all"]
         to_dict = self.all_dicts[target_objects]
+        
+        # classification labels are ints (no lists, no tensor)
+        # so we convert the int to list for the remapping loop to work
+        # with both int classification labels and tensors segmentation labels
+        if "classification" in args.goal:
+            self.point_labels = list([self.point_labels])
         
         # Remapping is only needed when working with movable or structural objects
         if target_objects != "all":
@@ -111,6 +131,7 @@ class AdaptNumClasses():
 
          
         return self.point_labels
+
 #------------------------------------------------------------------------------
 # Datasets
 #------------------------------------------------------------------------------
@@ -131,6 +152,7 @@ class S3DISDataset4Classification(torch.utils.data.Dataset):
         
         self.root_dir = root_dir
         self.transform = transform
+        self.all_objects_dict = all_objects_dict
         # The ground truth file    
         self.summary_df = get_summary_file()
 
@@ -183,7 +205,17 @@ class S3DISDataset4Classification(torch.utils.data.Dataset):
             # Make all the point clouds equal size
             obj = PointSampler(obj, hparams['num_points_per_object']).sample()
 
-            return obj, torch.tensor(obj_label_id)
+            # Adapt the labels to num classes
+            # By default, points in the sliding windows have all labels (14)
+            # We must adapt the point_labels tensor to have only the proper classes:
+            # movable objects: 5 + clutter
+            # structural objects: 8 + clutter
+            # all objects: 13 + clutter
+            
+            labels = AdaptNumClasses(obj_label_id, self.all_objects_dict).adapt()
+            labels = torch.tensor(labels, dtype = torch.float)    
+
+            return obj, labels
     
     def __str__(self) -> str:
         

@@ -22,6 +22,7 @@ import torch.nn.functional as F
 # Visualization imports
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
+import torchvision.transforms as transforms
 # from torchinfo import summary
 
 
@@ -33,7 +34,7 @@ building_distribution = {
 
 # Environment (file system and so on) params
 eparams = {
-    'pc_data_path': "/Users/jgalera/datasets/S3DIS/aligned",
+    'pc_data_path': r"C:\Users\marcc\OneDrive\Escritorio\PROJECTE\S3DIS_ANTIC\Stanford3dDataset_v1.2_Aligned_Version",
     'pc_file_extension': ".txt",
     'pc_file_extension_rgb_norm': "_rgb_norm.txt",
     'pc_file_extension_sem_seg_suffix': "_annotated",
@@ -41,7 +42,7 @@ eparams = {
     's3dis_summary_file': "s3dis_summary.csv",
     "checkpoints_folder": "checkpoints",
     "tnet_outputs": "tnet_outputs",
-    'tensorboard_log_dir': "runs/pointnet_with_s3dis",
+    'tensorboard_log_dir': r"C:\Users\marcc\OneDrive\Escritorio\PROJECTE\CODE\3D-semantic-parsing\runs", # runs/pointnet_with_s3dis
 }
 
 # Checking if the script is running in GCP
@@ -135,9 +136,9 @@ if "toy" in args.load:
     hparams["max_points_per_sliding_window"] = 10
 
 if "low" in args.load:
-    hparams["num_points_per_object"] = 100
+    hparams["num_points_per_object"] = 100 
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 5 #5 
+    hparams["epochs"] = 1 #5 
     hparams["max_points_per_space"] = 1000
     hparams["max_points_per_sliding_window"] = 100
 

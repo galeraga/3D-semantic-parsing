@@ -234,7 +234,3 @@ if "structural" in args.objects:
 if "all" in args.objects:
     hparams["num_classes"] = len(structural_objects_set.union(movable_objects_set))
 
-# Set the device to CPU to avoid running out of memory in GCP GPU
-# when testing segmentation with a whole space/room
-if ("segmentation" in args.goal) and ("test" in args.task) and ("OS_IMAGE_FAMILY" in os.environ.keys()):
-    hparams['device'] =  'cpu'

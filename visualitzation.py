@@ -12,8 +12,8 @@ def infer(model,
 
     Parameters
     ----------
-    model(idk):
-        The model that we have previously trained.
+    model(model of the network):
+        The model that we will pass.
     point_cloud_file(txt):
         The pointcloud that we want to infer saved in a .txt
     shuffle_points(bool, Default = False):
@@ -27,10 +27,11 @@ def infer(model,
 
     Returns
     -------
-    preds(idk):
-        The model prediction given a pointcloud
-    tnet_out(idk):
-        
+    preds(numpy array):
+        An array with the predictions of our pointCloud. Each number represents the class.
+    tnet_out(numpy array):
+        An array with the points of our pointCloud multiplicated by the output of the T-Net.
+        In other words the points displayed in a canonic way. 
     '''
     #num_classes = dataset.NUM_CLASSIFICATION_CLASSES
     points, label = point_cloud_file
@@ -66,7 +67,7 @@ def tnet_compare(model, subdataset, num_samples = 7):
 
     Parameters:
     -----------
-    model(idk):
+    model(model of the network):
         The model that we will pass.
     subdataset(pandas):
         This subdataset is the dataset where we will extract all the pointclouds samples that we want to plot.
@@ -111,3 +112,47 @@ def tnet_compare(model, subdataset, num_samples = 7):
         plt.savefig(png_path, dpi=100)
         #print('Detected class: %s' % preds)
 
+
+def tnet_compare_in_site(model, sample, preds, tnet_out):
+    '''
+    Comparing this function compares a SINGLE pointCloud with the same PointCloud multiplied by the T-net.
+
+    Parameters:
+    -----------
+    model(model of the network):
+        The model that we will pass.
+    sample(tuple):
+        The sample is the object of the dataset that we want to visualize.
+    preds(numpy array):
+        An array with the predictions of our pointCloud. Each number represents the class.
+    tnet_out(numpy array):
+        An array with the points of our pointCloud multiplicated by the output of the T-Net.
+        In other words the points displayed in a canonic way.
+    Returns:
+    --------
+    VOID.
+    '''
+    # Plot 7 samples
+    fig = plt.figure(figsize=[12,6]) # height and width, DO NOT CHANGE.
+
+    ax = fig.add_subplot(1, 2, 1, projection='3d')
+
+    # plot input sample
+    pc = sample[0].numpy()
+    label = sample[1]
+    sc = ax.scatter(pc[:,0], pc[:,1], pc[:,2], c=pc[:,0] ,s=50, marker='o', cmap="viridis", alpha=0.7)
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    ax.set_zlim3d(-1, 1)
+    ax.title.set_text(f'Input point cloud - Target: {label}')
+
+    # plot transformation
+    ax = fig.add_subplot(1, 2, 2, projection='3d')
+    preds, tnet_out = infer(model,sample)
+    points=tnet_out
+    sc = ax.scatter(points[0,0,:], points[0,1,:], points[0,2,:], c=points[0,0,:] ,s=50, marker='o', cmap="viridis", alpha=0.7)
+    ax.title.set_text(f'Output of "Input Transform" Detected: {preds}')
+    ax.set_xlabel('x')
+    ax.set_ylabel('y')
+    plt.savefig(f'C:/Users/marcc/OneDrive/Escritorio/Tnet-out-{label}.png',dpi=100)
+    #print('Detected class: %s' % preds)

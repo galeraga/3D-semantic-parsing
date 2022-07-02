@@ -11,7 +11,7 @@ import dataset
 import model    
 from tensorboardlogger import TensorBoardLogger 
 from summarizer import S3DIS_Summarizer
-from visualitzation import tnet_compare
+from visualitzation import tnet_compare, tnet_compare_in_site, infer
 
 #------------------------------------------------------------------------------
 # AUX METHODS

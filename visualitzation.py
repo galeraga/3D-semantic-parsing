@@ -1,6 +1,12 @@
 from settings import *
 import model
 
+
+"""
+borrar
+
+"""
+
 def infer(model,
           point_cloud_file,
           shuffle_points=False,

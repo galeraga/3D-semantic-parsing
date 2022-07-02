@@ -590,6 +590,10 @@ class S3DIS_Summarizer():
                     names = None) 
     
         # Get the data and labels arrays
+        # IMPORTANT NOTE: When creating sliding windows, color must also be 
+        # selected from the annotated files. Later on, we'll decide
+        # whether or not to use color during training/val/test
+        # TODO: when creating sliding windows, color must also be selected!
         data_points = data[ :, :hparams["dimensions_per_object"]]
         point_labels = data[ :, -1] 
 

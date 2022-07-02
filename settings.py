@@ -40,6 +40,11 @@ building_distribution = {
     'Building 3': ["Area_5"], 
 }
 
+# Defining how areas are going to be splitetd for training, val and test
+training_areas = ["Area_1", "Area_2", "Area_3", "Area_4"]
+val_areas = ["Area_5"]
+test_areas = ["Area_6"]
+
 #------------------------------------------------------------------------------
 # ENVIRONMENT AND MODEL PARAMETERS
 #------------------------------------------------------------------------------
@@ -72,9 +77,8 @@ hparams = {
     # (not used in classification)
     # Mainly used when testing semantic segmentation, since
     # to make all the elements of the segmentation dataset equal size when
-    # sliding windows are NOT used 
-    'max_points_per_space': None,
-    'max_points_per_sliding_window': None,
+    # sliding windows are NOT used
+    'num_points_per_room': None, 
     # Cols to use from the point cloud files (either 3 (xyz) or 6 (xyzrgb))
     'dimensions_per_object': None,
     # Params to create sliding windows
@@ -94,7 +98,7 @@ if "OS_IMAGE_FAMILY" in os.environ.keys():
 hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
 
 # Num workers bigger than 0 doesn't work with GPUs (coding parallelization required)
-max_workers = 4
+max_workers = 2
 hparams['num_workers'] = max_workers if hparams['device'] == 'cpu' else 0
 
 #------------------------------------------------------------------------------
@@ -192,32 +196,29 @@ args = parser.parse_args()
 # getting the most of the model is NOT the goal
 if "toy" in args.load:
     hparams["num_points_per_object"] = 10
+    hparams["num_points_per_room"] = 100
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 3
-    hparams["max_points_per_space"] = 10
-    hparams["max_points_per_sliding_window"] = 512
+    
 
 if "low" in args.load:
     hparams["num_points_per_object"] = 100
+    hparams["num_points_per_room"] = 512
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 5
-    hparams["max_points_per_space"] = 1000
-    hparams["max_points_per_sliding_window"] = 512
-
+   
 if "medium" in args.load:
     hparams["num_points_per_object"] = 1024
+    hparams["num_points_per_room"] = 1024
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 10
-    hparams["max_points_per_space"] = 2000
-    hparams["max_points_per_sliding_window"] = 1024
-
+    
 if "high" in args.load:
     hparams["num_points_per_object"] = 4096
+    hparams["num_points_per_room"] = 4096
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 50
-    hparams["max_points_per_space"] = 4096
-    hparams["max_points_per_sliding_window"] = 4096
-
+   
 # Select the number of classes to work with
 if "movable" in args.objects:
     hparams["num_classes"] = len(movable_objects_set)

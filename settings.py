@@ -101,6 +101,11 @@ hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
 max_workers = 2
 hparams['num_workers'] = max_workers if hparams['device'] == 'cpu' else 0
 
+# Select the objects we want to display when visualizing
+# table is selected by hand because seems to be the only object detected 
+# with 4096 points per room (before deploying sliding windows)
+segmentation_target_object = "table"
+    
 #------------------------------------------------------------------------------
 # AUX FOLDER CREATION
 #------------------------------------------------------------------------------

@@ -356,7 +356,7 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
     winK: sequential ID of the sliding window
     """
     
-    def __init__(self, root_dir, all_objects_dict, transform = None, proper_area = None):
+    def __init__(self, root_dir, all_objects_dict, transform = None, proper_area = None, subset = None):
         """
         Args:
             root_dir (string): Directory with all the pre-processed 
@@ -364,27 +364,40 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
             all_objects_dict: dict containing the mapping object_ID <-> object_name    
             transform (callable, optional): Optional transform 
                 to be applied on a sample.
+            proper_area (list): Areas to be used in order to create the proper dataset
+                        Areas 1, 2, 3 and 4 for training
+                        Area 5 for validation
+                        Area 6 for test
+            subset (list): A subset of sliding windows belonging to the test area
+                         (mainly intended to help visualization of a single room)
         """
         
         self.root_dir = root_dir
         self.transform = transform
         self.all_objects_dict = all_objects_dict
         self.proper_area = proper_area
+        self.subset = subset
 
         # Get a sorted list of all the sliding windows
         # Get only Pytorch files, in case other file types exist
         self.all_sliding_windows = sorted(
             [f for f in os.listdir(path_to_current_sliding_windows_folder) if ".pt" in f])
 
-        # Get the sliding windows for proper area and purpose
-        # sliding windows for training: Area 1, Area 2, Area 3 and Area 4
-        # sliding windows for val: Area 5
-        # sliding windows for test: Area 6
         self.sliding_windows = []
-        for area in self.proper_area:
-            for f in self.all_sliding_windows:
-                if f.startswith(area):
-                    self.sliding_windows.append(f)
+        
+        # If we're going to visualize, the sliding windows are already known and passed
+        if subset:
+            self.sliding_windows = subset
+        
+        else:
+            # Get the sliding windows for proper area and purpose
+            # sliding windows for training: Area 1, Area 2, Area 3 and Area 4
+            # sliding windows for val: Area 5
+            # sliding windows for test: Area 6
+            for area in self.proper_area:
+                for f in self.all_sliding_windows:
+                    if f.startswith(area):
+                        self.sliding_windows.append(f)
     
 
     def __len__(self):
@@ -394,11 +407,6 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         """
-        In order to follow the original paper implmenetation, the size of this
-        method output will be based on the task type:
-
-        - If task == train, only 4096 points will be returned per sliding windows
-        - If task == test, all the points in the proper sliding window will be returned
         """
 
         if torch.is_tensor(idx):
@@ -416,25 +424,33 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
         sliding_window = torch.load(path_to_sliding_window_file,
                      map_location = torch.device(hparams["device"]))
 
-        # For training:
-        #   - We set the max points per sliding windows as per original paper (4096)
-        # For testing:
-        #   - If we're in a batch mode, we limit the amount of points per room to
-        #     make all the rooms equal size
-        #   - If we're not in a batch mode, no dataset is used (to room to test 
-        #     is directly selected in the test_segmentation() method)
-        
+        # Sample points to make all elements equal size for the dataloader to work 
         sliding_window = PointSampler(sliding_window, hparams['num_points_per_room']).sample()
 
-        # The amount of cols to return per room will depend on whether or not
-        # we're taking the color into account
+        # The amount of cols to return per room point will depend on two factors:
+        #  1) Are we taking the color into account? (No: 3 cols | Yes: 6 cols )
+        #  2) Are we visualizing a single room? (No: 3 cols | Yes: 6 cols)
+        # If we're visualing, we need to take (x_rel y_rel z_rel) and (x y z)
+        # (x y z) will be saved for plotting from the original room, if they match an object
         # Sliding window cols: (x_rel y_rel z_rel R G B x y z win_ID label)
         # - 3 relative normalized points (x_rel y_rel z_rel)
         # - 3 colors (R G B)
         # - 3 absolute coordinates (x y z)
         # - 1 sliding window identifier (win_ID)
         # - 1 point label for that point (label)
-        sliding_window_points = sliding_window[ :, :hparams["dimensions_per_object"]]
+        
+        # Slicing the tensor 
+        # [start_row_index:end_row_index, start_column_index:end_column_index]
+        if self.subset:
+            # TODO: Correct when tri_points_out is corrected
+            # cols_to_select = [0, 1, 2, 3, 4, 5]
+            sliding_window_points = sliding_window[ :, :6]
+            #cols_to_select = torch.tensor([0, 1, 2, 6, 7])
+            #sliding_window_points = torch.index_select(sliding_window, 1, cols_to_select)
+
+        else:
+            sliding_window_points = sliding_window[ :, :hparams["dimensions_per_object"]]
+
         point_labels = sliding_window[ :, -1]
         
         # Adapt the labels to num classes
@@ -462,14 +478,15 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
         msg_list.append("Total dataset elements: {} (from a grand total of {})".format(
             len(self.sliding_windows),
             len(self.all_sliding_windows)))
+        
+        if not self.subset:
+            # Create a dict to know which sliding window files are per area
+            sliding_windows_per_area = dict()
+            for area in self.proper_area:
+                    sliding_windows_per_area[area] = [f for f in self.sliding_windows if f.startswith(area)]
 
-        # Create a dict to know which sliding window files are per area
-        sliding_windows_per_area = dict()
-        for area in self.proper_area:
-                sliding_windows_per_area[area] = [f for f in self.sliding_windows if f.startswith(area)]
-
-        for k,v in sliding_windows_per_area.items():
-            msg_list.append("From {} : {} ({}...{})".format(k, len(v), v[:3], v[-3:]))     
+            for k,v in sliding_windows_per_area.items():
+                msg_list.append("From {} : {} ({}...{})".format(k, len(v), v[:3], v[-3:]))     
 
         msg = '\n'.join(msg_list)
         msg += "\n"
@@ -500,3 +517,11 @@ class S3DISDataset4SegmentationTest(S3DISDataset4SegmentationBase):
     """
     def __init__(self, root_dir, all_objects_dict, transform = None, proper_area = None):
         S3DISDataset4SegmentationBase.__init__(self, root_dir, all_objects_dict, transform = None, proper_area = test_areas)
+
+class S3DISDataset4SegmentationVisualization(S3DISDataset4SegmentationBase):
+    """
+    Augmented S3DISDataset4SegmentationBase class to create the dataset used
+    for test
+    """
+    def __init__(self, root_dir, all_objects_dict, subset = None):
+        S3DISDataset4SegmentationBase.__init__(self, root_dir, all_objects_dict, subset = subset)

@@ -50,7 +50,7 @@ test_areas = ["Area_6"]
 #------------------------------------------------------------------------------
 # Environment (file system and so on) params
 eparams = {
-    'pc_data_path': "/Users/jgalera/datasets/S3DIS/aligned",
+    'pc_data_path': "C:\Users\Lluis\Desktop\Projecte2\Stanford3dDataset",
     'pc_file_extension': ".txt",
     'pc_file_extension_rgb_norm': "_rgb_norm.txt",
     'pc_file_extension_sem_seg_suffix': "_annotated",

@@ -50,7 +50,7 @@ test_areas = ["Area_6"]
 #------------------------------------------------------------------------------
 # Environment (file system and so on) params
 eparams = {
-    'pc_data_path': "/Users/jgalera/datasets/S3DIS/aligned",
+    'pc_data_path': r"C:\Users\oliverc\Documents\PG\datasets\Stanford3dDataset_v1.2",
     'pc_file_extension': ".txt",
     'pc_file_extension_rgb_norm': "_rgb_norm.txt",
     'pc_file_extension_sem_seg_suffix': "_annotated",
@@ -153,7 +153,7 @@ parser.add_argument("--goal",
                     type = str,
                     action = "store",
                     nargs = 1,
-                    default = "classification",
+                    default = "segmentation",
                     choices = ["classification", "segmentation"],
                     help = "Either classification (class) or segmentation (seg)")
 

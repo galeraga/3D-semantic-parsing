@@ -590,7 +590,7 @@ class S3DIS_Summarizer():
                     names = None) 
     
         # Get the data and labels arrays
-        data_points = data[ :, :hparams["dimensions_per_object"]]
+        data_points = data[ :, :6]
         point_labels = data[ :, -1] 
 
         # Create column vectors for each X, Y, Z coordinates
@@ -669,52 +669,61 @@ class S3DIS_Summarizer():
             
             # If there are no points in the defined window, ignore the window
             if tri_points_aux.size != 0: 
-                
-                # tri_point_aux is now the matrix containing only the 3D points 
-                # inside the prism window in absolute coordenates
-                # Take each vector separately
-                abs_x_win = tri_points_aux[:, 0]
-                abs_y_win = tri_points_aux[:, 1]
-                abs_z_win = tri_points_aux[:, 2]
-                
-                # Transform coordinates to relative (with respect to window origin, 
-                # not absolute origin) and normalize with win_width, win_depth and win_height
-                # rel_x, rel_y, rel_z are vectors
-                rel_x = (abs_x_win-winmin_x)/win_width 
-                rel_y = (abs_y_win-winmin_y)/win_depth 
-                rel_z = (abs_z_win-winmin_z)/win_height
+                pcminx=min(tri_points_aux[:,0])
+                pcmaxx=max(tri_points_aux[:,0])
+                pcminy=min(tri_points_aux[:,1])
+                pcmaxy=max(tri_points_aux[:,1])
 
-                tri_points_rel = np.copy(tri_points_aux)
+                distance_x=pcmaxx-pcminx
+                distance_y=pcmaxy-pcminy
                 
-                # Put the relative and normalized points inside a matrix with the color information
-                # tri_points aux is a matrix with relative as well as rgb info
-                tri_points_rel[:,0] = rel_x 
-                tri_points_rel[:,1] = rel_y
-                tri_points_rel[:,2] = rel_z
-
-                # Convert to 1D array else it won't work
-                labels_aux.shape=(len(labels_aux), 1) 
+                if (distance_x<0.9*win_width and distance_y<0.9*win_depth):
                 
-                # Create matrix with: 
-                # - 3 relative normalized points, then 
-                # - 3 colors, then 
-                # - 3 absolute coordinates, then
-                # - 1 window identifier, then 
-                # - 1 label
-                tri_points_out = np.concatenate((tri_points_rel, tri_points_aux[:,0:3], np.full((len(rel_x),1), win_count), labels_aux), axis = 1)
+                    # tri_point_aux is now the matrix containing only the 3D points 
+                    # inside the prism window in absolute coordenates
+                    # Take each vector separately
+                    abs_x_win = tri_points_aux[:, 0]
+                    abs_y_win = tri_points_aux[:, 1]
+                    abs_z_win = tri_points_aux[:, 2]
+                    
+                    # Transform coordinates to relative (with respect to window origin, 
+                    # not absolute origin) and normalize with win_width, win_depth and win_height
+                    # rel_x, rel_y, rel_z are vectors
+                    rel_x = (abs_x_win-winmin_x)/win_width 
+                    rel_y = (abs_y_win-winmin_y)/win_depth 
+                    rel_z = (abs_z_win-winmin_z)/win_height
 
-                # Convert the NumPy matrix to a float torch tensor
-                tri_points_out = torch.from_numpy(tri_points_out).float()
-                
-                # Save the torch tensor as a file
-                # Common PyTorch convention is to save tensors using .pt 
-                # file extension
-                sliding_window_name = area + '_' + space + "_" 
-                sliding_window_name += "win" + str(win_count) + ".pt"
-                torch.save(tri_points_out, os.path.join(folder, sliding_window_name))
+                    tri_points_rel = np.copy(tri_points_aux)
+                    
+                    # Put the relative and normalized points inside a matrix with the color information
+                    # tri_points aux is a matrix with relative as well as rgb info
+                    tri_points_rel[:,0] = rel_x 
+                    tri_points_rel[:,1] = rel_y
+                    tri_points_rel[:,2] = rel_z
 
-                # Update the sliding window ID
-                win_count += 1
+                    # Convert to 1D array else it won't work
+                    labels_aux.shape=(len(labels_aux), 1) 
+                    
+                    # Create matrix with: 
+                    # - 3 relative normalized points, then 
+                    # - 3 colors, then 
+                    # - 3 absolute coordinates, then
+                    # - 1 window identifier, then 
+                    # - 1 label
+                    tri_points_out = np.concatenate((tri_points_rel, tri_points_aux[:,0:3], np.full((len(rel_x),1), win_count), labels_aux), axis = 1)
+
+                    # Convert the NumPy matrix to a float torch tensor
+                    tri_points_out = torch.from_numpy(tri_points_out).float()
+                    
+                    # Save the torch tensor as a file
+                    # Common PyTorch convention is to save tensors using .pt 
+                    # file extension
+                    sliding_window_name = area + '_' + space + "_" 
+                    sliding_window_name += "win" + str(win_count) + ".pt"
+                    torch.save(tri_points_out, os.path.join(folder, sliding_window_name))
+
+                    # Update the sliding window ID
+                    win_count += 1
                 
         
                 

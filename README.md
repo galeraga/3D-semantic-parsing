@@ -18,11 +18,11 @@ This project'll be focus on implementing only **object classification** and **sc
 The main goal is to implement a PointNet architecture in Pytorch that uses the S3DIS dataset in order to perform object classification and indoor scene semantic segmentation. 
 
 The following considerations will be of particular interest:
-- How color impacts object detection and semantic segmentation
-- Goal 2
-- Goal 3
-- Goal 4
-- Goal 5
+-Classification of movable elements given their own point cloud (5 movable classes)
+-Classification of movable elements given an enclosed space point cloud.
+-Semantic and instance segmentation of each object given an enclosed space point cloud
+-The impact of modifying some model hyperparameters, as well as including or not color in the input dataset
+
 
 ## The dataset
 The **3D Semantic Parsing of Large-Scale Indoor Spaces (S3DIS)** dataset is going to be used in order to work with the PointNet architecture. 
@@ -99,7 +99,13 @@ This is the dataset used in conjunction with the **classification** network of t
 
 #### S3DISDataset4Segmentation
 
-This is the dataset used for **semantic segmentation**. Since semantic segmentation needs every point in the cloud to be labeled, a new file is generated for every space/room with the suitable object labels. To do so, all files located in the `Annotations` folder are concatenated (along with the proper label) to create a single file per space/room with all the object points that belong to this space already labaled. This file is called `space_x_annotated.txt` (e.g., *office_1_annotated.txt*) and contains 7 cols (instead of 6): XYZRGB+*Object ID*. 
+This is the dataset used for **semantic segmentation**. Since semantic segmentation needs every point in the cloud to be labeled, two preprocessing action are implemented to the original dataset:
+- A new file is generated for every space/room with the suitable object labels. To do so, all files located in the `Annotations` folder are concatenated (along with the proper label) to create a single file per space/room with all the object points that belong to this space already labeled. This file is called `space_x_annotated.txt` (e.g., *office_1_annotated.txt*) and contains 7 cols (instead of 6): XYZRGB+*Object ID*. 
+- The input of the model will be batches of room sections or "windows". These will be generated from each of the room files outputted in the previous step using a "sliding window" process, explained later in this file. This process is defined by a set of hyperparamers: window width, depth, height, and overlap of the sliding windows. The model creates a folder named "sliding_windows" and inside it for each set of hyperparameters: 
+    -A new folder is generated that will contain each separate window. This folder is called after the sequential ID of the sliding window: w_X_d_Y_h_Z_o_T with X,Y,Z and T being window width, depth, heigt and overlap respectively.
+    -Inside the previous folder, for each window generated with these hyperparameters, a file is created with all the object points that fall inside such window. The files are called 'Area_N_Space_J_winK.pt', with winK being the sequential ID of the sliding window (e.g., *Area_1_office_3_w_1_d_1_h_3_o_0.pt*). They contain 11 columns: winXwinYwinZ+XYZRGB+*Window ID*+*Object ID*, where winXwinYwinZ are the normalized coordintates of the points inside the window in a new reference system specific for said window
+  
+  
 
 So the S3DISDataset4Segmentation will use the `space_x_annotated.txt` to get both the **input data** and **labels**
 
@@ -116,8 +122,26 @@ Taking into account the previous information, the final folder structure for the
 │   │   │   ├── object_1.txt (the file with the point cloud for object_1 that can be found in Space_X. It contains 6 cols per row: XYZRGB)
 |   |   |   ├── ...
 │   │   │   ├── object_Y.txt (the file with the point cloud for object_Y that can be found in Space_X. It contains 6 cols per row: XYZRGB)
-```  
+|   ├──...
+├──w_X_d_Y_h_Z_o_T
+|   ├──Area_1_space_1_w_X_d_Y_h_Z_o_T.py
+|   ├──...
+|   ├──Area_N_space_M_w_X_d_Y_h_Z_o_T.py
+```
 
+## Pre-processing
+
+### Sliding windows
+
+We divide each room into sections of specific dimensions, and output only the points inside said section separately from the others. 
+
+Said sections or windows can overlap with and overlap factor going from 0%(no overlapping) to 99%(almost complete overlapping, choosing 100% overlap would lead to an infinite loop always outputing the same window).
+The window width (X) and depth(Y) are specified as hyperparameters. They can be defined separately, but it makes sense that they would be the same value since objects in a room are commonly rotated on the X-Y plane.
+The window height can be specified as a hyperparamer and the model is ready in case windowing in Z is necessary, but as the selected classes for segmentation are movable objects, and these are usually laid on the floor, the most logical solution is to consider all points inside a window defined by only their X-Y coordinates, and to just take all the points height-wise.This configuration would lead to the windows having a pillar-shape, from the floor to the ceiling of each room.
+
+Having defined the parameters, we take each of the defined windows and select only the points of the room point cloud whose coordinates fall inside said windows. Because the window point clouds will be the inputs to our segmentation model, they must be independant from one another and from the room coordenates. We must then create a new reference system for every window, where the coordinates of each point refer to the origin point of each window (winX=0 winY=0) instead of to the origin of the original room point cloud.
+
+Additionaly, so the training results can be applied to calculate--TODO
 
 ## The model
 

@@ -9,7 +9,7 @@ import dataset
 import model    
 from tensorboardlogger import TensorBoardLogger 
 from summarizer import S3DIS_Summarizer
-from visualitzation import tnet_compare, tnet_compare_in_site, infer
+from visualitzation import tnet_compare, tnet_compare_infer,  infer
 
 
 def task_welcome_msg(task = None):
@@ -440,19 +440,8 @@ def train_classification(model, dataloaders):
             print('La forma tnet_out 0', tnet_out[0].shape)
             print('La forma preds 0', preds[0].shape)
 
-            '''
-            PROVES CUTRES:
-            Tant tnet_out com preds son vectors dels valors de 23 objectes. Tal com està construida la funció en volem només una.
-            Per tant agafem un índex random i el plotegem. 
 
-            Also faig el reshape per que la forma sigui igual a quan ho hem fet altres cops, però realment no se si és necessari.
-            '''
-            # -----------------------------------
-            preds = preds[0]
-            preds = preds.reshape(1,1)
-            tnet_out = tnet_out[0]
-            tnet_out = tnet_out.reshape(1,3,100)
-            # -----------------------------------
+
 
             # Log results to TensorBoard for every epoch
             logger.writer.add_scalar(goal.capitalize() + " Loss/Training", train_loss[-1], epoch)
@@ -461,14 +450,14 @@ def train_classification(model, dataloaders):
             logger.writer.add_scalar(goal.capitalize() + " Accuracy/Validation", val_acc[-1], epoch)
             logger.writer.add_scalar(goal.capitalize() + " Time/Training", total_train_time[-1], epoch)
             logger.writer.add_scalar(goal.capitalize() + " Time/Validation", total_val_time[-1], epoch)
-            #logger.writer.add_image('Tnet-out-image.png', tnet_compare_in_site(model, points[0], preds, tnet_out), 0)
-            logger.writer.add_figure('Tnet-out-proof.png', tnet_compare_in_site(model, points[0], preds, tnet_out), global_step=None, close=True, walltime=None)
-            #logger.writer.close()
+            
+            # Exemple visualització tnet-out en aquesta part del codi:
+            preds = preds[0]
+            preds = preds.reshape(1,1)
+            tnet_out = tnet_out[0]
+            tnet_out = tnet_out.reshape(1,3,100)
+            #logger.writer.add_figure('Tnet-out-proof.png', tnet_compare(points[0], preds, tnet_out), global_step=None, close=True, walltime=None)
 
-            # prova borrar despres ----------------
-            #im = tnet_compare_in_site(model, points[0], preds, tnet_out)
-            #print('Imatge de sortida', im.shape)
-            # -------------
 
 
         print("Total time (seconds) for {}ing {}: {} secs ".format( 
@@ -732,26 +721,19 @@ if __name__ == "__main__":
     # Close TensorBoard logger and send runs to TensorBoard.dev
     #logger.finish()
 
-    # tnet_compare(model, ds)
-    sample = ds[0]
+    # tnet_compare example here -----------------------
+    # Extracting tnet_out and preds:
+    sample = (ds[0])[0]
     preds,tnet_out = infer(model, sample)
-    print('TNET_OUT FORA', tnet_out.shape)
-    print('PREDS FORA', preds.shape)
-    #tnet_compare_in_site(model, sample, preds, tnet_out,tensorboard=True)
-    
-    #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_in_site(model, sample, preds, tnet_out,tensorboard=False), global_step=None, close=True, walltime=None)
-    '''
-    img_batch = np.zeros((16, 3, 100, 100))
-    for i in range(16):
-        img_batch[i, 0] = np.arange(0, 10000).reshape(100, 100) / 10000 / 16 * i
-        img_batch[i, 1] = (1 - np.arange(0, 10000).reshape(100, 100) / 10000) / 16 * i
-    logger.writer.add_images('my_image_batch', img_batch, 0)
-    '''
+    #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample, preds, tnet_out), global_step=None, close=True, walltime=None)
+    # Using the _infer version that extracts the variables by itself.
+    logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample), global_step=None, close=True, walltime=None)
+    # ---------------------------------------------------
+
+    # We need to close the writer and the logger:
     logger.writer.flush()
     logger.writer.close()
-    
-    # Change 01/07/22
-    # logger.finish()
+    logger.finish()
 
 
 

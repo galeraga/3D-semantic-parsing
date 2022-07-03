@@ -4,7 +4,7 @@ from PIL import Image
 
 
 def infer(model,
-          point_cloud_file,
+          points,
           shuffle_points=False,
           plot_tNet_out=True,
           return_indices_maxpool=False):
@@ -16,7 +16,7 @@ def infer(model,
     ----------
     model(model of the network):
         The model that we will pass.
-    point_cloud_file(txt):
+    points(np array):
         The pointcloud that we want to infer saved in a .txt
     shuffle_points(bool, Default = False):
         Not implemented.
@@ -35,11 +35,7 @@ def infer(model,
         An array with the points of our pointCloud multiplicated by the output of the T-Net.
         In other words the points displayed in a canonic way. 
     '''
-    #num_classes = dataset.NUM_CLASSIFICATION_CLASSES
-    points, label = point_cloud_file
-    
     points = points.to(hparams["device"])
-    label = label.to(hparams["device"])
     
     # We ran out of memory in GCP GPU, so all tensors have to be on the same device
     #if torch.cuda.is_available():
@@ -67,9 +63,7 @@ def tnet_compare(sample, preds, tnet_out, save=False):
 
     Parameters:
     -----------
-    model(model of the network):
-        The model that we will pass.
-    sample(tuple):
+    sample(Torch tensor):
         The sample is the object of the dataset that we want to visualize.
     preds(numpy array):
         An array with the predictions of our pointCloud. Each number represents the class.
@@ -90,9 +84,6 @@ def tnet_compare(sample, preds, tnet_out, save=False):
     # plot input sample
     #pc = sample[0].numpy()
     pc = sample.numpy()
-    print('Forma sample', sample)
-    print('Printing pc shape:')
-    print(pc.shape)
     label = sample[1]
     sc = ax.scatter(pc[:,0], pc[:,1], pc[:,2], c=pc[:,0] ,s=50, marker='o', cmap="viridis", alpha=0.7)
     ax.set_xlabel('x')
@@ -123,14 +114,9 @@ def tnet_compare_infer(model, sample, save=False):
     Parameters:
     -----------
     model(model of the network):
-        The model that we will pass.
-    sample(tuple):
+        The model used to infer.
+    sample(Torch tensor):
         The sample is the object of the dataset that we want to visualize.
-    preds(numpy array):
-        An array with the predictions of our pointCloud. Each number represents the class.
-    tnet_out(numpy array):
-        An array with the points of our pointCloud multiplicated by the output of the T-Net.
-        In other words the points displayed in a canonic way.
     save (Bool) Default = False:
         If True saves the image.
     Returns:
@@ -170,7 +156,7 @@ def tnet_compare_infer(model, sample, save=False):
     return fig
 
 
-
+# The follow code will be deprectated in future versions ------------------------
 
 def fig2data (fig):
     """

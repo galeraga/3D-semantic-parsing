@@ -590,7 +590,7 @@ def test_segmentation(model, dataloaders):
 
 @avoid_MaxPool1d_warning
 @torch.no_grad()    
-def visualize_segmentation(model):
+def visualize_segmentation_short(model):
     """
     Visualize how PointNet segments objects in a single room.
 
@@ -680,7 +680,14 @@ def visualize_segmentation(model):
     points_color = data[:, 3:6].to(device)
     points_abs = data[:, -3:].to(device)
     target_labels = data[:, -1].to(device)
+
+    # Translate labels to the proper dict!
+    print("Max:", torch.max(target_labels))
+    target_labels = dataset.AdaptNumClasses(target_labels, all_dicts).adapt()
+    print("Max:", torch.max(target_labels))
     
+
+
     # From all the points in the room, find out how many of them belong to 
     # the different objects
     total_points_annotated_as_target_id = target_labels.eq(segmentation_target_object_id).cpu().sum() 
@@ -762,6 +769,189 @@ def visualize_segmentation(model):
         #print(80 * "-")
         #print("Average accuracy: {:.2f}%".format(float(mean_accuracy)))
         #print(80 * "-")
+
+@avoid_MaxPool1d_warning
+@torch.no_grad()  
+def visualize_segmentation_long(model):
+    """
+    Visualize how PointNet segments objects in a single room.
+
+    All the points of a single room are taken for visualization in order to have
+    a visually smooth representation of the room.
+
+    Since all the points of the rooms are going to be taken, no dataloaders can 
+    be used since dataloaders return an smaller amount of points per room/sliding 
+    window due to their sampling process.
+
+    At least, two ways can be folloed to achieve this goal:
+    1.- Read directly the annotated file (e.g., Area_6_office_33_annotated.txt)
+    2.- Read from sliding windows (e.g., Area_6_office_33_win14.pt)
+
+    The latter option is prefered in order to have the ability to also display 
+    per sliding window information, if desired.
+
+    Workflow:
+    1.- Pick randomly one of the available sliding windows
+    2.- Get the Area_N Space_X from this randomly selected sliding window
+    3.- Get all the sliding windows from Area_N Space_X
+    4.- Join all the sliding windows into a single (torch) file    
+    """
+    
+    print("Visualizing data segmentation")
+    
+    # Enter evaluation mode
+    model.eval()
+
+    # Aux test vars
+    accuracies = []
+    
+    # Path to the checkpoint file
+    model_checkpoint = os.path.join(
+            eparams['pc_data_path'], 
+            eparams['checkpoints_folder'], 
+            eparams["checkpoint_name"]
+            )
+    
+    # If the checkpoint does not exist, train the model
+    if not os.path.exists(model_checkpoint):
+        print("The model does not seem already trained! Starting the training rigth now from scratch...")
+        train_classification(model, dataloaders)
+    
+    # Loading the existing checkpoint
+    print("Loading checkpoint {} ...".format(model_checkpoint))
+    state = torch.load(
+                model_checkpoint, 
+                map_location = torch.device(hparams["device"]))
+    model.load_state_dict(state['model'])  
+  
+    # Select the object to detect
+    # segmentation_target_object is defined in settings.py
+    # Get the ID from the proper dic (either "all", "movable" or "structural")
+    # From the summary file, these are the available dicts:
+    # 'all': {'ceiling': 0, 'clutter': 1, 'door': 2, 'floor': 3, 'wall': 4, 'beam': 5, 'board': 6, 'bookcase': 7, 'chair': 8, 'table': 9, 'column': 10, 'sofa': 11, 'window': 12, 'stairs': 13}, 
+    # 'movable': {'clutter': 0, 'board': 1, 'bookcase': 2, 'chair': 3, 'table': 4, 'sofa': 5}, 
+    # 'structural': {'ceiling': 0, 'clutter': 1, 'door': 2, 'floor': 3, 'wall': 4, 'beam': 5, 'column': 6, 'window': 7, 'stairs': 8}}
+    dict_to_use = all_dicts[''.join(args.objects)]
+    segmentation_target_object_id = dict_to_use[segmentation_target_object]
+
+    # Select a random sliding window from an office room 
+    # (e.g, 'Area_6_office_33_win14.pt')
+    picked_sliding_window = random.choice([i for i in test_ds.sliding_windows if "office" in i])
+    area = picked_sliding_window.split('_')[0] + '_' + picked_sliding_window.split('_')[1]
+    room = picked_sliding_window.split('_')[2] + '_' + picked_sliding_window.split('_')[3]
+    area_and_room ='_'.join(picked_sliding_window.split('_')[0:4])
+    
+    path_to_room_file = os.path.join(eparams['pc_data_path'], area, room, room + "_annotated.txt")
+    print("Reading room X file from CSV to NumPy array")
+    data = np.genfromtxt(path_to_room_file, 
+                dtype = float, 
+                skip_header = 1, 
+                delimiter = '', 
+                names = None) 
+    print("Converting NumPy array to Pytorch tensor")
+    data = torch.from_numpy(data).float()
+
+
+    # The amount of cols to return per room will depend on whether or not
+    # color must be taken into account when data is fed into the model
+    # room -> [x y z r g b label] (7 cols)
+    print("Getting data and labels")  
+    points = data[:, :hparams["dimensions_per_object"]].to(device)
+    target_labels = data[:, -1].to(device)
+
+    # Translate labels to the proper dict!
+    print("Labels Max:", torch.max(target_labels))
+    orig_seg_target_id = all_dicts["all"][segmentation_target_object]
+    temp = target_labels.eq(orig_seg_target_id).cpu().sum() 
+    print("Total points annotated as {} (ID: {}) before converting labels: {}".format(segmentation_target_object, orig_seg_target_id, temp))
+    print("Translating labels to the {} dict".format(''.join(args.objects)))
+    
+    target_labels = dataset.AdaptNumClasses(target_labels, all_dicts).adapt()
+    print("Labels Max:", torch.max(target_labels))
+    
+    # From all the points in the room, find out how many of them belong to 
+    # the different objects
+    total_points_annotated_as_target_id = target_labels.eq(segmentation_target_object_id).cpu().sum() 
+    print("Randomly selected room to visualize: {} (Total points: {})".format(area_and_room, len(data)))
+    print("Object to detect: {0} (ID:{1}) (Total annotated {0} points: {2})".format(
+        segmentation_target_object, 
+        segmentation_target_object_id, 
+        total_points_annotated_as_target_id))
+    
+    if total_points_annotated_as_target_id.item() == 0:
+        print("There're no {}s in room {}!".format(segmentation_target_object, area_and_room))
+        return
+    
+    else: 
+        # Find out per object info
+        # A list of lists:
+        # [object, object_ID, 
+        # amount of annotated points this object has in this room (as a tensor)
+        # amount of predicted points for this object in this room (as a tensor) (initialized to zero)]
+        point_breakdown = []
+        for k,v in dict_to_use.items():
+            point_breakdown.append([k, v, target_labels.eq(v).cpu().sum(), torch.tensor([0])])        
+        
+        # Work with points_rel (instead of points_abs)
+        # Unsquezze the data tensor to give it the depth of batch_size = 1,
+        # since we're going to process a single room only
+        points = points.unsqueeze(dim = 0)
+        
+        # Test the model
+        # Model input: points.shape([batch_size, room_points, dimensons_per_point)]
+        # Model output: preds.shape([batch_size, num_classes, room_points])
+        preds, feature_transform, tnet_out, ix = model(points)
+
+        # Output after argmax: preds.shape([batch_size, room_points])
+        preds = preds.data.max(1)[1]
+
+        print("Preds Max:", torch.max(preds))
+        # Save predictions per object
+        for i in point_breakdown:
+            # Select the object_id of the element to check accuraracy
+            id = i[1]
+            # Save predictions for that object
+            i[3] = preds.eq(id).cpu().sum()
+       
+        print(80 * "-")
+        print("Model performance (annotated | predicted) points per object:")
+        print(80 * "-")
+        for obj, id, qty, qty_pred in point_breakdown:
+            print("{} (ID:{}): {} | {}".format(obj, id, qty.item(), qty_pred.item()))
+        
+
+        #corrects = preds.eq(target_labels.data).cpu().sum()
+        #accuracy = corrects.item() / total_points_annotated_as_target_id
+        #accuracies.append(accuracy)
+        
+        # Get the points identified as target objects    
+        # Get the indices of preds that match the object_id
+        # From preds after argmax, get the indexes in dim = 1 that match
+        # the object class (segmentation_target_object_id) we want to display
+        # These indexes in dim = 1 in preds (after argmax) should be a mapping 
+        # of the the indexes in dim = 1 in points
+        # Tricky method:
+        # - torch.where() returns 1. where condition is met, 0. elsewhere 
+        # - torch.nonzero() returns a tensor containing the indices of all non-zero elements of ones_mask
+        # - torch.index_select() returns a new tensor which indexes the input tensor along 
+        #   dimension dim using the entries in indices
+        ones_mask = torch.where(preds == segmentation_target_object_id, 1., 0.).squeeze(dim = 0)
+        indices = torch.nonzero(ones_mask).squeeze(dim = 1)
+        points = points.squeeze(dim = 0)
+        points_to_display = torch.index_select(points, 0, indices)
+
+        # TODO: Insert Lluis' code here for visualization
+        # points is the whole room points
+        # lluis_code(data, segmentation_target_object_id, points_to_display) 
+        
+        
+        #logger.writer.add_scalar(goal.capitalize() + " Accuracy/Visualization", accuracy)
+
+        #mean_accuracy = (torch.FloatTensor(accuracies).sum()/len(accuracies))*100
+        #print(80 * "-")
+        #print("Average accuracy: {:.2f}%".format(float(mean_accuracy)))
+        #print(80 * "-")
+
 
 #------------------------------------------------------------------------------
 # MAIN
@@ -852,7 +1042,8 @@ if __name__ == "__main__":
     
     if goal == "segmentation":
         # Let's visualize how segmentation works
-        visualize_segmentation(model)
+        #visualize_segmentation_short(model)
+        visualize_segmentation_long(model)
 
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.finish()

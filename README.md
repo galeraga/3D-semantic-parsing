@@ -101,9 +101,9 @@ This is the dataset used in conjunction with the **classification** network of t
 
 This is the dataset used for **semantic segmentation**. Since semantic segmentation needs every point in the cloud to be labeled, a new file is generated for every space/room with the suitable object labels. To do so, all files located in the `Annotations` folder are concatenated (along with the proper label) to create a single file per space/room with all the object points that belong to this space already labeled. This file is called `space_x_annotated.txt` (e.g., *office_1_annotated.txt*) and contains 7 cols (instead of 6): XYZRGB+*Object ID*. 
 
-Since every `space_x_annotated.txt` might have millions of points, point clouds for rooms are "sliced" into smaller blocks (called *sliding windows*) to improve model performance. 
+Since every `space_x_annotated.txt` might have millions of points, point clouds for rooms are "sliced" into smaller blocks (called *sliding windows*) to improve model training performance. 
 
-So the S3DISDataset4Segmentation will use the `space_x_annotated.txt` to get both the **input data** and **labels**
+So the S3DISDataset4Segmentation will use the contents of the sliding windows folder to get both the **input data** and **labels**
 
 ### The final folder structure 
 

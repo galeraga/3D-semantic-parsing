@@ -84,7 +84,7 @@ hparams = {
     # Params to create sliding windows
     'win_width': 1,
     'win_depth': 1,
-    'win_height': 3,
+    'win_height': 4,
     'overlap': 0, # Percentage, 0-95%, 100 will create an infinite loop
 }
 

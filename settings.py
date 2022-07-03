@@ -131,7 +131,7 @@ chosen_params += '_h' + str(hparams['win_height'])
 chosen_params += '_o' + str(hparams['overlap']) 
 
 path_to_current_sliding_windows_folder = os.path.join(
-                path_to_root_sliding_windows_folder, chosen_params)
+                path_to_root_sliding_windows_folder, chosen_params + "_11_1")
 
 if not os.path.exists(path_to_current_sliding_windows_folder):
     os.makedirs(path_to_current_sliding_windows_folder)

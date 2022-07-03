@@ -678,7 +678,7 @@ class S3DIS_Summarizer():
                     distance_x=pcmaxx-pcminx
                     distance_y=pcmaxy-pcminy
                     
-                    if (distance_x<0.9*win_width and distance_y<0.9*win_depth):
+                    if (distance_x>0.9*win_width and distance_y>0.9*win_depth):
                     
                         # tri_point_aux is now the matrix containing only the 3D points 
                         # inside the prism window in absolute coordenates

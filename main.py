@@ -1214,9 +1214,6 @@ if __name__ == "__main__":
     # Print info about the model with torchinfo
     # summary(model, input_size=(hparams['batch_size'], hparams['max_points_per_space'], hparams['dimensions_per_object']))
 
-    visualize_segmentation_per_single_sliding_window(model)
-    assert False
-
     # Carry out the the task to do
     # (e.g, train_classification(), test_segmentation())
     locals()[task + "_" + goal](model, dataloaders)
@@ -1226,7 +1223,11 @@ if __name__ == "__main__":
         #visualize_segmentation_slow(model)
         visualize_segmentation_fast(model)
 
+    visualize_segmentation_per_single_sliding_window(model)
+    assert False
+
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.finish()
     #tnet_compare(model, ds)
+
 

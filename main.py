@@ -592,7 +592,7 @@ def visualize_segmentation(model, dataloaders):
     """
     Visualize how PointNet segments objects in a single room
 
-    Select randomly a whole room to test
+    Workflow:
     
     1.- Pick randomly one of the available sliding windows
     2.- Get the Area_N Space_X from this randomly selected sliding window
@@ -600,6 +600,8 @@ def visualize_segmentation(model, dataloaders):
     4.- Create a dataset and dataloader for that room
     5.- Test it
     6.- Get the points the model predicted
+    8.- From the predicted points, select only the points that match the object to plot
+    9.- Call the point to plot
     """
     # Enter evaluation mode
     model.eval()

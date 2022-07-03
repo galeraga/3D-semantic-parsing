@@ -141,7 +141,11 @@ The window height can be specified as a hyperparamer and the model is ready in c
 
 Having defined the parameters, we take each of the defined windows and select only the points of the room point cloud whose coordinates fall inside said windows. Because the window point clouds will be the inputs to our segmentation model, they must be independant from one another and from the room coordenates. We must then create a new reference system for every window, where the coordinates of each point refer to the origin point of each window (winX=0 winY=0) instead of to the origin of the original room point cloud.
 
-Additionaly, so the training results can be applied to calculate--TODO
+Additionaly, so the training is easier, we will normalize every window so that the point coordinates range only from 0-1.
+
+During training, each window will have information on the relative coordinates of each point in it, their color, and the absolute coordinates those points had before the transformation. We also store the window identifier and the associated label.
+
+During validation and testing, if we use overlap different than 0, each point will be stored in more than one window so the model might label it differently depending on the window they belong to. There are several ways to solve this, to simplify in this model we will store, for each point, the first label that is different than the clutter, and will ignore any other labelling from the following windows for that point.
 
 ## The model
 

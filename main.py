@@ -11,7 +11,7 @@ import dataset
 import model    
 from tensorboardlogger import TensorBoardLogger 
 from summarizer import S3DIS_Summarizer
-from visualitzation import tnet_compare, tnet_compare_in_site, infer
+from visualitzation import tnet_compare, tnet_compare_in_site, infer, render_segmentation
 
 #------------------------------------------------------------------------------
 # AUX METHODS
@@ -694,9 +694,17 @@ def visualize_segmentation(model, dataloaders):
     points = points.squeeze(dim = 0)
     points_to_display = torch.index_select(points, 0, indices)
 
-    # TODO: Insert Lluis' code here for visualization
-    # points is the whole room points
-    # lluis_code(data, segmentation_target_object_id, points_to_display) 
+    render_segmentation(data = data,
+                        segmentation_target_object_id = segmentation_target_object_id,
+                        points_to_display = points_to_display,
+                        gt_label_col = 3,
+                        model_label_col = 3,
+                        b_model_without_label_col = True,
+                        b_multiple_seg = False,
+                        draw_original_rgb_data = False,
+                        b_hide_wall = True,
+                        b_hide_column = False,
+                        b_show_inside_room = True)
     
     corrects = preds.eq(target_labels.data).cpu().sum()
     accuracy = corrects.item() / preds.numel()
@@ -790,6 +798,8 @@ if __name__ == "__main__":
     # Print info about the model with torchinfo
     # summary(model, input_size=(hparams['batch_size'], hparams['max_points_per_space'], hparams['dimensions_per_object']))
     
+    visualize_segmentation(model, dataloaders)
+
     # Carry out the the task to do
     # (e.g, train_classification(), test_segmentation())
     locals()[task + "_" + goal](model, dataloaders)

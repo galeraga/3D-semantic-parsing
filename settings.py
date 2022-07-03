@@ -219,10 +219,10 @@ if "medium" in args.load:
     hparams["epochs"] = 10
     
 if "high" in args.load:
-    hparams["num_points_per_object"] = 4096
-    hparams["num_points_per_room"] = 4096
+    hparams["num_points_per_object"] = 2048
+    hparams["num_points_per_room"] = 2048
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 50
+    hparams["epochs"] = 20
    
 # Select the number of classes to work with
 if "movable" in args.objects:

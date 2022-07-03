@@ -442,12 +442,7 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
         # Slicing the tensor 
         # [start_row_index:end_row_index, start_column_index:end_column_index]
         if self.subset:
-            # TODO: Correct when tri_points_out is corrected
-            # cols_to_select = [0, 1, 2, 3, 4, 5]
-            sliding_window_points = sliding_window[ :, :6]
-            #cols_to_select = torch.tensor([0, 1, 2, 6, 7])
-            #sliding_window_points = torch.index_select(sliding_window, 1, cols_to_select)
-
+            sliding_window_points = sliding_window[ :, :8]
         else:
             sliding_window_points = sliding_window[ :, :hparams["dimensions_per_object"]]
 

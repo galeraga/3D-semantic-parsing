@@ -186,16 +186,16 @@ Arguments:
 
 
 def render_segmentation(data, 
-                            segmentation_target_object_id,
-                            points_to_display,
-                            gt_label_col = 3,
-                            model_label_col = 3,
-                            b_model_without_label_col = True,
-                            b_multiple_seg = False,
-                            draw_original_rgb_data = False,
-                            b_hide_wall = False, 
-                            b_hide_column = False,
-                            b_show_inside_room = True):
+                        segmentation_target_object_id,
+                        points_to_display,
+                        gt_label_col = 3,
+                        model_label_col = 3,
+                        b_model_without_label_col = True,
+                        b_multiple_seg = False,
+                        draw_original_rgb_data = False,
+                        b_hide_wall = False, 
+                        b_hide_column = False,
+                        b_show_inside_room = True):
 
     # Stablish a maximal number of points to visualize
     room_points = PointSampler(data, 100000).sample()

@@ -101,11 +101,9 @@ def create_dataloaders(ds):
 def train_classification(model, dataloaders):
     """
     Train the PointNet network for classification goals
-
     Inputs:
         - model: the PointNet model class
         - dataloaders: train, val and test
-
     Outputs:
         - None
     """
@@ -344,11 +342,9 @@ def test_classification(model, dataloaders):
 def train_segmentation(model, dataloaders):
     """
     Train the PointNet network for semantic segmentation tasks
-
     Inputs:
         - model: the PointNet model class
         - dataloaders: train, val and test
-
     Outputs:
         - None
     """
@@ -795,7 +791,7 @@ if __name__ == "__main__":
     model = getattr(model, model_to_call)(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object']).to(device)
 
-    # Print info about the model with torchinfo
+    # Print info about the model with torchinfo
     # summary(model, input_size=(hparams['batch_size'], hparams['max_points_per_space'], hparams['dimensions_per_object']))
     
     visualize_segmentation(model, dataloaders)
@@ -807,4 +803,3 @@ if __name__ == "__main__":
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.finish()
     #tnet_compare(model, ds)
-

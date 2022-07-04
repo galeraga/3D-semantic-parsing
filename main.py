@@ -726,7 +726,7 @@ if __name__ == "__main__":
     sample = (ds[0])[0]
     preds,tnet_out = infer(model, sample)
     #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample, preds, tnet_out), global_step=None, close=True, walltime=None)
-    # Using the _infer version that extracts the variables by itself.
+    # Using the _infer version that extracts the variables by itself:
     logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample), global_step=None, close=True, walltime=None)
     # ---------------------------------------------------
 

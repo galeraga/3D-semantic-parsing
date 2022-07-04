@@ -11,7 +11,7 @@ import dataset
 import model    
 from tensorboardlogger import TensorBoardLogger 
 from summarizer import S3DIS_Summarizer
-from visualitzation import tnet_compare, tnet_compare_in_site, infer
+from visualitzation import tnet_compare, tnet_compare_infer,  infer
 
 #------------------------------------------------------------------------------
 # AUX METHODS
@@ -877,7 +877,23 @@ if __name__ == "__main__":
         visualize_segmentation(model)
 
     # Close TensorBoard logger and send runs to TensorBoard.dev
+    #logger.finish()
+
+    # tnet_compare example here -----------------------
+    # Extracting tnet_out and preds:
+    sample = (ds[0])[0]
+    preds,tnet_out = infer(model, sample)
+    #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample, preds, tnet_out), global_step=None, close=True, walltime=None)
+    # Using the _infer version that extracts the variables by itself:
+    logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample), global_step=None, close=True, walltime=None)
+    # ---------------------------------------------------
+
+    # We need to close the writer and the logger:
+    logger.writer.flush()
+    logger.writer.close()
     logger.finish()
-    #tnet_compare(model, ds)
+
+
+
 
 

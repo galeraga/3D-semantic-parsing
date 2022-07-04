@@ -26,6 +26,7 @@ import torch.nn.functional as F
 # Visualization imports
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
+import torchvision.transforms as transforms
 # from torchinfo import summary
 
 #------------------------------------------------------------------------------
@@ -55,7 +56,7 @@ segmentation_target_object = "table"
 #------------------------------------------------------------------------------
 # Environment (file system and so on) params
 eparams = {
-    'pc_data_path': "/Users/jgalera/datasets/S3DIS/aligned",
+    'pc_data_path': r"C:\Users\marcc\OneDrive\Escritorio\PROJECTE\S3DIS_ANTIC\Stanford3dDataset_v1.2_Aligned_Version",
     'pc_file_extension': ".txt",
     'pc_file_extension_rgb_norm': "_rgb_norm.txt",
     'pc_file_extension_sem_seg_suffix': "_annotated",

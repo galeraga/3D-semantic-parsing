@@ -89,7 +89,7 @@ hparams = {
     # Params to create sliding windows
     'win_width': 1,
     'win_depth': 1,
-    'win_height': 3,
+    'win_height': 4,
     'overlap': 0, # Percentage, 0-95%, 100 will create an infinite loop
 }
 
@@ -131,7 +131,7 @@ chosen_params += '_h' + str(hparams['win_height'])
 chosen_params += '_o' + str(hparams['overlap']) 
 
 path_to_current_sliding_windows_folder = os.path.join(
-                path_to_root_sliding_windows_folder, chosen_params + "_11_1")
+                path_to_root_sliding_windows_folder, chosen_params)
 
 if not os.path.exists(path_to_current_sliding_windows_folder):
     os.makedirs(path_to_current_sliding_windows_folder)

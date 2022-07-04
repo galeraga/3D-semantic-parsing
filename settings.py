@@ -210,7 +210,7 @@ if "low" in args.load:
     hparams["num_points_per_object"] = 100
     hparams["num_points_per_room"] = 512
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 5
+    hparams["epochs"] = 1
    
 if "medium" in args.load:
     hparams["num_points_per_object"] = 1024

@@ -252,7 +252,8 @@ class S3DISDataset4ClassificationBase(torch.utils.data.Dataset):
             
             # Element order is ignored when data is retrieved by cols in Pandas
             # so we need to define the order of the cols
-            cols_to_get = [col for col in range (hparams['dimensions_per_object'])]
+            cols_to_get = [col for col in range (hparams['dimensions_per_object'])] 
+        
             obj_df = pd.read_csv(
                 path_to_obj, 
                 sep = " ", 
@@ -450,6 +451,8 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
 
         else:
             sliding_window_points = sliding_window[ :, :hparams["dimensions_per_object"]]
+            sliding_window_points=torch.cat((sliding_window_points,sliding_window[:,6:9]),1)#adds absolute values to points output 
+            #sliding_window_points=torch.cat((sliding_window_points,sliding_window[:,9]),1)#as well as window ID CLARA
 
         point_labels = sliding_window[ :, -1]
         

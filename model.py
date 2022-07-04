@@ -241,7 +241,7 @@ class SegmentationPointNet(nn.Module):
         # Returns a Tensor of the same dimension and shape 
         # as the input with values in the range [-inf, 0]
         # NLL Loss will expect the shape:
-        # preds.shape[batch_size, num_classes, max_points_per_room]
+        # preds.shape[batch_size, num_classes, max_points_per_room] ex 32,6,1024
         preds = F.log_softmax(x, dim = 1)
         
         # Returning the same values than ClassificationPointNet

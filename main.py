@@ -393,6 +393,8 @@ def train_segmentation(model, dataloaders):
             
             points, targets = data  
             
+            points[:,:,:hparams["dimensions_per_object"]] # CLARA
+            
             points = points.to(device)
             targets = targets.to(device)
 
@@ -464,7 +466,8 @@ def train_segmentation(model, dataloaders):
         for data in tqdm(val_dataloader, desc = tqdm_desc):
             model = model.eval()
     
-            points, targets = data
+            points, targets = data #changed dataset so that data is relative and absolute values at the end and winID. Matrix is either size 6 if no colors added or size 9 if colors are added
+            points=points[:,:,:hparams["dimensions_per_object"]] # CLARA remove absolute points and win ID (use them later)
             points = points.to(device)
             targets = targets.to(device)
                     
@@ -475,9 +478,15 @@ def train_segmentation(model, dataloaders):
             epoch_val_loss.append(loss.cpu().item())
             
             preds = preds.data.max(dim = 1)[1]
+
+            #preds is now batch,1,points_in_win.
             corrects = preds.eq(targets.data).cpu().sum()
             accuracy = corrects.item() / preds.numel()       
             epoch_val_acc.append(accuracy)
+
+            #how to store point values? each point should have an associated label
+            dict[points[:,:,hparams["dimensions_per_object"]:(hparams["dimensions_per_object"]+3)]]=[]
+
 
         epoch_val_end_time = datetime.datetime.now()
         val_time_per_epoch = (epoch_val_end_time - epoch_val_start_time).seconds
@@ -564,9 +573,11 @@ def test_segmentation(model, dataloaders):
     model.eval()
     
     # Test the model
-    print("Testing data segmenation")
+    print("Testing data segmentation")
     for batch_idx, data in enumerate(tqdm(test_dataloader)):
-        points, target_labels = data        
+        points, target_labels = data  
+
+        points[:,:,:hparams["dimensions_per_object"]]      
                 
         points = points.to(device)
         target_labels = target_labels.to(device)
@@ -663,14 +674,17 @@ def visualize_segmentation(model, dataloaders):
     # Testing the model with a single room for visualization
     print("Testing data segmenation over a single room for data visualization")
     for batch_idx, data in enumerate(tqdm(visualization_dataloader)):
+        
         points, target_labels = data
+
+        
         
         # When visualizing, the dataset returns 8 cols
         # to be able to map relative positions to absolute positions
         # (x_rel y_rel z_rel r g b x_abs y_abs z_abs)        
                 
         points_rel = points[:, :, :hparams["dimensions_per_object"]].to(device)
-        points_abs = points[:, :, -3:].to(device)
+        points_abs = points[:, :, -3:].to(device) #CLARAare these really the abs points? aren't those just the values of the color since points is size 3 or 6?
         target_labels = target_labels.to(device)
 
         # Model input: points.shape([batch_size, room_points, dimensons_per_point)]
@@ -680,7 +694,7 @@ def visualize_segmentation(model, dataloaders):
         # Output: preds.shape([batch_size, room_points])
         preds = preds.data.max(1)[1]
 
-        # Get the indices of preds that match the object_id
+        # Get the indices of preds that match the object_id--> CLARA we don't have that in the real model
         # From preds after argmax, get the indexes in dim = 1 that match
         # the object class (segmentation_target_object_id) we want to display
         # These indexes in dim = 1 in preds (after argmax) should be a mapping 

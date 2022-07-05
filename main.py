@@ -875,10 +875,10 @@ if __name__ == "__main__":
     # tnet_compare example here -----------------------
     # Extracting tnet_out and preds:
     sample = (ds[0])[0]
-    preds,tnet_out = infer(model, sample)
+    preds,tnet_out = infer(model, sample[0])
     #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample, preds, tnet_out), global_step=None, close=True, walltime=None)
     # Using the _infer version that extracts the variables by itself:
-    logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample), global_step=None, close=True, walltime=None)
+    logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample[0]), global_step=None, close=True, walltime=None)
     # ---------------------------------------------------
 
     # We need to close the writer and the logger:

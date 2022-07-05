@@ -222,6 +222,63 @@ def fig2img ( fig ):
 
 """
 Function to visualize the object segmentation generated both by the model and the ground truth data. 
+The function after the visualization creates a png file for each image generated.
+Arguments:
+    data: Tensor containing ground truth labelled points. 
+          Each point is informed by its xyz location and rgb color data followed by the segmentation label identifier.
+          Has the x y z r g b label or x y z label structure posible.
+    segmentation_target_object_id: Integer, label that identifies the object type that has been segmented
+    points_to_display: Tensor, containing the model segmented labelled points.
+            The tensor has the x y z label structure.
+    gt_label_col: Specifies the number of the column of the data tensor where is the segmentation label.
+    model_label_col: Specifies the number of the column of the points_to_display tensor where is the segmentation label.
+    b_model_without_label_col: bool, specifies if the model tensor 
+    b_multiple_seg: bool, to visualize all segmentations given in the given tensors.
+    draw_original_rgb_data: To render the original rgb color of the data tensor.
+    b_hide_wall: bool, hides the points that corresponds to the wall
+    
+    b_hide_column: bool, hides the points that corresponds to the column
+    b_show_inside_room: bool, to change camera point of view to the inside of the room
+"""
+
+
+def render_segmentation(data, 
+                        segmentation_target_object_id,
+                        points_to_display,
+                        gt_label_col = 3,
+                        model_label_col = 3,
+                        b_model_without_label_col = True,
+                        b_multiple_seg = False,
+                        draw_original_rgb_data = False,
+                        b_hide_wall = False, 
+                        b_hide_column = False,
+                        b_show_inside_room = True):
+
+    # Stablish a maximal number of points to visualize
+    room_points = PointSampler(data, 100000).sample()
+    object_points_model = PointSampler(points_to_display, 50000).sample()
+
+    colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0], [0.5, 0.5, 0], [0.5, 0.5, 0.5], [0.5, 0, 0.5], [0.2, 1, 0], [0.7, 0, 0.7], [0.5, 0.2, 0], [0.2, 8, 0.4], [0.5, 1, 1], [0.5, 0.1, 0.6]]
+    
+    # Now we can save it to a numpy array.
+    data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
+    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
+    return data
+
+def fig2img ( fig ):
+    """
+    @brief Convert a Matplotlib figure to a PIL Image in RGBA format and return it
+    @param fig a matplotlib figure
+    @return a Python Imaging Library ( PIL ) image
+    """
+    # put the figure pixmap into a numpy array
+    buf = fig2data ( fig )
+    w, h, d = buf.shape
+    return Image.fromstring( "RGBA", ( w ,h ), buf.tostring( ) )
+
+
+"""
+Function to visualize the object segmentation generated both by the model and the ground truth data. 
 
 The function after the visualization creates a png file for each image generated.
 

@@ -11,7 +11,7 @@ import dataset
 import model    
 from tensorboardlogger import TensorBoardLogger 
 from summarizer import S3DIS_Summarizer
-from visualitzation import tnet_compare, tnet_compare_infer,  infer
+from visualitzation import tnet_compare, tnet_compare_infer,  infer, render_segmentation
 
 #------------------------------------------------------------------------------
 # AUX METHODS
@@ -780,9 +780,14 @@ def visualize_segmentation(model):
             print(i)
     
     # TODO: Insert Lluis' code here for visualization
-    # out_dict contains all the points detected for all objects
-    # lluis_code(data, segmentation_target_object_id, points_to_display) 
-        
+    render_segmentation(str_object_to_visualize = "chair",
+                            str_area_and_office = area_and_office,
+                            dict_segmented_points = out_dict,
+                            b_multiple_seg = False,
+                            draw_original_rgb_data = False,
+                            b_hide_wall = False, 
+                            b_hide_column = False,
+                            b_show_inside_room = True)  
 
 
 #------------------------------------------------------------------------------

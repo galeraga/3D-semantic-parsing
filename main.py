@@ -26,6 +26,9 @@ def avoid_MaxPool1d_warning(f):
     def function_with_warnings_removed(*args, **kwargs):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
+            print(80 * "-")
+            print(task.upper()+ "ING")
+            print(80 * "-")
             print("Start time: ", datetime.datetime.now())
             f(*args, **kwargs)
             print("End time: ", datetime.datetime.now())
@@ -38,7 +41,7 @@ def task_welcome_msg(task = None):
     """
 
     msg = "Starting {}-{} with:".format(task, goal)
-    msg += "\n- {} classes ({})".format(hparams['num_classes'], all_dicts[''.join(args.objects)])
+    msg += "\n- {} classes ({})".format(hparams['num_classes'], objects_dict)
     
     if "classification" in args.goal:
         msg += "\n- {} points per object ".format(hparams['num_points_per_object'])
@@ -271,6 +274,10 @@ def train_classification(model, dataloaders):
         logger.writer.add_scalar(goal.capitalize() + " Time/Training", total_train_time[-1], epoch)
         logger.writer.add_scalar(goal.capitalize() + " Time/Validation", total_val_time[-1], epoch)
     
+    print("Mean accuracy: Training: {:.4f} | Validation: {:.4f} ".format(
+            sum(train_acc)/len(train_acc),
+            sum(val_acc)/len(val_acc),
+            ))
     print("Total time (seconds) for {}ing {}: {} secs ".format( 
                     task,
                     goal,
@@ -381,18 +388,7 @@ def train_segmentation(model, dataloaders):
         for data in tqdm(train_dataloader, desc = tqdm_desc):
             model = model.train()
             
-            # TODO: Insert Clara's code here
-            # split_the_room_into_blocks(data) -> list_of_blocks
-            # for each block in list_of_block:
-            #   points, targets = block
-            #   points = points.to(device)
-            #   targets = targets.to(device)
-            #   optimizer.zero_grad()
-            #   model(block)
-            #   Move the rest of the code (accuracy, etc) within the for loop
-            
             points, targets = data  
-            
             points = points.to(device)
             targets = targets.to(device)
 
@@ -416,8 +412,6 @@ def train_segmentation(model, dataloaders):
             regularization_loss = torch.norm(
                 identity - torch.bmm(feature_transform, feature_transform.transpose(2, 1)))
             
-            # TODO: loss has to be defined for semantic segmentation   
-            # TODO: Is needed the same regularization loss that classification??
             # Loss: The negative log likelihood loss 
             # It is useful to train a classification problem with C classes.
             # torch.nn.functional.nll_loss(input, target, ...) 
@@ -518,7 +512,11 @@ def train_segmentation(model, dataloaders):
         logger.writer.add_scalar(goal.capitalize() + " Accuracy/Validation", val_acc[-1], epoch)
         logger.writer.add_scalar(goal.capitalize() + " Time/Training", total_train_time[-1], epoch)
         logger.writer.add_scalar(goal.capitalize() + " Time/Validation", total_val_time[-1], epoch)
-        
+    
+    print("Mean accuracy: Training: {:.4f} | Validation: {:.4f} ".format(
+            sum(train_acc)/len(train_acc),
+            sum(val_acc)/len(val_acc),
+            ))
     print("Total time (seconds) for {}ing {}: {} secs ".format( 
                 task,
                 goal,
@@ -590,7 +588,7 @@ def test_segmentation(model, dataloaders):
 
 @avoid_MaxPool1d_warning
 @torch.no_grad()    
-def visualize_segmentation(model):
+def watch_segmentation(model, dataloaders):
     """
     Visualize how PointNet segments objects in a single room.
 
@@ -622,7 +620,8 @@ def visualize_segmentation(model):
         - object_ID (from the proper dict)
         - amount of annotated points this object has in this room (as a tensor)
         - amount of predicted points for this object in this room (as a tensor)
-        - the actual predicted points (as a tensor)
+        - the actual predicted points, in relative coordinates (as a tensor)
+        - the actual predicted points, in absolute coordinates (as a tensor)
     """
     
     print("Visualizing data segmentation")
@@ -630,9 +629,6 @@ def visualize_segmentation(model):
     # Enter evaluation mode
     model.eval()
 
-    # Aux test vars
-    accuracies = []
-    
     # Path to the checkpoint file
     model_checkpoint = os.path.join(
             eparams['pc_data_path'], 
@@ -659,7 +655,7 @@ def visualize_segmentation(model):
     # 'all': {'ceiling': 0, 'clutter': 1, 'door': 2, 'floor': 3, 'wall': 4, 'beam': 5, 'board': 6, 'bookcase': 7, 'chair': 8, 'table': 9, 'column': 10, 'sofa': 11, 'window': 12, 'stairs': 13}, 
     # 'movable': {'clutter': 0, 'board': 1, 'bookcase': 2, 'chair': 3, 'table': 4, 'sofa': 5}, 
     # 'structural': {'ceiling': 0, 'clutter': 1, 'door': 2, 'floor': 3, 'wall': 4, 'beam': 5, 'column': 6, 'window': 7, 'stairs': 8}}
-    dict_to_use = all_dicts[''.join(args.objects)]
+    dict_to_use = objects_dict
 
     # Select a random sliding window from an office room 
     # (e.g, 'Area_6_office_33_win14.pt')
@@ -707,9 +703,9 @@ def visualize_segmentation(model):
         target_labels = data[:, -1].to(device)
 
         # Translate labels to the proper dict!
-        msg = "{} - Translating labels (with {} points)".format(win_id, len(target_labels))    
-        progress_bar.set_description(msg)
-        target_labels = dataset.AdaptNumClasses(target_labels, all_dicts).adapt()
+       # msg = "{} - Translating labels (with {} points)".format(win_id, len(target_labels))    
+       # progress_bar.set_description(msg)
+       # target_labels = dataset.AdaptNumClasses(target_labels, all_dicts).adapt()
        
         # From all the points in the room, find out how many of them belong to 
         # the different objects
@@ -718,10 +714,11 @@ def visualize_segmentation(model):
         # - object_ID, 
         # - amount of annotated points this object has in this room (as a tensor)
         # - amount of predicted points for this object in this room (as a tensor) (initialized to zero)]
-        # - predicted points (as a tensor)
+        # - predicted points, in relative coordinates (as a tensor)
+        # - predicted points, in absolute coordinates (as a tensor)
         point_breakdown = []
         for k,v in dict_to_use.items():
-            point_breakdown.append([k, v, target_labels.eq(v).cpu().sum(), torch.tensor([0]), None])        
+            point_breakdown.append([k, v, target_labels.eq(v).cpu().sum(), torch.tensor([0]), None, None])        
         
         # Work with points_rel (instead of points_abs)
         # Unsquezze the data tensor to give it the depth of batch_size = 1,
@@ -747,6 +744,7 @@ def visualize_segmentation(model):
             id = i[1]
 
             # Save predictions for that object
+            preds = torch.squeeze(preds, dim = 0)
             i[3] = preds.eq(id).cpu().sum()
 
             # Get the points identified as target objects    
@@ -760,15 +758,17 @@ def visualize_segmentation(model):
             # - torch.nonzero() returns a tensor containing the indices of all non-zero elements of ones_mask
             # - torch.index_select() returns a new tensor which indexes the input tensor along 
             #   dimension dim using the entries in indices
-
             ones_mask = torch.where(preds == id, 1., 0.).squeeze(dim = 0)
             indices = torch.nonzero(ones_mask).squeeze(dim = 1)
             # points = points.squeeze(dim = 0)
-            points_to_display = torch.index_select(points_abs, 0, indices)
-            
-            # Save the points to display
-            i[4] = points_to_display
 
+            # Save the points to display
+            # Points to display (relative coordinates)
+            i[4] = torch.index_select(points_rel, 0, indices)
+            # Points to display (absolute coordinates)
+            i[5] =  torch.index_select(points_abs, 0, indices)
+    
+    
         # Save the results in a dict
         out_dict[win_id] = point_breakdown
       
@@ -782,7 +782,6 @@ def visualize_segmentation(model):
     # TODO: Insert Lluis' code here for visualization
     # out_dict contains all the points detected for all objects
     # lluis_code(data, segmentation_target_object_id, points_to_display) 
-        
 
 
 #------------------------------------------------------------------------------
@@ -806,11 +805,8 @@ if __name__ == "__main__":
     # Create the ground truth file for classification
     summary_file = S3DIS_Summarizer(eparams["pc_data_path"], logger)
 
-    # Get the dicts we'll use to translate:
-    #  - from all the objects ID we have in the summary file [0-13]
-    #  - to a subset of object IDs: movable [0-5], structural [0-8]
-    # when not working with all the num_classes
-    all_dicts = summary_file.get_labels()
+    # Get the dicts:
+    objects_dict = summary_file.get_labels()
 
     # Create the ground truth files for semantic segmentation
     if "segmentation" in args.goal:
@@ -844,9 +840,9 @@ if __name__ == "__main__":
     val_ds_to_call = "S3DISDataset4" + goal.capitalize()  + "Val"
     test_ds_to_call = "S3DISDataset4" + goal.capitalize()  + "Test"
     
-    train_ds = getattr(dataset, train_ds_to_call)(eparams['pc_data_path'], all_dicts, transform = None)
-    val_ds = getattr(dataset, val_ds_to_call)(eparams['pc_data_path'], all_dicts, transform = None)
-    test_ds = getattr(dataset, test_ds_to_call)(eparams['pc_data_path'], all_dicts, transform = None)
+    train_ds = getattr(dataset, train_ds_to_call)(eparams['pc_data_path'], objects_dict, transform = None)
+    val_ds = getattr(dataset, val_ds_to_call)(eparams['pc_data_path'], objects_dict, transform = None)
+    test_ds = getattr(dataset, test_ds_to_call)(eparams['pc_data_path'], objects_dict, transform = None)
     
     ds = train_ds, val_ds, test_ds    
     
@@ -869,13 +865,10 @@ if __name__ == "__main__":
     # summary(model, input_size=(hparams['batch_size'], hparams['max_points_per_space'], hparams['dimensions_per_object']))
 
     # Carry out the the task to do
-    # (e.g, train_classification(), test_segmentation())
+    # (e.g, train_classification(), test_segmentation(), watch_segmentation())
+    
     locals()[task + "_" + goal](model, dataloaders)
     
-    if goal == "segmentation":
-        # Let's visualize how segmentation works
-        visualize_segmentation(model)
-
     # Close TensorBoard logger and send runs to TensorBoard.dev
     #logger.finish()
 

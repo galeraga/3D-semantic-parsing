@@ -35,7 +35,11 @@ def infer(model,
         An array with the points of our pointCloud multiplicated by the output of the T-Net.
         In other words the points displayed in a canonic way. 
     '''
-    points = points.to(hparams["device"])
+    if type(points)==tuple:
+        print('Type is tuple')
+    
+    else:
+        points = points.to(hparams["device"])
     
     # We ran out of memory in GCP GPU, so all tensors have to be on the same device
     #if torch.cuda.is_available():

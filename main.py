@@ -776,10 +776,12 @@ def watch_segmentation(model, dataloaders):
             i[4] = torch.index_select(points_rel, 0, indices)
             # Points to display (absolute coordinates)
             i[5] =  torch.index_select(points_abs, 0, indices)
+            memorized_labels=torch.cat(memorized_labels,i[5],preds, dim=1)
     
     
         # Save the results in a dict
         out_dict[win_id] = point_breakdown
+        #from memorized points find repeated and keep max value
       
     # TODO: Remove (only for intermediate checking)       
     for k, v in out_dict.items():

@@ -99,7 +99,7 @@ hparams = {
     # Params to create sliding windows
     'win_width': 1,
     'win_depth': 1,
-    'win_height': 4,
+    'win_height': 3,
     'overlap': 0, # Percentage, 0-95%, 100 will create an infinite loop
 }
 
@@ -201,7 +201,7 @@ if "toy" in args.load:
 
 if "low" in args.load:
     hparams["num_points_per_object"] = 100
-    hparams["num_points_per_room"] = 512
+    hparams["num_points_per_room"] = 128
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 1
    

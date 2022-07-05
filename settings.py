@@ -32,8 +32,13 @@ import torchvision.transforms as transforms
 #------------------------------------------------------------------------------
 # S3DIS DATASET SPECIFIC INFORMATION
 #------------------------------------------------------------------------------
-movable_objects_set = {"board", "bookcase", "chair", "table", "sofa", "clutter"}
-structural_objects_set = {"ceiling", "door", "floor", "wall", "beam", "column", "window", "stairs", "clutter"}
+#movable_objects_set = {"board", "bookcase", "chair", "table", "sofa", "clutter"}
+#movable_objects_set = {"board", "bookcase", "chair", "table", "sofa"}
+#structural_objects_set = {"ceiling", "door", "floor", "wall", "beam", "column", "window", "stairs", "clutter"}
+
+
+movable_objects_set = {"board", "bookcase", "chair", "table", "sofa"}
+structural_objects_set = {"ceiling", "door", "floor", "wall", "beam", "column", "window", "stairs"}
 
 building_distribution = {
     'Building 1': ["Area_1", "Area_3", "Area_6"], 
@@ -59,9 +64,13 @@ eparams = {
     'pc_data_path': r"C:\Users\Lluis\Desktop\Projecte2\Stanford3dDataset",    
     'pc_file_extension': ".txt",
     'pc_file_extension_rgb_norm': "_rgb_norm.txt",
-    'pc_file_extension_sem_seg_suffix': "_annotated",
+    #'pc_file_extension_sem_seg_suffix': "_annotated",
+    'pc_file_extension_sem_seg_suffix': "_annotated_clutter_free",
     'already_rgb_normalized_suffix': "_rgb_norm",
-    's3dis_summary_file': "s3dis_summary.csv",
+    #'s3dis_summary_file': "s3dis_summary.csv",
+    # The proper summary file to work with depends on the args.parser
+    's3dis_summary_file_all': "s3dis_summary_clutter_free_all.csv",
+    's3dis_summary_file_movable': "s3dis_summary_clutter_free_movable.csv",
     "checkpoints_folder": "checkpoints",
     "tnet_outputs": "tnet_outputs",
     'tensorboard_log_dir': "runs/pointnet_with_s3dis",
@@ -120,23 +129,6 @@ tnet_outputs_folder = os.path.join(eparams["pc_data_path"], eparams["tnet_output
 if not os.path.exists(tnet_outputs_folder):
     os.makedirs(tnet_outputs_folder)
 
-# To store sliding windows 
-path_to_root_sliding_windows_folder = os.path.join(eparams["pc_data_path"], eparams['sliding_windows_folder'])
-if not os.path.exists(path_to_root_sliding_windows_folder):
-    os.makedirs(path_to_root_sliding_windows_folder)
-
-# The folder will follow this convention: w_X_d_Y_h_Z_o_T
-chosen_params = 'w' + str(hparams['win_width']) 
-chosen_params += '_d' + str(hparams['win_depth'])
-chosen_params += '_h' + str(hparams['win_height']) 
-chosen_params += '_o' + str(hparams['overlap']) 
-
-path_to_current_sliding_windows_folder = os.path.join(
-                path_to_root_sliding_windows_folder, chosen_params)
-
-if not os.path.exists(path_to_current_sliding_windows_folder):
-    os.makedirs(path_to_current_sliding_windows_folder)
-
 #------------------------------------------------------------------------------
 # PARSER DEFINITION AND DEFAULT SETTINGS
 #------------------------------------------------------------------------------
@@ -165,7 +157,7 @@ parser.add_argument("--task",
                     action = "store",
                     nargs = 1,
                     default = "train",
-                    choices = ["train", "test"],
+                    choices = ["train", "test", "watch"],
                     help = "Either train or test")
 
 parser.add_argument("--load",
@@ -217,21 +209,54 @@ if "medium" in args.load:
     hparams["num_points_per_object"] = 1024
     hparams["num_points_per_room"] = 1024
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 10
+    hparams["epochs"] = 20
     
 if "high" in args.load:
     hparams["num_points_per_object"] = 2048
     hparams["num_points_per_room"] = 2048
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 20
+    hparams["epochs"] = 10
    
-# Select the number of classes to work with
+# Adapt params depending on the target objects we're going to work
 if "movable" in args.objects:
-    hparams["num_classes"] = len(movable_objects_set)
-
+    objects_set = movable_objects_set
+    eparams["s3dis_summary_file"] = eparams["s3dis_summary_file_movable"]
+    
 if "structural" in args.objects:
     hparams["num_classes"] = len(structural_objects_set)
 
 if "all" in args.objects:
-    hparams["num_classes"] = len(structural_objects_set.union(movable_objects_set))
+    objects_set = structural_objects_set.union(movable_objects_set)
+    eparams["s3dis_summary_file"] = eparams["s3dis_summary_file_all"]
+
+hparams["num_classes"] = len(objects_set)
+
+# The annotated file will storge only the type of points we're working with:
+# annotated_clutter_free_all: 
+#   - data and labels for all the objects (except clutter): wall, door, beam,
+# annotated_clutter_free_movable: 
+#   - data and labels for only movable objects (except cluuter): chair, table
+eparams["pc_file_extension_sem_seg_suffix"] = eparams["pc_file_extension_sem_seg_suffix"] + "_" + ''.join(args.objects)
+
+# To store sliding windows 
+path_to_root_sliding_windows_folder = os.path.join(eparams["pc_data_path"], 
+                                        eparams['sliding_windows_folder'])
+if not os.path.exists(path_to_root_sliding_windows_folder):
+    os.makedirs(path_to_root_sliding_windows_folder)
+
+# The folder will follow this convention: w_X_d_Y_h_Z_o_T
+chosen_params = 'w' + str(hparams['win_width']) 
+chosen_params += '_d' + str(hparams['win_depth'])
+chosen_params += '_h' + str(hparams['win_height']) 
+chosen_params += '_o' + str(hparams['overlap']) 
+
+path_to_current_sliding_windows_folder = os.path.join(
+                path_to_root_sliding_windows_folder, 
+                ''.join(args.objects),
+                chosen_params)
+
+if not os.path.exists(path_to_current_sliding_windows_folder):
+    os.makedirs(path_to_current_sliding_windows_folder)
+
+
 

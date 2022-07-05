@@ -124,36 +124,38 @@ class S3DIS_Summarizer():
                 
                 space_idx = spaces_dict[space_label]
                 
-                # The file to be used will be the original of the S3DIS 
-                # (not the_rgb_norm.txt), since rgb normalization is 
-                # optional (only required to visualize data with Open3D)        
+                # Get the lst of the files 
                 objects = sorted([object for object in os.listdir(path_to_objects) 
-                    if (eparams['pc_file_extension'] in object) and (eparams['already_rgb_normalized_suffix'] not in object)])    
-
-                desc = "Getting points from objects in {} {}".format(area, space)
+                    if object.split("_")[0] in objects_set])    
                 
-                for object in tqdm(objects, desc = desc):
-                    # Get the object label
-                    # From chair_1, chair_2, take only "chair"
-                    object_label = object.split("_")[0]
+                
+                # Some rooms have no movable objects (e.g, WC)
+                if objects: 
                     
-                    # Update the object dict
-                    # {'chair': 0, 'table': 1, ...}
-                    if object_label not in objects_dict:
-                        objects_dict[object_label] = total_objects
-                        total_objects += 1
-                    
-                    object_idx = objects_dict[object_label]
+                    desc = "Getting points from objects in {} {}".format(area, space)
+                
+                    for object in tqdm(objects, desc = desc):
+                        # Get the object label
+                        # From chair_1, chair_2, take only "chair"
+                        object_label = object.split("_")[0]
+                        
+                        # Update the object dict
+                        # {'chair': 0, 'table': 1, ...}
+                        if object_label not in objects_dict:
+                            objects_dict[object_label] = total_objects
+                            total_objects += 1
+                        
+                        object_idx = objects_dict[object_label]
 
-                    # Get the number of points in the object
-                    with open(os.path.join(path_to_objects, object)) as f:
-                        points_per_object = len(list(f))
-                    
-                    # Save all the traversal info in the summary file:
-                    # (Area, space, space_label, space ID, object, 
-                    # points per object, object label, object ID, health status)
-                    summary_line.append((area, space, space_label, space_idx, object, 
-                        points_per_object, object_label, object_idx,  "Unknown"))
+                        # Get the number of points in the object
+                        with open(os.path.join(path_to_objects, object)) as f:
+                            points_per_object = len(list(f))
+                        
+                        # Save all the traversal info in the summary file:
+                        # (Area, space, space_label, space ID, object, 
+                        # points per object, object label, object ID, health status)
+                        summary_line.append((area, space, space_label, space_idx, object, 
+                            points_per_object, object_label, object_idx,  "Unknown"))
 
         # Save the data into the CSV summary file
         self.summary_df = pd.DataFrame(summary_line)
@@ -269,7 +271,7 @@ class S3DIS_Summarizer():
         progress_bar = tqdm(unique_area_space_df.iterrows(), total = len(unique_area_space_df))
        
         # Start processing files    
-        print("Checking whether point labeling has to be performed.")
+        print("Creating a single annotated file per room (source file: {})".format(eparams['s3dis_summary_file']))
         print("Start time: ", datetime.datetime.now())
         
         for (idx, row) in progress_bar:         
@@ -310,35 +312,36 @@ class S3DIS_Summarizer():
                     # Get the proper info from each line
                     obj_file = summary_line["Object"]
                     obj_label_id = summary_line["Object ID"]
-
-                    # Update the progress bar message
-                    msg = "Processing file {}_{}: {}/{} ({})".format(area, 
-                                space, idx+1, len(objects_df), obj_file)
-                    progress_bar.set_description(msg)
                     
-                    try:
-                        # Let's try to open the file as a Numpy array   
-                        path_to_obj = os.path.join(path_to_objs, obj_file)
-                        obj_data = np.genfromtxt(path_to_obj, 
-                            delimiter = ' ', 
-                            names = None) 
-
-                        # Create a vector col copying the object_label_id as many
-                        # times as rows in the object data
-                        label_col = np.array([obj_label_id for _ in obj_data])
-
-                        # Stack/concatenate the label to all the points for this object
-                        sem_seg_data = np.column_stack((obj_data, label_col))
+                    if "clutter" not in obj_file:
+                        # Update the progress bar message
+                        msg = "Processing file {}_{}: {}/{} ({})".format(area, 
+                                    space, idx+1, len(objects_df), obj_file)
+                        progress_bar.set_description(msg)
                         
-                        # Save the semantic segmentation file as a Numpy txt file
-                        with open(path_to_sem_seg_file, 'a') as f:
-                            np.savetxt(f, sem_seg_data, fmt ="%4.3f")
-                                                                        
-                    except:    
-                        # Write error on logger
-                        msg = "The following file seems to be corrupted: {} ".format(path_to_obj)
-                        self.logger.writer.add_text("Summarizer/Error", msg)
-        
+                        try:
+                            # Let's try to open the file as a Numpy array   
+                            path_to_obj = os.path.join(path_to_objs, obj_file)
+                            obj_data = np.genfromtxt(path_to_obj, 
+                                delimiter = ' ', 
+                                names = None) 
+
+                            # Create a vector col copying the object_label_id as many
+                            # times as rows in the object data
+                            label_col = np.array([obj_label_id for _ in obj_data])
+
+                            # Stack/concatenate the label to all the points for this object
+                            sem_seg_data = np.column_stack((obj_data, label_col))
+                            
+                            # Save the semantic segmentation file as a Numpy txt file
+                            with open(path_to_sem_seg_file, 'a') as f:
+                                np.savetxt(f, sem_seg_data, fmt ="%4.3f")
+                                                                            
+                        except:    
+                            # Write error on logger
+                            msg = "The following file seems to be corrupted: {} ".format(path_to_obj)
+                            self.logger.writer.add_text("Summarizer/Error", msg)
+            
         progress_bar.close()
         print("End time: ", datetime.datetime.now())       
 
@@ -355,14 +358,12 @@ class S3DIS_Summarizer():
 
     def get_labels(self):
         """
-        Get the labels from the S3DIS dataset folder structure
-
         Create dicts with the different spaces (conf rooms, hall ways,...)
         and objects (table, chairs,...) within an Area 
         
         Output:
-            space_labels: A dict containing {space_0: 0, space_1: 1 ... }
-            object_labels: A dict containing {object_0: 0, object_1:1, ... }
+            - The proper dict, depending on the amount of elements 
+                we're working with (movable, all)
         """
         
         if not os.path.exists(self.path_to_summary_file):
@@ -371,47 +372,25 @@ class S3DIS_Summarizer():
             print(msg.format(eparams['s3dis_summary_file'], self.path_to_data))     
             self.__init__(self.path_to_data, rebuild = True)
         
-        # Define the sets and dicts to be used 
-        spaces_dict = dict()
+        # Define the sets and dicts to be used    
         all_objects_dict = dict()
-        movable_objects_dict = dict()
-        structural_objects_dict = dict()
-
+        objects_dict = dict()
+        
         # Get Object IDs and labels to build a dict
         # {'celing': 0, 'clutter':1,...}
         unique_objects_df = self.summary_df[["Object ID", "Object Label"]].drop_duplicates(ignore_index=True) 
         for row in unique_objects_df.iterrows():
             all_objects_dict[row[1][1]] = row[1][0]
-        
-        # Get Space IDs and labels to build a dict
-        # {'WC': 0, 'conferenceRoom':1,...}
-        # Created for convenience, but not used
-        unique_spaces_df = self.summary_df[["Space ID", "Space Label"]].drop_duplicates(ignore_index=True) 
-        for row in unique_spaces_df.iterrows():
-            spaces_dict[row[1][1]] = row[1][0] 
 
         # Create a dict only for movable objects for their values to be
         # in the expected range from the loss function
         idx = 0
         for k in all_objects_dict:
-            if k in movable_objects_set:
-                movable_objects_dict[k] = idx
+            if k in objects_set:
+                objects_dict[k] = idx
                 idx += 1
 
-        # Create a dict only for structural objects for the same reason
-        idx = 0
-        for k in all_objects_dict:
-            if k in structural_objects_set:
-                structural_objects_dict[k] = idx
-                idx += 1
-        
-        # Create a dict of dicts in order to have these mappings in a single place
-        all_dicts = dict(all = all_objects_dict, 
-                        movable = movable_objects_dict, 
-                        structural = structural_objects_dict)
-
-        return all_dicts
-
+        return objects_dict
         
     def get_stats(self):
         """

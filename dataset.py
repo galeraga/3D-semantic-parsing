@@ -120,14 +120,15 @@ class AdaptNumClasses():
             for i in range(len(self.point_labels)):            
                     # Get the textual label of the point from the "old/from" dict
                     textual_label = ''.join([k for k,v in from_dict.items() if v == self.point_labels[i]])
-                    
+                    """
                     # If the object is not defined in the "new/to" dict, flag it as clutter
                     if textual_label not in to_dict.keys():
                         self.point_labels[i] = to_dict["clutter"]
                     
                     # Remap/translate the rest of the objects
                     else:
-                        self.point_labels[i] = to_dict[textual_label]
+                    """
+                    self.point_labels[i] = to_dict[textual_label]
 
          
         return self.point_labels
@@ -275,7 +276,7 @@ class S3DISDataset4ClassificationBase(torch.utils.data.Dataset):
             # structural objects: 8 + clutter
             # all objects: 13 + clutter
             
-            labels = AdaptNumClasses(obj_label_id, self.all_objects_dict).adapt()
+            #labels = AdaptNumClasses(obj_label_id, self.all_objects_dict).adapt()
             labels = torch.tensor(labels, dtype = torch.float)    
 
             return obj, labels
@@ -443,12 +444,7 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
         # Slicing the tensor 
         # [start_row_index:end_row_index, start_column_index:end_column_index]
         if self.subset:
-            # TODO: Correct when tri_points_out is corrected
-            # cols_to_select = [0, 1, 2, 3, 4, 5]
-            sliding_window_points = sliding_window[ :, :6]
-            #cols_to_select = torch.tensor([0, 1, 2, 6, 7])
-            #sliding_window_points = torch.index_select(sliding_window, 1, cols_to_select)
-
+            sliding_window_points = sliding_window[ :, :8]
         else:
             sliding_window_points = sliding_window[ :, :hparams["dimensions_per_object"]]
             sliding_window_points=torch.cat((sliding_window_points,sliding_window[:,6:9]),1)#adds absolute values to points output 
@@ -462,7 +458,7 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
         # movable objects: 5 + clutter
         # structural objects: 8 + clutter
         # all objects: 13 + clutter
-        point_labels = AdaptNumClasses(point_labels, self.all_objects_dict).adapt()
+        # point_labels = AdaptNumClasses(point_labels, self.all_objects_dict).adapt()
 
         return sliding_window_points, point_labels
     
@@ -524,7 +520,7 @@ class S3DISDataset4SegmentationTest(S3DISDataset4SegmentationBase):
 class S3DISDataset4SegmentationVisualization(S3DISDataset4SegmentationBase):
     """
     Augmented S3DISDataset4SegmentationBase class to create the dataset used
-    for test
+    when visualizing (if needed)
     """
     def __init__(self, root_dir, all_objects_dict, subset = None):
         S3DISDataset4SegmentationBase.__init__(self, root_dir, all_objects_dict, subset = subset)

@@ -99,15 +99,11 @@ This is the dataset used in conjunction with the **classification** network of t
 
 #### S3DISDataset4Segmentation
 
-This is the dataset used for **semantic segmentation**. Since semantic segmentation needs every point in the cloud to be labeled, two preprocessing action are implemented to the original dataset:
-- A new file is generated for every space/room with the suitable object labels. To do so, all files located in the `Annotations` folder are concatenated (along with the proper label) to create a single file per space/room with all the object points that belong to this space already labeled. This file is called `space_x_annotated.txt` (e.g., *office_1_annotated.txt*) and contains 7 cols (instead of 6): XYZRGB+*Object ID*. 
-- The input of the model will be batches of room sections or "windows". These will be generated from each of the room files outputted in the previous step using a "sliding window" process, explained later in this file. This process is defined by a set of hyperparamers: window width, depth, height, and overlap of the sliding windows. The model creates a folder named "sliding_windows" and inside it for each set of hyperparameters: 
-    -A new folder is generated that will contain each separate window. This folder is called after the sequential ID of the sliding window: w_X_d_Y_h_Z_o_T with X,Y,Z and T being window width, depth, heigt and overlap respectively.
-    -Inside the previous folder, for each window generated with these hyperparameters, a file is created with all the object points that fall inside such window. The files are called 'Area_N_Space_J_winK.pt', with winK being the sequential ID of the sliding window (e.g., *Area_1_office_3_w_1_d_1_h_3_o_0.pt*). They contain 11 columns: winXwinYwinZ+XYZRGB+*Window ID*+*Object ID*, where winXwinYwinZ are the normalized coordintates of the points inside the window in a new reference system specific for said window
-  
-  
+This is the dataset used for **semantic segmentation**. Since semantic segmentation needs every point in the cloud to be labeled, a new file is generated for every space/room with the suitable object labels. To do so, all files located in the `Annotations` folder are concatenated (along with the proper label) to create a single file per space/room with all the object points that belong to this space already labeled. This file is called `space_x_annotated.txt` (e.g., *office_1_annotated.txt*) and contains 7 cols (instead of 6): XYZRGB+*Object ID*. 
 
-So the S3DISDataset4Segmentation will use the `space_x_annotated.txt` to get both the **input data** and **labels**
+Since every `space_x_annotated.txt` might have millions of points, point clouds for rooms are "sliced" into smaller blocks (called *sliding windows*) to improve model training performance. 
+
+So the S3DISDataset4Segmentation will use the contents of the sliding windows folder to get both the **input data** and **labels**
 
 ### The final folder structure 
 
@@ -122,12 +118,12 @@ Taking into account the previous information, the final folder structure for the
 │   │   │   ├── object_1.txt (the file with the point cloud for object_1 that can be found in Space_X. It contains 6 cols per row: XYZRGB)
 |   |   |   ├── ...
 │   │   │   ├── object_Y.txt (the file with the point cloud for object_Y that can be found in Space_X. It contains 6 cols per row: XYZRGB)
-|   ├──...
-├──w_X_d_Y_h_Z_o_T
-|   ├──Area_1_space_1_w_X_d_Y_h_Z_o_T.py
-|   ├──...
-|   ├──Area_N_space_M_w_X_d_Y_h_Z_o_T.py
-```
+├── sliding_windows (sliced portions of all the the space_x_annotated.txt files)
+│   └── w1_d1_h3_o0 
+├── checkpoints 
+├── runs (for TensorBoard logging)
+└── tnet_outputs (output images of T-Net features)
+```  
 
 ## Pre-processing
 

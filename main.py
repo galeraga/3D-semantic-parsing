@@ -11,7 +11,7 @@ import dataset
 import model    
 from tensorboardlogger import TensorBoardLogger 
 from summarizer import S3DIS_Summarizer
-from visualitzation import tnet_compare, tnet_compare_in_site, infer
+from visualitzation import tnet_compare, tnet_compare_infer,  infer
 
 #------------------------------------------------------------------------------
 # AUX METHODS
@@ -26,6 +26,9 @@ def avoid_MaxPool1d_warning(f):
     def function_with_warnings_removed(*args, **kwargs):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
+            print(80 * "-")
+            print(task.upper()+ "ING")
+            print(80 * "-")
             print("Start time: ", datetime.datetime.now())
             f(*args, **kwargs)
             print("End time: ", datetime.datetime.now())
@@ -38,7 +41,7 @@ def task_welcome_msg(task = None):
     """
 
     msg = "Starting {}-{} with:".format(task, goal)
-    msg += "\n- {} classes ({})".format(hparams['num_classes'], all_dicts[''.join(args.objects)])
+    msg += "\n- {} classes ({})".format(hparams['num_classes'], objects_dict)
     
     if "classification" in args.goal:
         msg += "\n- {} points per object ".format(hparams['num_points_per_object'])
@@ -271,6 +274,10 @@ def train_classification(model, dataloaders):
         logger.writer.add_scalar(goal.capitalize() + " Time/Training", total_train_time[-1], epoch)
         logger.writer.add_scalar(goal.capitalize() + " Time/Validation", total_val_time[-1], epoch)
     
+    print("Mean accuracy: Training: {:.4f} | Validation: {:.4f} ".format(
+            sum(train_acc)/len(train_acc),
+            sum(val_acc)/len(val_acc),
+            ))
     print("Total time (seconds) for {}ing {}: {} secs ".format( 
                     task,
                     goal,
@@ -381,20 +388,7 @@ def train_segmentation(model, dataloaders):
         for data in tqdm(train_dataloader, desc = tqdm_desc):
             model = model.train()
             
-            # TODO: Insert Clara's code here
-            # split_the_room_into_blocks(data) -> list_of_blocks
-            # for each block in list_of_block:
-            #   points, targets = block
-            #   points = points.to(device)
-            #   targets = targets.to(device)
-            #   optimizer.zero_grad()
-            #   model(block)
-            #   Move the rest of the code (accuracy, etc) within the for loop
-            
             points, targets = data  
-            
-            points[:,:,:hparams["dimensions_per_object"]] # CLARA
-            
             points = points.to(device)
             targets = targets.to(device)
 
@@ -418,8 +412,6 @@ def train_segmentation(model, dataloaders):
             regularization_loss = torch.norm(
                 identity - torch.bmm(feature_transform, feature_transform.transpose(2, 1)))
             
-            # TODO: loss has to be defined for semantic segmentation   
-            # TODO: Is needed the same regularization loss that classification??
             # Loss: The negative log likelihood loss 
             # It is useful to train a classification problem with C classes.
             # torch.nn.functional.nll_loss(input, target, ...) 
@@ -527,7 +519,11 @@ def train_segmentation(model, dataloaders):
         logger.writer.add_scalar(goal.capitalize() + " Accuracy/Validation", val_acc[-1], epoch)
         logger.writer.add_scalar(goal.capitalize() + " Time/Training", total_train_time[-1], epoch)
         logger.writer.add_scalar(goal.capitalize() + " Time/Validation", total_val_time[-1], epoch)
-        
+    
+    print("Mean accuracy: Training: {:.4f} | Validation: {:.4f} ".format(
+            sum(train_acc)/len(train_acc),
+            sum(val_acc)/len(val_acc),
+            ))
     print("Total time (seconds) for {}ing {}: {} secs ".format( 
                 task,
                 goal,
@@ -593,65 +589,55 @@ def test_segmentation(model, dataloaders):
         
         logger.writer.add_scalar(goal.capitalize() + " Accuracy/Test", accuracy, batch_idx)
     
-    mean_accuracy = (torch.FloatTensor(accuracies).sum()/len(accuracies))
-    print("Average accuracy: {:.2f} ".format(float(mean_accuracy)))
+    mean_accuracy = (torch.FloatTensor(accuracies).sum()/len(accuracies))*100
+    print(80 * "-")
+    print("Average accuracy: {:.2f}%".format(float(mean_accuracy)))
+    print(80 * "-")
 
 
 @avoid_MaxPool1d_warning
-@torch.no_grad()
-def visualize_segmentation(model, dataloaders):
+@torch.no_grad()    
+def watch_segmentation(model, dataloaders):
     """
-    Visualize how PointNet segments objects in a single room
+    Visualize how PointNet segments objects in a single room.
 
-    Select randomly a whole room to test
-    
+    All the points of a single room are taken for visualization in order to have
+    a visually smooth representation of the room.
+
+    Since all the points of the rooms are going to be taken, no dataloaders can 
+    be used since dataloaders return an smaller amount of points per room/sliding 
+    window due to their sampling process.
+
+    At least, two ways can be folloed to achieve this goal:
+    1.- Read directly the annotated file (e.g., Area_6_office_33_annotated.txt)
+    2.- Read from sliding windows (e.g., Area_6_office_33_win14.pt)
+
+    The latter option is prefered in order to have the ability to also display 
+    per sliding window information, if desired.
+
+    Workflow overview:
     1.- Pick randomly one of the available sliding windows
     2.- Get the Area_N Space_X from this randomly selected sliding window
     3.- Get all the sliding windows from Area_N Space_X
-    4.- Create a dataset and dataloader for that room
-    5.- Test it
-    6.- Get the points the model predicted
+    4.- Get object info per sliding window
+
+    Output: 
+    A dict containing:
+    - As keys: The sliding window ID (winID) 
+    - As values: A list of list. Every list with:
+        - object name (chair, table,...)
+        - object_ID (from the proper dict)
+        - amount of annotated points this object has in this room (as a tensor)
+        - amount of predicted points for this object in this room (as a tensor)
+        - the actual predicted points, in relative coordinates (as a tensor)
+        - the actual predicted points, in absolute coordinates (as a tensor)
     """
+    
+    print("Visualizing data segmentation")
+    
     # Enter evaluation mode
     model.eval()
 
-    # Select a random sliding window from an office room 
-    # (e.g, 'Area_6_office_33_win14.pt')
-    picked_sliding_window = random.choice([i for i in test_ds.sliding_windows if "office" in i])
-    area_and_office ='_'.join(picked_sliding_window.split('_')[0:4])
-
-    # Get all the sliding windows related to the picked one
-    # to have a single room
-    # (e.g. 'Area_6_office_33_win0.pt', 'Area_6_office_33_win1.pt',...)
-    all_sliding_windows_for_a_room = [i for i in test_ds.sliding_windows if area_and_office in i] 
-    
-    # Create a custom dataset and dataloader to visualize this room
-    visualization_dataset = dataset.S3DISDataset4SegmentationVisualization(
-                                eparams['pc_data_path'], 
-                                all_dicts, 
-                                subset = all_sliding_windows_for_a_room
-                                )
-    
-    print(visualization_dataset)
-    
-    visualization_dataloader = torch.utils.data.DataLoader(
-                                visualization_dataset, 
-                                batch_size = hparams['batch_size'], 
-                                shuffle = True,
-                                num_workers = hparams["num_workers"]
-                                )
-
-    # segmentation_target_object is defined in settings.py
-    # Get the ID from the proper dic (either "all", "movable" or "structural")
-    # From the summary file, these are the available dicts:
-    # 'all': {'ceiling': 0, 'clutter': 1, 'door': 2, 'floor': 3, 'wall': 4, 'beam': 5, 'board': 6, 'bookcase': 7, 'chair': 8, 'table': 9, 'column': 10, 'sofa': 11, 'window': 12, 'stairs': 13}, 
-    # 'movable': {'clutter': 0, 'board': 1, 'bookcase': 2, 'chair': 3, 'table': 4, 'sofa': 5}, 
-    # 'structural': {'ceiling': 0, 'clutter': 1, 'door': 2, 'floor': 3, 'wall': 4, 'beam': 5, 'column': 6, 'window': 7, 'stairs': 8}}
-    segmentation_target_object_id = all_dicts[''.join(args.objects)][segmentation_target_object]
-
-    # Aux test vars
-    accuracies = []
-    
     # Path to the checkpoint file
     model_checkpoint = os.path.join(
             eparams['pc_data_path'], 
@@ -670,65 +656,142 @@ def visualize_segmentation(model, dataloaders):
                 model_checkpoint, 
                 map_location = torch.device(hparams["device"]))
     model.load_state_dict(state['model'])  
+  
+    # Select the object to detect
+    # segmentation_target_object is defined in settings.py
+    # Get the ID from the proper dic (either "all", "movable" or "structural")
+    # From the summary file, these are the available dicts:
+    # 'all': {'ceiling': 0, 'clutter': 1, 'door': 2, 'floor': 3, 'wall': 4, 'beam': 5, 'board': 6, 'bookcase': 7, 'chair': 8, 'table': 9, 'column': 10, 'sofa': 11, 'window': 12, 'stairs': 13}, 
+    # 'movable': {'clutter': 0, 'board': 1, 'bookcase': 2, 'chair': 3, 'table': 4, 'sofa': 5}, 
+    # 'structural': {'ceiling': 0, 'clutter': 1, 'door': 2, 'floor': 3, 'wall': 4, 'beam': 5, 'column': 6, 'window': 7, 'stairs': 8}}
+    dict_to_use = objects_dict
 
-    # Testing the model with a single room for visualization
-    print("Testing data segmenation over a single room for data visualization")
-    for batch_idx, data in enumerate(tqdm(visualization_dataloader)):
+    # Select a random sliding window from an office room 
+    # (e.g, 'Area_6_office_33_win14.pt')
+    picked_sliding_window = random.choice([i for i in test_ds.sliding_windows if "office" in i])
+    area_and_office ='_'.join(picked_sliding_window.split('_')[0:4])
+    print("Randomly selected office to plot: ", area_and_office)
+    
+    # Get all the sliding windows related to the picked one
+    # to have a single room
+    # (e.g. 'Area_6_office_33_win0.pt', 'Area_6_office_33_win1.pt',...)
+    all_sliding_windows_for_a_room = sorted([i for i in test_ds.sliding_windows if area_and_office in i]) 
+    
+    # Load the tensors from the files
+    room_tensors = []
+    for f in all_sliding_windows_for_a_room:
+        # Get the name of the WinID. We'll be used didct keys
+        winID = f.split('_')[-1].split('.')[0]    
         
-        points, target_labels = data
+        path_to_sliding_window_file = os.path.join(
+                path_to_current_sliding_windows_folder, 
+                f)
+        room_tensors.append(
+            (torch.load(path_to_sliding_window_file, map_location = torch.device(hparams["device"])),
+            winID
+            ))
 
-        
-        
-        # When visualizing, the dataset returns 8 cols
-        # to be able to map relative positions to absolute positions
-        # (x_rel y_rel z_rel r g b x_abs y_abs z_abs)        
-                
-        points_rel = points[:, :, :hparams["dimensions_per_object"]].to(device)
-        points_abs = points[:, :, -3:].to(device) #CLARAare these really the abs points? aren't those just the values of the color since points is size 3 or 6?
-        target_labels = target_labels.to(device)
+    # Define the process bar to display when processing files
+    progress_bar = tqdm(room_tensors, total = len(room_tensors))
+       
+    # data = torch.cat(room_tensors, dim = 0)
+    # Define the output dict containing the points to display per WinID
+    out_dict = dict()
 
+    for (data, win_id) in progress_bar:
+
+        msg = "{} - Splitting points".format(win_id)    
+        progress_bar.set_description(msg)
+
+        # The amount of cols to return per room will depend on whether or not
+        # color must be taken into account when data is fed into the model
+        # room -> [x_rel y_rel z_rel r g b x_abs y_abs x_abs winID label] (11 cols)
+        points_rel = data[:, :hparams["dimensions_per_object"]].to(device)
+        points_color = data[:, 3:6].to(device)
+        points_abs = data[:, -3:].to(device)
+        target_labels = data[:, -1].to(device)
+
+        # Translate labels to the proper dict!
+       # msg = "{} - Translating labels (with {} points)".format(win_id, len(target_labels))    
+       # progress_bar.set_description(msg)
+       # target_labels = dataset.AdaptNumClasses(target_labels, all_dicts).adapt()
+       
+        # From all the points in the room, find out how many of them belong to 
+        # the different objects
+        # We're going to get per object info (a list of lists) containing:
+        # - object, 
+        # - object_ID, 
+        # - amount of annotated points this object has in this room (as a tensor)
+        # - amount of predicted points for this object in this room (as a tensor) (initialized to zero)]
+        # - predicted points, in relative coordinates (as a tensor)
+        # - predicted points, in absolute coordinates (as a tensor)
+        point_breakdown = []
+        for k,v in dict_to_use.items():
+            point_breakdown.append([k, v, target_labels.eq(v).cpu().sum(), torch.tensor([0]), None, None])        
+        
+        # Work with points_rel (instead of points_abs)
+        # Unsquezze the data tensor to give it the depth of batch_size = 1,
+        # since we're going to process a single room only
+        points = points_rel.unsqueeze(dim = 0)
+        
+        # Test the model
         # Model input: points.shape([batch_size, room_points, dimensons_per_point)]
         # Model output: preds.shape([batch_size, num_classes, room_points])
-        preds, feature_transform, tnet_out, ix = model(points_rel)
-        
-        # Output: preds.shape([batch_size, room_points])
+        msg = "{} - Feeding the model (with {} points)".format(win_id, len(points_rel))    
+        progress_bar.set_description(msg)
+        preds, feature_transform, tnet_out, ix = model(points)
+
+        # Output after argmax: preds.shape([batch_size, room_points])
         preds = preds.data.max(1)[1]
 
-        # Get the indices of preds that match the object_id--> CLARA we don't have that in the real model
-        # From preds after argmax, get the indexes in dim = 1 that match
-        # the object class (segmentation_target_object_id) we want to display
-        # These indexes in dim = 1 in preds (after argmax) should be a mapping 
-        # of the the indexes in dim = 1 in points
-        # Tricky method:
-        # - torch.where() returns 1. where condition is met, 0. elsewhere 
-        # - torch.nonzero() returns a tensor containing the indices of all non-zero elements of ones_mask
-        # - torch.index_select() returns a new tensor which indexes the input tensor along 
-        #   dimension dim using the entries in indices
-        ones_mask = torch.where(preds == segmentation_target_object_id, 1., 0.).squeeze(dim = 0)
-        #indices = torch.nonzero(ones_mask).squeeze(dim = 1)
-        indices = torch.nonzero(ones_mask).flatten()
-        # points = points.squeeze(dim = 0)
-        points_to_display = torch.index_select(points_abs, 0, indices)
+        msg = "{} - Saving predictions".format(win_id)    
+        progress_bar.set_description(msg)
 
-        # TODO: Insert call to Lluis'code here
-        
-        # Calculate the usual stuff
-        corrects = preds.eq(target_labels.data).cpu().sum()
-        accuracy = corrects.item() / preds.numel()
-        accuracies.append(accuracy)
-        
-        # Save info into Tensorboard
-        logger.writer.add_scalar(goal.capitalize() + " Accuracy/Test", accuracy, batch_idx)
-        
+        # Save predictions per object
+        for i in point_breakdown:
+            # Select the object_id of the element to check accuraracy
+            id = i[1]
 
-    mean_accuracy = (torch.FloatTensor(accuracies).sum()/len(accuracies))
-    print("Average accuracy: {:.2f} ".format(float(mean_accuracy)))
+            # Save predictions for that object
+            preds = torch.squeeze(preds, dim = 0)
+            i[3] = preds.eq(id).cpu().sum()
 
- 
-    # TODO: Insert Lluis' code here for visualization
-    # points is the whole room points
-    # lluis_code(data, segmentation_target_object_id, points_to_display) 
+            # Get the points identified as target objects    
+            # Get the indices of preds that match the object_id
+            # From preds after argmax, get the indexes in dim = 1 that match
+            # the object class (segmentation_target_object_id) we want to display
+            # These indexes in dim = 1 in preds (after argmax) should be a mapping 
+            # of the the indexes in dim = 1 in points
+            # Tricky method:
+            # - torch.where() returns 1. where condition is met, 0. elsewhere 
+            # - torch.nonzero() returns a tensor containing the indices of all non-zero elements of ones_mask
+            # - torch.index_select() returns a new tensor which indexes the input tensor along 
+            #   dimension dim using the entries in indices
+            ones_mask = torch.where(preds == id, 1., 0.).squeeze(dim = 0)
+            indices = torch.nonzero(ones_mask).squeeze(dim = 1)
+            # points = points.squeeze(dim = 0)
+
+            # Save the points to display
+            # Points to display (relative coordinates)
+            i[4] = torch.index_select(points_rel, 0, indices)
+            # Points to display (absolute coordinates)
+            i[5] =  torch.index_select(points_abs, 0, indices)
     
+    
+        # Save the results in a dict
+        out_dict[win_id] = point_breakdown
+      
+    # TODO: Remove (only for intermediate checking)       
+    for k, v in out_dict.items():
+        print("WinID: ", k)
+        print("values: \n")
+        for i in v:
+            print(i)
+    
+    # TODO: Insert Lluis' code here for visualization
+    # out_dict contains all the points detected for all objects
+    # lluis_code(data, segmentation_target_object_id, points_to_display) 
+
 
 #------------------------------------------------------------------------------
 # MAIN
@@ -751,11 +814,8 @@ if __name__ == "__main__":
     # Create the ground truth file for classification
     summary_file = S3DIS_Summarizer(eparams["pc_data_path"], logger)
 
-    # Get the dicts we'll use to translate:
-    #  - from all the objects ID we have in the summary file [0-13]
-    #  - to a subset of object IDs: movable [0-5], structural [0-8]
-    # when not working with all the num_classes
-    all_dicts = summary_file.get_labels()
+    # Get the dicts:
+    objects_dict = summary_file.get_labels()
 
     # Create the ground truth files for semantic segmentation
     if "segmentation" in args.goal:
@@ -789,9 +849,9 @@ if __name__ == "__main__":
     val_ds_to_call = "S3DISDataset4" + goal.capitalize()  + "Val"
     test_ds_to_call = "S3DISDataset4" + goal.capitalize()  + "Test"
     
-    train_ds = getattr(dataset, train_ds_to_call)(eparams['pc_data_path'], all_dicts, transform = None)
-    val_ds = getattr(dataset, val_ds_to_call)(eparams['pc_data_path'], all_dicts, transform = None)
-    test_ds = getattr(dataset, test_ds_to_call)(eparams['pc_data_path'], all_dicts, transform = None)
+    train_ds = getattr(dataset, train_ds_to_call)(eparams['pc_data_path'], objects_dict, transform = None)
+    val_ds = getattr(dataset, val_ds_to_call)(eparams['pc_data_path'], objects_dict, transform = None)
+    test_ds = getattr(dataset, test_ds_to_call)(eparams['pc_data_path'], objects_dict, transform = None)
     
     ds = train_ds, val_ds, test_ds    
     
@@ -814,14 +874,28 @@ if __name__ == "__main__":
     # summary(model, input_size=(hparams['batch_size'], hparams['max_points_per_space'], hparams['dimensions_per_object']))
 
     # Carry out the the task to do
-    # (e.g, train_classification(), test_segmentation())
+    # (e.g, train_classification(), test_segmentation(), watch_segmentation())
+    
     locals()[task + "_" + goal](model, dataloaders)
     
-    if goal == "segmentation":
-        # Let's visualize how segmentation works
-        visualize_segmentation(model, dataloaders)
-
     # Close TensorBoard logger and send runs to TensorBoard.dev
+    #logger.finish()
+
+    # tnet_compare example here -----------------------
+    # Extracting tnet_out and preds:
+    sample = (ds[0])[0]
+    preds,tnet_out = infer(model, sample[0])
+    #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample, preds, tnet_out), global_step=None, close=True, walltime=None)
+    # Using the _infer version that extracts the variables by itself:
+    logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample[0]), global_step=None, close=True, walltime=None)
+    # ---------------------------------------------------
+
+    # We need to close the writer and the logger:
+    logger.writer.flush()
+    logger.writer.close()
     logger.finish()
-    #tnet_compare(model, ds)
+
+
+
+
 

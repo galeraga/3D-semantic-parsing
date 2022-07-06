@@ -135,9 +135,6 @@ def tnet_compare_infer(model, sample, save=False):
     # plot input sample
     #pc = sample[0].numpy()
     pc = sample.numpy()
-    print('Forma sample', sample)
-    print('Printing pc shape:')
-    print(pc.shape)
     label = sample[1]
     sc = ax.scatter(pc[:,0], pc[:,1], pc[:,2], c=pc[:,0] ,s=50, marker='o', cmap="viridis", alpha=0.7)
     ax.set_xlabel('x')

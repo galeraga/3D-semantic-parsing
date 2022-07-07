@@ -186,6 +186,7 @@ def train_classification(model, dataloaders):
             
             epoch_train_loss.append(loss.cpu().item())
         
+            loss.requires_grad=True #WHAT?
             loss.backward()
             optimizer.step()
             
@@ -248,7 +249,7 @@ def train_classification(model, dataloaders):
                     )
                 )
 
-        if np.mean(val_loss) < best_loss:
+        if np.mean(val_loss) < best_loss: #needs at least to epochs
             state = {
                 'model': model.state_dict(),
                 'optimizer': optimizer.state_dict()
@@ -429,7 +430,8 @@ def train_segmentation(model, dataloaders):
 
             # epoch_train_loss.append(loss.cpu().item())
             epoch_train_loss.append(loss.cpu().item())
-        
+
+            loss.requires_grad=True #again, WHY?
             loss.backward()
             
             optimizer.step()
@@ -639,10 +641,10 @@ def watch_segmentation(model, dataloaders):
     # If the checkpoint does not exist, train the model
     if not os.path.exists(model_checkpoint):
         print("The model does not seem already trained! Starting the training rigth now from scratch...")
-        train_classification(model, dataloaders)
+        train_segmentation(model, dataloaders) #model should is classification but should be segmentation. It's not saving checkpoint
     
     # Loading the existing checkpoint
-    print("Loading checkpoint {} ...".format(model_checkpoint))
+    print("Loading checkpoint {} ...".format(model_checkpoint)) 
     state = torch.load(
                 model_checkpoint, 
                 map_location = torch.device(hparams["device"]))
@@ -662,6 +664,7 @@ def watch_segmentation(model, dataloaders):
     picked_sliding_window = random.choice([i for i in test_ds.sliding_windows if "office" in i])
     area_and_office ='_'.join(picked_sliding_window.split('_')[0:4])
     print("Randomly selected office to plot: ", area_and_office)
+
     
     # Get all the sliding windows related to the picked one
     # to have a single room
@@ -737,7 +740,7 @@ def watch_segmentation(model, dataloaders):
 
         msg = "{} - Saving predictions".format(win_id)    
         progress_bar.set_description(msg)
-
+        matrix_fin=np.empty([0,4])
         # Save predictions per object
         for i in point_breakdown:
             # Select the object_id of the element to check accuraracy
@@ -767,8 +770,20 @@ def watch_segmentation(model, dataloaders):
             i[4] = torch.index_select(points_rel, 0, indices)
             # Points to display (absolute coordinates)
             i[5] =  torch.index_select(points_abs, 0, indices)
+            if (i[5]!=[]):
+                matrix_aux=torch.cat([i[5],torch.full([i[5].shape[0], 1],i[1])], dim=1) 
+                matnum=matrix_aux.numpy()
+                for row in matnum:
+                    a=np.where(np.all((row[:-1]==matrix_fin[:,:-1]),axis=1))# finds if that point is already in the final matrix (no-mater the label)
+                    for item in a: #if it is in the matrix only overwrites it if it's labelled as clutter. else it just leaves it as is
+                        if matnum[item,-1]!=5:
+                            matrix_fin[item,:]=row
+                    else:
+                        matrix_fin=np.append(matrix_fin,row.reshape(1, 4), axis=0)
+                        
+
     
-    
+
         # Save the results in a dict
         out_dict[win_id] = point_breakdown
       
@@ -782,6 +797,9 @@ def watch_segmentation(model, dataloaders):
     # TODO: Insert Lluis' code here for visualization
     # out_dict contains all the points detected for all objects
     # lluis_code(data, segmentation_target_object_id, points_to_display) 
+
+def select_duplicates(dup_m):
+    df=pd.DataFrame(dup_m.numpy())
 
 
 #------------------------------------------------------------------------------

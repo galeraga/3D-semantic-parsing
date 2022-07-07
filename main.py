@@ -377,12 +377,19 @@ def train_segmentation(model, dataloaders):
     total_train_time = []
     total_val_time = []
 
+    # Per object accuracy
+    per_object_accuracy = dict()
+    
     optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
 
     for epoch in range(1, hparams['epochs'] +1):
         epoch_train_loss = []
         epoch_train_acc = []
         epoch_train_start_time = datetime.datetime.now()
+
+        for k,v in objects_dict.items():
+            per_object_accuracy[k] = []
+            
 
         tqdm_desc = "{}ing epoch ({}/{})".format(task.capitalize(), epoch, hparams['epochs'])
         # training loop
@@ -392,7 +399,7 @@ def train_segmentation(model, dataloaders):
             points, targets = data  
             points = points.to(device)
             targets = targets.to(device)
-
+            
             optimizer.zero_grad()
             
             preds, feature_transform, tnet_out, ix_maxpool = model(points)
@@ -445,8 +452,14 @@ def train_segmentation(model, dataloaders):
             corrects = preds.eq(targets.data).cpu().sum()
             accuracy = corrects.item() / preds.numel()
             epoch_train_acc.append(accuracy)
-            
 
+            for k,v in objects_dict.items():
+                # From the label tensor, get only the ones of that object
+                annotated_labels_per_object = targets.eq(v).cpu().sum()
+                predicted_labels_per_object = preds.eq(v).cpu().sum()
+                per_object_accuracy[k].append((annotated_labels_per_object, predicted_labels_per_object))
+            
+            
         epoch_train_end_time = datetime.datetime.now()
         train_time_per_epoch = (epoch_train_end_time - epoch_train_start_time).seconds
         total_train_time.append(train_time_per_epoch)
@@ -488,6 +501,18 @@ def train_segmentation(model, dataloaders):
                 train_time_per_epoch + val_time_per_epoch
                 )
             )
+
+        msg = 'Per object points (Annotated | Predicted): '
+        for k,v in per_object_accuracy.items():
+            total_annotated = sum(a.item() for a,p in v)
+            total_predicted = sum(p.item() for a,p in v)
+            msg += "{}: ({}|{})  ".format(k, total_annotated, total_predicted)
+            
+            tb_desc = goal.capitalize() + " Accuracy Per Object " + "(" + task + ")/" + k
+            logger.writer.add_scalars(tb_desc, 
+                    {"Annotated": total_annotated, 
+                    "Predicted": total_predicted}, 
+                    epoch)     
 
         if np.mean(val_loss) < best_loss:
             state = {
@@ -664,7 +689,8 @@ def watch_segmentation(model, dataloaders):
     picked_sliding_window = random.choice([i for i in test_ds.sliding_windows if "office" in i])
     area_and_office ='_'.join(picked_sliding_window.split('_')[0:4])
     print("Randomly selected office to plot: ", area_and_office)
-
+    # To avoid getting office11, office12, when the randomly selectd office is office_1 
+    area_and_office += "_"
     
     # Get all the sliding windows related to the picked one
     # to have a single room
@@ -838,11 +864,12 @@ if __name__ == "__main__":
     logger.log_hparams(hparams)
     
     # Define the checkpoint name
-    eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_{}_points_{}_dims_{}_num_classes.pth".format(
+    eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_{}_points_{}_dims_{}_num_classes_{}_epochs.pth".format(
                                             goal,
                                             hparams["num_points_per_object"] if goal == "classification" else hparams["num_points_per_room"],
                                             hparams["dimensions_per_object"],
                                             hparams["num_classes"],
+                                            hparams["epochs"],
                                             )
     
     # Dataset instance creation (goal-dependent) 
@@ -894,9 +921,9 @@ if __name__ == "__main__":
     # Extracting tnet_out and preds:
     sample = (ds[0])[0]
     preds,tnet_out = infer(model, sample[0])
-    #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample, preds, tnet_out), global_step=None, close=True, walltime=None)
+    logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample[0], preds, tnet_out), global_step=None, close=True, walltime=None)
     # Using the _infer version that extracts the variables by itself:
-    logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample[0]), global_step=None, close=True, walltime=None)
+    #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample[0]), global_step=None, close=True, walltime=None)
     # ---------------------------------------------------
 
     # We need to close the writer and the logger:

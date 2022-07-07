@@ -93,14 +93,14 @@ def tnet_compare(sample, preds, tnet_out, save=False):
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     ax.set_zlim3d(-1, 1)
-    ax.title.set_text(f'Input point cloud - Target: {label}')
+    ax.title.set_text(f'Input point cloud')
 
     # plot transformation
     ax = fig.add_subplot(1, 2, 2, projection='3d')
     # preds, tnet_out = infer(model,sample) de moment no necessitem aquesta linea.
     points=tnet_out
     sc = ax.scatter(points[0,0,:], points[0,1,:], points[0,2,:], c=points[0,0,:] ,s=50, marker='o', cmap="viridis", alpha=0.7)
-    ax.title.set_text(f'Output of "Input Transform" Detected: {preds}')
+    ax.title.set_text(f'Point cloud in our canonical form')
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     if save == True:
@@ -135,9 +135,6 @@ def tnet_compare_infer(model, sample, save=False):
     # plot input sample
     #pc = sample[0].numpy()
     pc = sample.numpy()
-    print('Forma sample', sample)
-    print('Printing pc shape:')
-    print(pc.shape)
     label = sample[1]
     sc = ax.scatter(pc[:,0], pc[:,1], pc[:,2], c=pc[:,0] ,s=50, marker='o', cmap="viridis", alpha=0.7)
     ax.set_xlabel('x')

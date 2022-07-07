@@ -193,7 +193,7 @@ args = parser.parse_args()
 # getting the most of the model is NOT the goal
 if "toy" in args.load:
     hparams["num_points_per_object"] = 10
-    hparams["num_points_per_room"] = 100  #100 originally
+    hparams["num_points_per_room"] = 1024  #100 originally
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 3 #3 originally
     
@@ -257,5 +257,9 @@ path_to_current_sliding_windows_folder = os.path.join(
 if not os.path.exists(path_to_current_sliding_windows_folder):
     os.makedirs(path_to_current_sliding_windows_folder)
 
+#------------------------------------------------------------------------------
+# VISUALZIATION SETTINGS    
+#------------------------------------------------------------------------------
 
-
+# Rooms with more bookcases and boards (chairs-tables seem to be detected easily)
+target_room_for_visualization = "Area_6_office_10"

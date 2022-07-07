@@ -61,7 +61,7 @@ segmentation_target_object = "table"
 #------------------------------------------------------------------------------
 # Environment (file system and so on) params
 eparams = {
-    'pc_data_path': "C:/Users/marcc/OneDrive/Escritorio/PROJECTE/S3DIS_ANTIC/Stanford3dDataset_v1.2_Aligned_Version",
+    'pc_data_path': r"C:\Users\oliverc\Documents\PG\datasets\Stanford3dDataset_v1.2",
     'pc_file_extension': ".txt",
     'pc_file_extension_rgb_norm': "_rgb_norm.txt",
     #'pc_file_extension_sem_seg_suffix': "_annotated",
@@ -203,7 +203,7 @@ if "low" in args.load:
     hparams["num_points_per_object"] = 512
     hparams["num_points_per_room"] = 512
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 2
+    hparams["epochs"] = 3
    
 if "medium" in args.load:
     hparams["num_points_per_object"] = 1024

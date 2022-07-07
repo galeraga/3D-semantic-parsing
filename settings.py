@@ -156,7 +156,7 @@ parser.add_argument("--task",
                     type = str,
                     action = "store",
                     nargs = 1,
-                    default = "train",
+                    default = "watch",
                     choices = ["train", "test", "watch"],
                     help = "Either train or test")
 
@@ -200,10 +200,10 @@ if "toy" in args.load:
     
 
 if "low" in args.load:
-    hparams["num_points_per_object"] = 100
-    hparams["num_points_per_room"] = 128
+    hparams["num_points_per_object"] = 512
+    hparams["num_points_per_room"] = 512
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 1
+    hparams["epochs"] = 2
    
 if "medium" in args.load:
     hparams["num_points_per_object"] = 1024

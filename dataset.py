@@ -276,7 +276,7 @@ class S3DISDataset4ClassificationBase(torch.utils.data.Dataset):
             # all objects: 13 + clutter
             
             #labels = AdaptNumClasses(obj_label_id, self.all_objects_dict).adapt()
-            labels = torch.tensor(labels, dtype = torch.float)    
+            labels = torch.tensor(obj_label_id , dtype = torch.float)    
 
             return obj, labels
     

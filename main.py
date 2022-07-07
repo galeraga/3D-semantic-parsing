@@ -457,7 +457,6 @@ def train_segmentation(model, dataloaders):
                 predicted_labels_per_object = preds.eq(v).cpu().sum()
                 per_object_accuracy[k].append((annotated_labels_per_object, predicted_labels_per_object))
             
-            
         epoch_train_end_time = datetime.datetime.now()
         train_time_per_epoch = (epoch_train_end_time - epoch_train_start_time).seconds
         total_train_time.append(train_time_per_epoch)
@@ -500,18 +499,20 @@ def train_segmentation(model, dataloaders):
                 )
             )
 
-        msg = 'Per object points (Annotated | Predicted): '
+        msg = 'Per object points (Annotated | Predicted): \n'
         for k,v in per_object_accuracy.items():
             total_annotated = sum(a.item() for a,p in v)
             total_predicted = sum(p.item() for a,p in v)
-            msg += "{}: ({}|{})  ".format(k, total_annotated, total_predicted)
+            msg += "- {}: ({}|{}) ({:.2f}%) \n".format(k, total_annotated, 
+                    total_predicted, (total_predicted/total_annotated)*100)
             
             tb_desc = goal.capitalize() + " Accuracy Per Object " + "(" + task + ")/" + k
             logger.writer.add_scalars(tb_desc, 
                     {"Annotated": total_annotated, 
                     "Predicted": total_predicted}, 
                     epoch)     
-
+        print(msg)
+        
         if np.mean(val_loss) < best_loss:
             state = {
                 'model': model.state_dict(),
@@ -613,7 +614,7 @@ def test_segmentation(model, dataloaders):
 
 @avoid_MaxPool1d_warning
 @torch.no_grad()    
-def watch_segmentation(model, dataloaders):
+def watch_segmentation(model, dataloaders, random = False):
     """
     Visualize how PointNet segments objects in a single room.
 
@@ -684,12 +685,16 @@ def watch_segmentation(model, dataloaders):
 
     # Select a random sliding window from an office room 
     # (e.g, 'Area_6_office_33_win14.pt')
-    picked_sliding_window = random.choice([i for i in test_ds.sliding_windows if "office" in i])
-    area_and_office ='_'.join(picked_sliding_window.split('_')[0:4])
+    if random:
+        picked_sliding_window = random.choice([i for i in test_ds.sliding_windows if "office" in i])
+        area_and_office ='_'.join(picked_sliding_window.split('_')[0:4])
+    else:
+        area_and_office = target_room_for_visualization
+    
     print("Randomly selected office to plot: ", area_and_office)
     # To avoid getting office11, office12, when the randomly selectd office is office_1 
     area_and_office += "_"
-    
+
     # Get all the sliding windows related to the picked one
     # to have a single room
     # (e.g. 'Area_6_office_33_win0.pt', 'Area_6_office_33_win1.pt',...)
@@ -799,12 +804,49 @@ def watch_segmentation(model, dataloaders):
         # Save the results in a dict
         out_dict[win_id] = point_breakdown
       
-    # TODO: Remove (only for intermediate checking)       
+    # Confussion Matrix (nested dict)
+    # True positives (tp)
+    # False positives (fp)
+    # True negatives (tn)
+    # False negatives (fn)
+    available_values = ("tp", "fp", "tn", "fn")
+    confussion_matrix_dict = dict()
+
+    for k in objects_dict:
+        confussion_matrix_dict[k] = {}
+        for i in available_values:
+            confussion_matrix_dict[k][i] = []
+
+       
     for k, v in out_dict.items():
+        print(80 * "-")
         print("WinID: ", k)
-        print("values: \n")
         for i in v:
-            print(i)
+            print(i)            
+            # Analyze results
+            # The difference between predicted and annotated points
+            delta_points = i[3] - i[2]
+            # True Positives
+            if (i[2].item() != 0) and (i[3].item() != 0):
+                confussion_matrix_dict[i[0]]["tp"].append(delta_points)
+            # True Negatives
+            elif (i[2].item() == 0) and (i[3].item() == 0):
+                confussion_matrix_dict[i[0]]["tn"].append(delta_points)
+            # False Positives
+            elif (i[2].item() == 0) and (i[3].item() != 0):
+                confussion_matrix_dict[i[0]]["fp"].append(delta_points)
+            # False Negatives
+            elif (i[2].item() != 0) and (i[3].item() == 0):
+                confussion_matrix_dict[i[0]]["fn"].append(delta_points)
+
+    print(80 * "-")
+    print("Values for confussion matrix for {}".format(model_checkpoint))
+    for k,v in confussion_matrix_dict.items():
+        print("{}: ".format(k))
+        for par, val in v.items():
+            print("\t{}: {}".format(par, sum(val)))
+    
+                
     
     # TODO: Insert Lluis' code here for visualization
     # out_dict contains all the points detected for all objects

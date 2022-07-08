@@ -195,119 +195,6 @@ def fig2img ( fig ):
     return Image.fromstring( "RGBA", ( w ,h ), buf.tostring( ) )
 
 
-"""
-Function to visualize the object segmentation generated both by the model and the ground truth data. 
-The function after the visualization creates a png file for each image generated.
-Arguments:
-    data: Tensor containing ground truth labelled points. 
-          Each point is informed by its xyz location and rgb color data followed by the segmentation label identifier.
-          Has the x y z r g b label or x y z label structure posible.
-    segmentation_target_object_id: Integer, label that identifies the object type that has been segmented
-    points_to_display: Tensor, containing the model segmented labelled points.
-            The tensor has the x y z label structure.
-    gt_label_col: Specifies the number of the column of the data tensor where is the segmentation label.
-    model_label_col: Specifies the number of the column of the points_to_display tensor where is the segmentation label.
-    b_model_without_label_col: bool, specifies if the model tensor 
-    b_multiple_seg: bool, to visualize all segmentations given in the given tensors.
-    draw_original_rgb_data: To render the original rgb color of the data tensor.
-    b_hide_wall: bool, hides the points that corresponds to the wall
-    
-    b_hide_column: bool, hides the points that corresponds to the column
-    b_show_inside_room: bool, to change camera point of view to the inside of the room
-"""
-
-
-def render_segmentation(data, 
-                        segmentation_target_object_id,
-                        points_to_display,
-                        gt_label_col = 3,
-                        model_label_col = 3,
-                        b_model_without_label_col = True,
-                        b_multiple_seg = False,
-                        draw_original_rgb_data = False,
-                        b_hide_wall = False, 
-                        b_hide_column = False,
-                        b_show_inside_room = True):
-
-    # Stablish a maximal number of points to visualize
-    room_points = PointSampler(data, 100000).sample()
-    object_points_model = PointSampler(points_to_display, 50000).sample()
-
-    colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0], [0.5, 0.5, 0], [0.5, 0.5, 0.5], [0.5, 0, 0.5], [0.2, 1, 0], [0.7, 0, 0.7], [0.5, 0.2, 0], [0.2, 8, 0.4], [0.5, 1, 1], [0.5, 0.1, 0.6]]
-    
-    # Now we can save it to a numpy array.
-    data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    return data
-
-def fig2img ( fig ):
-    """
-    @brief Convert a Matplotlib figure to a PIL Image in RGBA format and return it
-    @param fig a matplotlib figure
-    @return a Python Imaging Library ( PIL ) image
-    """
-    # put the figure pixmap into a numpy array
-    buf = fig2data ( fig )
-    w, h, d = buf.shape
-    return Image.fromstring( "RGBA", ( w ,h ), buf.tostring( ) )
-
-
-"""
-Function to visualize the object segmentation generated both by the model and the ground truth data. 
-The function after the visualization creates a png file for each image generated.
-Arguments:
-    data: Tensor containing ground truth labelled points. 
-          Each point is informed by its xyz location and rgb color data followed by the segmentation label identifier.
-          Has the x y z r g b label or x y z label structure posible.
-    segmentation_target_object_id: Integer, label that identifies the object type that has been segmented
-    points_to_display: Tensor, containing the model segmented labelled points.
-            The tensor has the x y z label structure.
-    gt_label_col: Specifies the number of the column of the data tensor where is the segmentation label.
-    model_label_col: Specifies the number of the column of the points_to_display tensor where is the segmentation label.
-    b_model_without_label_col: bool, specifies if the model tensor 
-    b_multiple_seg: bool, to visualize all segmentations given in the given tensors.
-    draw_original_rgb_data: To render the original rgb color of the data tensor.
-    b_hide_wall: bool, hides the points that corresponds to the wall
-    
-    b_hide_column: bool, hides the points that corresponds to the column
-    b_show_inside_room: bool, to change camera point of view to the inside of the room
-"""
-
-
-def render_segmentation(data, 
-                        segmentation_target_object_id,
-                        points_to_display,
-                        gt_label_col = 3,
-                        model_label_col = 3,
-                        b_model_without_label_col = True,
-                        b_multiple_seg = False,
-                        draw_original_rgb_data = False,
-                        b_hide_wall = False, 
-                        b_hide_column = False,
-                        b_show_inside_room = True):
-
-    # Stablish a maximal number of points to visualize
-    room_points = PointSampler(data, 100000).sample()
-    object_points_model = PointSampler(points_to_display, 50000).sample()
-
-    colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0], [0.5, 0.5, 0], [0.5, 0.5, 0.5], [0.5, 0, 0.5], [0.2, 1, 0], [0.7, 0, 0.7], [0.5, 0.2, 0], [0.2, 8, 0.4], [0.5, 1, 1], [0.5, 0.1, 0.6]]
-    
-    # Now we can save it to a numpy array.
-    data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    return data
-
-def fig2img ( fig ):
-    """
-    @brief Convert a Matplotlib figure to a PIL Image in RGBA format and return it
-    @param fig a matplotlib figure
-    @return a Python Imaging Library ( PIL ) image
-    """
-    # put the figure pixmap into a numpy array
-    buf = fig2data ( fig )
-    w, h, d = buf.shape
-    return Image.fromstring( "RGBA", ( w ,h ), buf.tostring( ) )
-
 
 """
 Function to visualize the object segmentation generated both by the model and the ground truth data. 
@@ -345,18 +232,21 @@ Arguments:
 """
 
 # TODO: UPDATE NEW PARAMS EXPLANATION
-def render_segmentation(segmentation_target_object_id = 3,
+
+                        # b_hide_wall = False, 
+                        # b_hide_column = False,
+def render_segmentation(dict_to_use = {},
                         str_area_and_office = "",
                         dict_model_segmented_points = {},
-                        b_multiple_seg = False,
+                        b_multiple_seg = False,                                              
                         draw_original_rgb_data = False,
-                        b_hide_wall = False, 
-                        b_hide_column = False,
-                        b_show_inside_room = True):
+                        b_show_inside_room = True,
+                        b_show_room_points = True):
     
     # Open proper annotated file with the room with GT segmented points 
-    str_area = str_area_and_office.split('_')[0]
-    str_room = str_area_and_office.split('_')[1]
+    a = str_area_and_office.split('_')
+    str_area = a[0] + "_" + a[1]
+    str_room = a[2] + "_" + a[3]
 
     path_to_space = os.path.join(eparams["pc_data_path"], str_area, str_room) #C:\Users\Lluis\Desktop\Projecte2\Stanford3dDataset\Area_1\conferenceRoom_1    
     sem_seg_file = str_room + eparams["pc_file_extension_sem_seg_suffix"] + eparams["pc_file_extension"] #conferenceRoom_1_annotated.txt    
@@ -368,115 +258,145 @@ def render_segmentation(segmentation_target_object_id = 3,
                 delimiter = '', 
                 names = None) 
 
-    # Get the data and labels arrays
-    data_points_with_color = data[ :, :6]
-    data_points = data[ :, :6]
-    point_labels = data[ :, -1]     
+    # Stablish maximal number of points per GT file
+    room_points = PointSampler(data, vparams["num_max_points_from_GT_file"]).sample()
 
-    # get the tensor with all model segmenteded points
-    kk_temp = []
-    for key_sw, value_sw in dict_model_segmented_points.items():
-        kk_temp.append(value_sw[segmentation_target_object_id][-1])
-    points_to_display = torch.cat(kk_temp)
+    # create a dictionary of objects with all points from all sliding window 
+    dict_of_tensors_allpoints_per_object = {}
+    for slid_wind_key, slid_wind_value in dict_model_segmented_points.items():    
+        for object in slid_wind_value:
+            if object[-1].numel() != 0:  #check if tensor has points     
 
-    # Stablish a maximal number of points to visualize
-    #TODO define maximal number of points at settings
-    room_points = PointSampler(data, 50000).sample()
+                #visualization for all objects
+                if b_multiple_seg:                        
+                    if object[0] in dict_of_tensors_allpoints_per_object.keys(): #check if object already in dictionary
+                        dict_of_tensors_allpoints_per_object[object[0]] = \
+                            torch.cat((dict_of_tensors_allpoints_per_object[object[0]], object[-1]), 0)
+                    # first time to store the point tensor
+                    else:
+                        dict_of_tensors_allpoints_per_object[object[0]] = object[-1]                        
 
-    object_points_model = PointSampler(points_to_display, 50000).sample()
+                # Visualization for only one object, only store study object
+                elif object[0] == vparams["str_object_to_visualize"]:
+                    if object[0] in dict_of_tensors_allpoints_per_object.keys(): #check if object already in dictionary
+                        dict_of_tensors_allpoints_per_object[object[0]] = \
+                            torch.cat((dict_of_tensors_allpoints_per_object[object[0]], object[-1]), 0)
+                    # first time to store the point tensor
+                    else:
+                        print('passa per inici')
+                        dict_of_tensors_allpoints_per_object[object[0]] = object[-1]                        
 
-    colors = [[1, 0, 0], [0, 1, 0], [0, 0, 1], [1, 1, 0], [0.5, 0.5, 0], [0.5, 0.5, 0.5], [0.5, 0, 0.5], [0.2, 1, 0], [0.7, 0, 0.7], [0.5, 0.2, 0], [0.2, 8, 0.4], [0.5, 1, 1], [0.5, 0.1, 0.6]]
-    
+    if len(dict_of_tensors_allpoints_per_object.keys()) == 0: 
+        print("------------------------------------------------------------")
+        print("The model has not detected any points for the class " + vparams["str_object_to_visualize"])
+        print("------------------------------------------------------------")
+        return
+
+
+    # reduce number of points per object
+    dict_of_tensors_allpoints_per_object_reduced = {}
+    for k_object, v_object in dict_of_tensors_allpoints_per_object.items():
+        dict_of_tensors_allpoints_per_object_reduced[k_object] = \
+            PointSampler(v_object, vparams["num_max_points_1_object_model"]).sample()    
+
     #--------------
     # GROUND TRUTH
     #--------------
     all_pointcloud_object_gt =  []
-
-    if b_multiple_seg:     
-        for i in range(12+1):
-            points = room_points[(room_points[:, gt_label_col] == i).nonzero().squeeze(1)]
+   
+    for k_object_name, v_object_index in dict_to_use.items():
+        if b_multiple_seg: 
+            # Get the point coordinates that matches with the object name
+            points = room_points[(room_points[:, 6] == v_object_index).nonzero().squeeze(1)]
+            # Create pointcloud and add it to be drawn later
             pc = o3d.geometry.PointCloud()
             pc.points = o3d.utility.Vector3dVector(points[ :, :3]) #get xyz coordinates
-            pc.paint_uniform_color(colors[i])
+            pc.paint_uniform_color(vparams[k_object_name + '_color'])
             all_pointcloud_object_gt.append(pc)
-    else:
-        points = room_points[(room_points[:, gt_label_col] == segmentation_target_object_id).nonzero().squeeze(1)]
-        pc = o3d.geometry.PointCloud()
-        pc.points = o3d.utility.Vector3dVector(points[ :, :3]) #get xyz coordinates
-        pc.paint_uniform_color(colors[segmentation_target_object_id])
-        all_pointcloud_object_gt.append(pc)
+
+        elif k_object_name == vparams["str_object_to_visualize"]:
+            points = room_points[(room_points[:, 6] == v_object_index).nonzero().squeeze(1)]
+            pc = o3d.geometry.PointCloud()
+            pc.points = o3d.utility.Vector3dVector(points[ :, :3]) #get xyz coordinates
+            pc.paint_uniform_color(vparams[k_object_name + '_color'])
+            all_pointcloud_object_gt.append(pc)
 
     #--------------
     # MODEL
     #--------------
     all_pointcloud_object_model =  []
 
-    if b_multiple_seg and not b_model_without_label_col:     
-        for i in range(12+1):
-            pc_model = o3d.geometry.PointCloud()
-            points_model = object_points_model[(object_points_model[:, model_label_col] == i).nonzero().squeeze(1)]
-            pc_model.points = o3d.utility.Vector3dVector(points_model[ :, :3]) #get xyz coordinates
-            pc_model.paint_uniform_color(colors[i])
-            all_pointcloud_object_model.append(pc_model)
-    else:
-        pc_model = o3d.geometry.PointCloud()
-        if b_model_without_label_col:            
-            pc_model.points = o3d.utility.Vector3dVector(object_points_model[ :, :3]) #get xyz coordinates
-        else:
-            points_model = object_points_model[(object_points_model[:, model_label_col] == segmentation_target_object_id).nonzero().squeeze(1)]
-            pc_model.points = o3d.utility.Vector3dVector(points_model[ :, :3]) #get xyz coordinates
+    # loop through all objects in all objects stablished   
+    for k_object_name, v_object_index in dict_to_use.items():
+        # loop through all objects from the segmented points detected by the model
+        for k_object_model, v_object_model in dict_of_tensors_allpoints_per_object_reduced.items(): 
+        # for k_object_model, v_object_model in dict_of_tensors_allpoints_per_object.items(): 
+            # If founded the object with label in the dict_to_use catalog get the points
+            if b_multiple_seg and k_object_model == k_object_name:
+                pc_model = o3d.geometry.PointCloud()
+                pc_model.points = o3d.utility.Vector3dVector(v_object_model[ :, :3]) #get xyz coordinates
+                pc_model.paint_uniform_color(vparams[k_object_name + '_color'])
+                all_pointcloud_object_model.append(pc_model)
+    
+            elif k_object_name == k_object_model and k_object_model == vparams["str_object_to_visualize"]:
+                pc_model = o3d.geometry.PointCloud()
+                pc_model.points = o3d.utility.Vector3dVector(v_object_model[ :, :3]) #get xyz coordinates
+                pc_model.paint_uniform_color(vparams[k_object_name + '_color'])
+                all_pointcloud_object_model.append(pc_model)
 
-        pc_model.paint_uniform_color(colors[segmentation_target_object_id]) #color of model and GT has to be the same  
-        all_pointcloud_object_model.append(pc_model)
-
-    #--------------
-    # ROOM
-    #--------------
-    #create object pointcloud
-    pc_room= o3d.geometry.PointCloud()    
-    pc_room.points = o3d.utility.Vector3dVector(room_points[ :, :3])
-
-    if draw_original_rgb_data:
-        #color room as original colors
-        pc_room.colors = o3d.utility.Vector3dVector(room_points[ :, 3:6])
-    else:
-        #colorize to grey all room points
-        pc_room.paint_uniform_color([142/255, 142/255, 142/255])
-
-    # -----------------------------------
-    #  VISUALIZATION
-    # -----------------------------------
-
-    #-----------------------------------------
-    # get only visualizable room points
-    #-----------------------------------------
-    diameter = np.linalg.norm(np.asarray(pc_room.get_max_bound()) - np.asarray(pc_room.get_min_bound()))
-    radius = diameter * 100
-    camera = [0, 0, diameter]
-
-    # Get points visible from view point
-    if b_show_inside_room:
-        _, pt_map = pc_room.hidden_point_removal(camera, radius)
-        pc_room = pc_room.select_by_index(pt_map)
+    vis_gt = o3d.visualization.Visualizer()
+    vis_model = o3d.visualization.Visualizer()
+    vis_gt.create_window(window_name='Segmentation GT id ' + vparams["str_object_to_visualize"])
+    vis_model.create_window(window_name='Segmentation MODEL id ' + vparams["str_object_to_visualize"])
 
     # -----------------------------------
     # GT SEGMENTATION VISUALIZATION
     # -----------------------------------
-    vis_gt = o3d.visualization.Visualizer()
-    vis_gt.create_window(window_name='Segmentation GT id ' + str(segmentation_target_object_id))
-    #add pointclouds
-    vis_gt.add_geometry(pc_room)
-    for segment_gt_i in range(len(all_pointcloud_object_gt)):
-        if b_hide_wall and segment_gt_i == 4:
-            continue
-        if b_hide_column and segment_gt_i == 11:
-            continue
-        vis_gt.add_geometry(all_pointcloud_object_gt[segment_gt_i])
+
+    # ROOM
+    if b_show_room_points:
+        # create object pointcloud
+        pc_room= o3d.geometry.PointCloud()    
+        pc_room.points = o3d.utility.Vector3dVector(room_points[ :, :3])
+
+        if draw_original_rgb_data:
+            # color room as original colors
+            pc_room.colors = o3d.utility.Vector3dVector(room_points[ :, 3:6])
+        else:
+            # color to grey all room points
+            pc_room.paint_uniform_color(cparams['Grey'])
+
+        # VISUALIZATION
+        # get only visualizable room points
+        diameter = np.linalg.norm(np.asarray(pc_room.get_max_bound()) - np.asarray(pc_room.get_min_bound()))
+        radius = diameter * 100
+        camera = [0, 0, diameter]
+
+        # Get points visible from view point
+        if b_show_inside_room:
+            _, pt_map = pc_room.hidden_point_removal(camera, radius)
+            pc_room = pc_room.select_by_index(pt_map)
+
+        #add pointclouds
+        vis_gt.add_geometry(pc_room) 
+        vis_model.add_geometry(pc_room)
+
+    # add only the segmented objects from the GT file that are being studied
+    for segment_gt in all_pointcloud_object_gt:
+        vis_gt.add_geometry(segment_gt)
+
+    # delete
+    # for segment_gt_i in range(len(all_pointcloud_object_gt)):
+        # if b_hide_wall and fparams["wall"] == 4:
+        #     continue
+        # if b_hide_column and fparams["column"] == 11:
+        #     continue
+        # vis_gt.add_geometry(all_pointcloud_object_gt[segment_gt_i])
 
     #camera point of view
-    ctr = vis_gt.get_view_control()
-    parameters = o3d.io.read_pinhole_camera_parameters("camera3.json")
-    ctr.convert_from_pinhole_camera_parameters(parameters)
+    # ctr = vis_gt.get_view_control()
+    # parameters = o3d.io.read_pinhole_camera_parameters("camera3.json")
+    # ctr.convert_from_pinhole_camera_parameters(parameters)
     vis_gt.run()
 
     ts = calendar.timegm(time.gmtime())
@@ -484,7 +404,11 @@ def render_segmentation(segmentation_target_object_id = 3,
     #save image
     vis_gt.poll_events()
     vis_gt.update_renderer()
-    filename = str(ts) + '__seg_GT_label_' + str(segmentation_target_object_id) + '.png'
+    if b_multiple_seg:
+        filename = str(ts) + '_' + str(str_area_and_office) + '__seg_GT_ALL.png'
+    else:
+        filename = str(ts) + '_' + str(str_area_and_office) + '__seg_GT_' +  str(vparams["str_object_to_visualize"]) + '.png'
+
     vis_gt.capture_screen_image(str(pathlib.Path().resolve()) + '/' + filename)
 
     #close window
@@ -493,26 +417,33 @@ def render_segmentation(segmentation_target_object_id = 3,
     # -----------------------------------
     # MODEL SEGMENTATION VISUALIZATION
     # -----------------------------------
-    vis_model = o3d.visualization.Visualizer()
-    vis_model.create_window(window_name='Segmentation MODEL id ' + str(segmentation_target_object_id))
-    vis_model.add_geometry(pc_room)
-    for segment_model_i in range(len(all_pointcloud_object_model)):   
-        if b_hide_wall and segment_model_i == 4:
-            continue
-        if b_hide_column and segment_model_i == 11:
-            continue
-        vis_model.add_geometry(all_pointcloud_object_model[segment_model_i])
+    # for segment_model_i in range(len(all_pointcloud_object_model)):   
+    #     # if b_hide_wall and segment_model_i == 4:
+    #     #     continue
+    #     # if b_hide_column and segment_model_i == 11:
+    #     #     continue
+    #     vis_model.add_geometry(all_pointcloud_object_model[segment_model_i])
+
+    # add only the segmented objects from the GT file that are being studied
+    for segment_model in all_pointcloud_object_model:
+        vis_gt.add_geometry(segment_model)
 
     #camera point of view
-    ctr = vis_model.get_view_control()
-    parameters = o3d.io.read_pinhole_camera_parameters("camera3.json")
-    ctr.convert_from_pinhole_camera_parameters(parameters)
+    # ctr = vis_model.get_view_control()
+    # parameters = o3d.io.read_pinhole_camera_parameters("camera3.json")
+    # ctr.convert_from_pinhole_camera_parameters(parameters)
     vis_model.run()
 
     #save image
     vis_model.poll_events()
     vis_model.update_renderer()
-    filename = str(ts) + '__seg_MODEL_label_' + str(segmentation_target_object_id) + '.png'
+
+    if b_multiple_seg:
+        filename = str(ts) + '_' + str(str_area_and_office) + '__seg_MODEL_ALL.png'
+    else:
+        filename = str(ts) + '_' + str(str_area_and_office) + '__seg_MODEL_' +  str(vparams["str_object_to_visualize"]) + '.png'
+
+
     vis_model.capture_screen_image(str(pathlib.Path().resolve()) + '/' + filename)
 
     #close window

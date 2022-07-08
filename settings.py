@@ -115,7 +115,71 @@ hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
 # Num workers bigger than 0 doesn't work with GPUs (coding parallelization required)
 max_workers = 2
 hparams['num_workers'] = max_workers if hparams['device'] == 'cpu' else 0
-    
+
+#------------------------------------------------------------------------------
+# VISUALIZATION PARAMETERS
+#------------------------------------------------------------------------------
+
+# GT labels in S3DIS Dataset
+fparams = {
+    'ceiling': 0,
+    'clutter': 1,
+    'door': 2,
+    'floor': 3,
+    'wall': 4,
+    'beam': 5,
+    'board': 6,
+    'bookcase': 7,
+    'chair': 8,
+    'table': 9,
+    'column': 10,
+    'sofa': 11,
+    'window': 12,
+    'stairs': 13
+}, 
+
+cparams = {
+    'Red': [1,0,0],
+    'Lime': [0,1,0],
+    'Blue': [0,0,1],
+    'Yellow': [1,1,0],
+    'Cyan': [0,1,1],
+    'Magenta': [1,0,1],
+    'Dark_green': [0,0.39,0],
+    'Deep_sky_blue': [0,0.75,1],
+    'Saddle_brown': [0.54,0.27,0.07],
+    'Lemon_chiffon': [1,0.98,0.8],
+    'Turquoise': [0.25,0.88,0.81],
+    'Gold': [1,0.84,0],
+    'Orange': [1,0.65,0],
+    'Chocolate': [0.82,0.41,0.12],
+    'Peru': [0.8,0.52,0.25],
+    'Blue_violet': [0.54,0.17,0.88],
+    'Dark_grey': [0.66,0.66,0.66],
+    'Grey': [0.5,0.5,0.5],
+}
+
+vparams = {    
+    'str_object_to_visualize': "chair",
+    'num_max_points_from_GT_file': 50000,
+    'num_max_points_1_object_model': 50000,    
+    'board_color': cparams['Red'],
+    'bookcase_color': cparams['Lime'],
+    'chair_color': cparams['Blue'],
+    'table_color': cparams['Yellow'],
+    'sofa_color': cparams['Cyan'],
+    'ceiling_color': cparams['Magenta'],
+    'clutter_color': cparams['Dark_green'],
+    'door_color': cparams['Deep_sky_blue'],
+    'floor_color': cparams['Saddle_brown'],
+    'wall_color': cparams['Lemon_chiffon'],
+    'beam_color': cparams['Turquoise'],
+    'column_color': cparams['Gold'],
+    'window_color': cparams['Orange'],
+    'stairs_color': cparams['Chocolate'],
+}
+
+
 #------------------------------------------------------------------------------
 # AUX FOLDER CREATION
 #------------------------------------------------------------------------------

@@ -778,16 +778,23 @@ def watch_segmentation(model, dataloaders):
         print("values: \n")
         for i in v:
             print(i)
-    
-    render_segmentation(segmentation_target_object_id = 3,
-                            str_area_and_office = area_and_office,
-                            dict_segmented_points = out_dict,
-                            b_multiple_seg = False,
-                            draw_original_rgb_data = False,
-                            b_hide_wall = False, 
-                            b_hide_column = False,
-                            b_show_inside_room = True)  
 
+    # render_segmentation(dict_to_use = dict_to_use,
+    #                     str_area_and_office = area_and_office,
+    #                     dict_model_segmented_points = out_dict,
+    #                     b_multiple_seg = True,
+    #                     draw_original_rgb_data = False,
+    #                     b_hide_wall = False, 
+    #                     b_hide_column = False,
+    #                     b_show_inside_room = False)
+
+    render_segmentation(dict_to_use = dict_to_use,
+                        str_area_and_office = area_and_office,
+                        dict_model_segmented_points = out_dict,
+                        b_multiple_seg = False,                                              
+                        draw_original_rgb_data = False,
+                        b_show_inside_room = False,
+                        b_show_room_points = True)
 #------------------------------------------------------------------------------
 # MAIN
 #------------------------------------------------------------------------------
@@ -870,6 +877,7 @@ if __name__ == "__main__":
 
     # Carry out the the task to do
     # (e.g, train_classification(), test_segmentation(), watch_segmentation())
+    watch_segmentation(model, dataloaders)
     
     locals()[task + "_" + goal](model, dataloaders)
     
@@ -879,10 +887,10 @@ if __name__ == "__main__":
     # tnet_compare example here -----------------------
     # Extracting tnet_out and preds:
     sample = (ds[0])[0]
-    preds,tnet_out = infer(model, sample)
+    preds,tnet_out = infer(model, sample[0])
     #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample, preds, tnet_out), global_step=None, close=True, walltime=None)
     # Using the _infer version that extracts the variables by itself:
-    logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample), global_step=None, close=True, walltime=None)
+    logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample[0]), global_step=None, close=True, walltime=None)
     # ---------------------------------------------------
 
     # We need to close the writer and the logger:

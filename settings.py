@@ -61,7 +61,7 @@ segmentation_target_object = "table"
 #------------------------------------------------------------------------------
 # Environment (file system and so on) params
 eparams = {
-    'pc_data_path': r"C:\Users\oliverc\Documents\PG\datasets\Stanford3dDataset_v1.2",
+    'pc_data_path': "C:/Users/marcc/OneDrive/Escritorio/PROJECTE/S3DIS_ANTIC/Stanford3dDataset_v1.2_Aligned_Version",
     'pc_file_extension': ".txt",
     'pc_file_extension_rgb_norm': "_rgb_norm.txt",
     #'pc_file_extension_sem_seg_suffix': "_annotated",
@@ -99,7 +99,7 @@ hparams = {
     # Params to create sliding windows
     'win_width': 1,
     'win_depth': 1,
-    'win_height': 3,
+    'win_height': 4,
     'overlap': 0, # Percentage, 0-95%, 100 will create an infinite loop
 }
 
@@ -146,7 +146,7 @@ parser.add_argument("--goal",
                     type = str,
                     action = "store",
                     nargs = 1,
-                    default = "segmentation",
+                    default = "classification",
                     choices = ["classification", "segmentation"],
                     help = "Either classification (class) or segmentation (seg)")
 
@@ -156,7 +156,7 @@ parser.add_argument("--task",
                     type = str,
                     action = "store",
                     nargs = 1,
-                    default = "watch",
+                    default = "train",
                     choices = ["train", "test", "watch"],
                     help = "Either train or test")
 
@@ -194,16 +194,16 @@ args = parser.parse_args()
 # getting the most of the model is NOT the goal
 if "toy" in args.load:
     hparams["num_points_per_object"] = 10
-    hparams["num_points_per_room"] = 100
+    hparams["num_points_per_room"] = 1024  #100 originally
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 3
+    hparams["epochs"] = 10 #3 originally
     
 
 if "low" in args.load:
-    hparams["num_points_per_object"] = 512
+    hparams["num_points_per_object"] = 100
     hparams["num_points_per_room"] = 512
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 2
+    hparams["epochs"] = 5
    
 if "medium" in args.load:
     hparams["num_points_per_object"] = 1024
@@ -258,5 +258,9 @@ path_to_current_sliding_windows_folder = os.path.join(
 if not os.path.exists(path_to_current_sliding_windows_folder):
     os.makedirs(path_to_current_sliding_windows_folder)
 
+#------------------------------------------------------------------------------
+# VISUALZIATION SETTINGS    
+#------------------------------------------------------------------------------
 
-
+# Rooms with more bookcases and boards (chairs-tables seem to be detected easily)
+target_room_for_visualization = "Area_6_office_10"

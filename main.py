@@ -186,7 +186,6 @@ def train_classification(model, dataloaders):
             
             epoch_train_loss.append(loss.cpu().item())
         
-            loss.requires_grad=True #WHAT?
             loss.backward()
             optimizer.step()
             
@@ -249,7 +248,7 @@ def train_classification(model, dataloaders):
                     )
                 )
 
-        if np.mean(val_loss) < best_loss: #needs at least to epochs
+        if np.mean(val_loss) < best_loss:
             state = {
                 'model': model.state_dict(),
                 'optimizer': optimizer.state_dict()
@@ -377,12 +376,19 @@ def train_segmentation(model, dataloaders):
     total_train_time = []
     total_val_time = []
 
+    # Per object accuracy
+    per_object_accuracy = dict()
+    
     optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
 
     for epoch in range(1, hparams['epochs'] +1):
         epoch_train_loss = []
         epoch_train_acc = []
         epoch_train_start_time = datetime.datetime.now()
+
+        for k,v in objects_dict.items():
+            per_object_accuracy[k] = []
+            
 
         tqdm_desc = "{}ing epoch ({}/{})".format(task.capitalize(), epoch, hparams['epochs'])
         # training loop
@@ -392,7 +398,7 @@ def train_segmentation(model, dataloaders):
             points, targets = data  
             points = points.to(device)
             targets = targets.to(device)
-
+            
             optimizer.zero_grad()
             
             preds, feature_transform, tnet_out, ix_maxpool = model(points)
@@ -430,8 +436,7 @@ def train_segmentation(model, dataloaders):
 
             # epoch_train_loss.append(loss.cpu().item())
             epoch_train_loss.append(loss.cpu().item())
-
-            loss.requires_grad=True #again, WHY?
+        
             loss.backward()
             
             optimizer.step()
@@ -445,8 +450,13 @@ def train_segmentation(model, dataloaders):
             corrects = preds.eq(targets.data).cpu().sum()
             accuracy = corrects.item() / preds.numel()
             epoch_train_acc.append(accuracy)
-            
 
+            for k,v in objects_dict.items():
+                # From the label tensor, get only the ones of that object
+                annotated_labels_per_object = targets.eq(v).cpu().sum()
+                predicted_labels_per_object = preds.eq(v).cpu().sum()
+                per_object_accuracy[k].append((annotated_labels_per_object, predicted_labels_per_object))
+            
         epoch_train_end_time = datetime.datetime.now()
         train_time_per_epoch = (epoch_train_end_time - epoch_train_start_time).seconds
         total_train_time.append(train_time_per_epoch)
@@ -496,6 +506,20 @@ def train_segmentation(model, dataloaders):
                 )
             )
 
+        msg = 'Per object points (Annotated | Predicted): \n'
+        for k,v in per_object_accuracy.items():
+            total_annotated = sum(a.item() for a,p in v)
+            total_predicted = sum(p.item() for a,p in v)
+            msg += "- {}: ({}|{}) ({:.2f}%) \n".format(k, total_annotated, 
+                    total_predicted, (total_predicted/total_annotated)*100)
+            
+            tb_desc = goal.capitalize() + " Accuracy Per Object " + "(" + task + ")/" + k
+            logger.writer.add_scalars(tb_desc, 
+                    {"Annotated": total_annotated, 
+                    "Predicted": total_predicted}, 
+                    epoch)     
+        print(msg)
+        
         if np.mean(val_loss) < best_loss:
             state = {
                 'model': model.state_dict(),
@@ -599,7 +623,7 @@ def test_segmentation(model, dataloaders):
 
 @avoid_MaxPool1d_warning
 @torch.no_grad()    
-def watch_segmentation(model, dataloaders):
+def watch_segmentation(model, dataloaders, random = False):
     """
     Visualize how PointNet segments objects in a single room.
 
@@ -650,10 +674,10 @@ def watch_segmentation(model, dataloaders):
     # If the checkpoint does not exist, train the model
     if not os.path.exists(model_checkpoint):
         print("The model does not seem already trained! Starting the training rigth now from scratch...")
-        train_segmentation(model, dataloaders) #model should is classification but should be segmentation. It's not saving checkpoint
+        train_classification(model, dataloaders)
     
     # Loading the existing checkpoint
-    print("Loading checkpoint {} ...".format(model_checkpoint)) 
+    print("Loading checkpoint {} ...".format(model_checkpoint))
     state = torch.load(
                 model_checkpoint, 
                 map_location = torch.device(hparams["device"]))
@@ -670,11 +694,16 @@ def watch_segmentation(model, dataloaders):
 
     # Select a random sliding window from an office room 
     # (e.g, 'Area_6_office_33_win14.pt')
-    picked_sliding_window = random.choice([i for i in test_ds.sliding_windows if "office" in i])
-    area_and_office ='_'.join(picked_sliding_window.split('_')[0:4])
-    print("Randomly selected office to plot: ", area_and_office)
-
+    if random:
+        picked_sliding_window = random.choice([i for i in test_ds.sliding_windows if "office" in i])
+        area_and_office ='_'.join(picked_sliding_window.split('_')[0:4])
+    else:
+        area_and_office = target_room_for_visualization
     
+    print("Randomly selected office to plot: ", area_and_office)
+    # To avoid getting office11, office12, when the randomly selectd office is office_1 
+    area_and_office += "_"
+
     # Get all the sliding windows related to the picked one
     # to have a single room
     # (e.g. 'Area_6_office_33_win0.pt', 'Area_6_office_33_win1.pt',...)
@@ -749,7 +778,7 @@ def watch_segmentation(model, dataloaders):
 
         msg = "{} - Saving predictions".format(win_id)    
         progress_bar.set_description(msg)
-        matrix_fin=np.empty([0,4])
+
         # Save predictions per object
         for i in point_breakdown:
             # Select the object_id of the element to check accuraracy
@@ -779,37 +808,90 @@ def watch_segmentation(model, dataloaders):
             i[4] = torch.index_select(points_rel, 0, indices)
             # Points to display (absolute coordinates)
             i[5] =  torch.index_select(points_abs, 0, indices)
-            if (i[5]!=[]):
-                matrix_aux=torch.cat([i[5],torch.full([i[5].shape[0], 1],i[1])], dim=1) 
-                matnum=matrix_aux.numpy()
-                for row in matnum:
-                    a=np.where(np.all((row[:-1]==matrix_fin[:,:-1]),axis=1))# finds if that point is already in the final matrix (no-mater the label)
-                    for item in a: #if it is in the matrix only overwrites it if it's labelled as clutter. else it just leaves it as is
-                        if matnum[item,-1]!=5:
-                            matrix_fin[item,:]=row
-                    else:
-                        matrix_fin=np.append(matrix_fin,row.reshape(1, 4), axis=0)
-                        
-
     
-
+    
         # Save the results in a dict
         out_dict[win_id] = point_breakdown
         #from memorized points find repeated and keep max value
       
-    # TODO: Remove (only for intermediate checking)       
+    # Confussion Matrix (nested dict)
+    # True positives (tp)
+    # False positives (fp)
+    # True negatives (tn)
+    # False negatives (fn)
+    available_values = ("tp", "fp", "tn", "fn")
+    confussion_matrix_dict = dict()
+
+    for k in objects_dict:
+        confussion_matrix_dict[k] = {}
+        for i in available_values:
+            confussion_matrix_dict[k][i] = []
+
+       
     for k, v in out_dict.items():
+        print(80 * "-")
         print("WinID: ", k)
-        print("values: \n")
         for i in v:
-            print(i)
+            print(i)            
+            # Analyze results
+            # The difference between predicted and annotated points
+            delta_points = abs(i[3] - i[2])
+            # True Positives
+            if (i[2].item() != 0) and (i[3].item() != 0):
+                confussion_matrix_dict[i[0]]["tp"].append(i[2])
+                if i[3] >= i[2]:
+                    confussion_matrix_dict[i[0]]["fp"].append(delta_points)
+                else:
+                    confussion_matrix_dict[i[0]]["fn"].append(delta_points)
+            # True Negatives
+            elif (i[2].item() == 0) and (i[3].item() == 0):
+                confussion_matrix_dict[i[0]]["tn"].append(delta_points)
+            # False Positives
+            elif (i[2].item() == 0) and (i[3].item() != 0):
+                confussion_matrix_dict[i[0]]["fp"].append(delta_points)
+            # False Negatives
+            elif (i[2].item() != 0) and (i[3].item() == 0):
+                confussion_matrix_dict[i[0]]["fn"].append(delta_points)
+
+    print(80 * "-")
+    print("Values for confussion matrix for {}".format(model_checkpoint))
+    for k,v in confussion_matrix_dict.items():
+        print(20 * "-")
+        print("{}: ".format(k))
+        for par, val in v.items():           
+            print("\t{}: {}".format(par, sum(val)))
+            
+        tp = 0 if len(v["tp"]) == 0 else sum(v["tp"]).item() 
+        tn = 0 if len(v["tn"]) == 0 else sum(v["tn"]).item() 
+        fp = 0 if len(v["fp"]) == 0 else sum(v["fp"]).item() 
+        fn = 0 if len(v["fn"]) == 0 else sum(v["fn"]).item() 
+
+        # When true positive + false positive == 0, precision is undefined. 
+        # When true positive + false negative == 0, recall is undefined. 
+        try:
+            accuracy = ((tp + tn) / (tp + tn + fp + fn))*100
+            accuracy = "{:.2f} %".format(accuracy)
+        except ZeroDivisionError:
+            accuracy = "N/A"
+        try:    
+            precision = (tp/(tp + fp))*100
+            precision = "{:.2f} %".format(precision)
+        except ZeroDivisionError: 
+            precision = "N/A (tp + fp = 0)"
+        try:
+            recall = (tp/(tp + fn))*100
+            recall = "{:.2f} %".format(recall)
+        except ZeroDivisionError:
+            recall = "N/A (tp + fn = 0)"
+
+        print("\tAccuracy: {}".format(accuracy))
+        print("\tPrecision: {}".format(precision))
+        print("\tRecall: {}".format(recall))
+               
     
     # TODO: Insert Lluis' code here for visualization
     # out_dict contains all the points detected for all objects
     # lluis_code(data, segmentation_target_object_id, points_to_display) 
-
-def select_duplicates(dup_m):
-    df=pd.DataFrame(dup_m.numpy())
 
 
 #------------------------------------------------------------------------------
@@ -848,11 +930,12 @@ if __name__ == "__main__":
     logger.log_hparams(hparams)
     
     # Define the checkpoint name
-    eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_{}_points_{}_dims_{}_num_classes.pth".format(
+    eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_{}_points_{}_dims_{}_num_classes_{}_epochs.pth".format(
                                             goal,
                                             hparams["num_points_per_object"] if goal == "classification" else hparams["num_points_per_room"],
                                             hparams["dimensions_per_object"],
                                             hparams["num_classes"],
+                                            hparams["epochs"],
                                             )
     
     # Dataset instance creation (goal-dependent) 
@@ -904,9 +987,9 @@ if __name__ == "__main__":
     # Extracting tnet_out and preds:
     sample = (ds[0])[0]
     preds,tnet_out = infer(model, sample[0])
-    #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample, preds, tnet_out), global_step=None, close=True, walltime=None)
+    logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample[0], preds, tnet_out), global_step=None, close=True, walltime=None)
     # Using the _infer version that extracts the variables by itself:
-    logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample[0]), global_step=None, close=True, walltime=None)
+    #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample[0]), global_step=None, close=True, walltime=None)
     # ---------------------------------------------------
 
     # We need to close the writer and the logger:

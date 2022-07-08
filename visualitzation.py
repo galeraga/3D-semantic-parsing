@@ -11,7 +11,6 @@ def infer(model,
     
     '''
     This function allows to return the prediction of the class given a pointcloud.
-
     Parameters
     ----------
     model(model of the network):
@@ -26,7 +25,6 @@ def infer(model,
         Plots the tNet
     return_indices_maxpool(bool, Defalut = False):
         If True returns also the indices of the maxpool operation
-
     Returns
     -------
     preds(numpy array):
@@ -64,7 +62,6 @@ def infer(model,
 def tnet_compare(sample, preds, tnet_out, save=False):
     '''
     Comparing this function compares a SINGLE pointCloud with the same PointCloud multiplied by the T-net.
-
     Parameters:
     -----------
     sample(Torch tensor):
@@ -114,7 +111,6 @@ def tnet_compare_infer(model, sample, save=False):
     '''
     Comparing this function compares a SINGLE pointCloud with the same PointCloud multiplied by the T-net.
     This function is used when you don't have the tnet_out and preds.
-
     Parameters:
     -----------
     model(model of the network):

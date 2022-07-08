@@ -15,7 +15,7 @@ from tqdm import tqdm
 import warnings
 import itertools
 
-# Math and DL imports
+# Math and DL imports
 import numpy as np
 import pandas as pd
 import torch
@@ -61,14 +61,14 @@ segmentation_target_object = "table"
 #------------------------------------------------------------------------------
 # Environment (file system and so on) params
 eparams = {
-    'pc_data_path': "C:/Users/marcc/OneDrive/Escritorio/PROJECTE/S3DIS_ANTIC/Stanford3dDataset_v1.2_Aligned_Version",
+    'pc_data_path': r"C:\Users\oliverc\Documents\PG\datasets\Stanford3dDataset_v1.2",
     'pc_file_extension': ".txt",
     'pc_file_extension_rgb_norm': "_rgb_norm.txt",
     #'pc_file_extension_sem_seg_suffix': "_annotated",
     'pc_file_extension_sem_seg_suffix': "_annotated_clutter_free",
     'already_rgb_normalized_suffix': "_rgb_norm",
     #'s3dis_summary_file': "s3dis_summary.csv",
-    # The proper summary file to work with depends on the args.parser
+    # The proper summary file to work with depends on the args.parser
     's3dis_summary_file_all': "s3dis_summary_clutter_free_all.csv",
     's3dis_summary_file_movable': "s3dis_summary_clutter_free_movable.csv",
     "checkpoints_folder": "checkpoints",
@@ -132,7 +132,7 @@ if not os.path.exists(tnet_outputs_folder):
 #------------------------------------------------------------------------------
 # PARSER DEFINITION AND DEFAULT SETTINGS
 #------------------------------------------------------------------------------
-# Parser definition
+# Parser definition
 parser_desc = "Provides convenient out-of-the-box options to train or test "
 parser_desc += "a PointNet model based on S3DIS dataset"
 
@@ -190,12 +190,12 @@ args = parser.parse_args()
 # slow or even freeze, lower the worker number to avoid potential 
 # slowness/freeze if necessary"
 
-# Toy is for testing code in a very quick way, where
+# Toy is for testing code in a very quick way, where
 # getting the most of the model is NOT the goal
 if "toy" in args.load:
     hparams["num_points_per_object"] = 10
     hparams["num_points_per_room"] = 1024  #100 originally
-    hparams["dimensions_per_object"] = 3
+    hparams["dimensions_per_object"] = 6
     hparams["epochs"] = 10 #3 originally
     
 

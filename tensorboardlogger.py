@@ -1,4 +1,3 @@
-
 from settings import *
 
 class TensorBoardLogger():
@@ -204,4 +203,3 @@ class TensorBoardLogger():
     def finish(self):
         self.writer.close()
         # TODO: Send info to TensorBoard.dev
-

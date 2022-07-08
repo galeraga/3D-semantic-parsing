@@ -3,10 +3,8 @@ from settings import *
 class TransformationNet(nn.Module):
     """
     The building block (T-Net) of the PointNet architecture 
-
     Used to apply both input transform and feature transformations,
     according to Figure 2 of the original PointNet architecture paper
-
     T-Net aligns all input set to a canonical space before feature extraction.
     How does it do it? It predicts an affine transformation matrix of 3x3 
     to be applied to the coordinate of input points (x, y, z).
@@ -66,7 +64,6 @@ class BasePointNet(nn.Module):
     """
     Defines the PointNet architecture for the classification network,
     according to Figure 2 from the original paper
-
     It provides the network architecture from the input points to the 
     max pool layer, providing the global feature vector
     """
@@ -136,7 +133,6 @@ class ClassificationPointNet(nn.Module):
     """
     Completes the PointNet architecture for the classification network,
     according to Figure 2 from the original paper
-
     It provides the network architecture from the global feature vector
     to the classification output score
     """
@@ -182,11 +178,9 @@ class ClassificationPointNet(nn.Module):
 class SegmentationPointNet(nn.Module):
     """
     Implements the semantic segmentation network of the PointNet architecture
-
     Concatenates local point features (the feature transformation vector) 
     with global features (the global feature vector) to get the probabality 
     of each point in the cloud
-
     From https://github.com/yunxiaoshi/pointnet-pytorch/blob/master/pointnet.py
     From https://github.com/fxia22/pointnet.pytorch/blob/master/pointnet/model.py
     From https://github.com/yanx27/Pointnet_Pointnet2_pytorch/tree/master/models
@@ -241,10 +235,9 @@ class SegmentationPointNet(nn.Module):
         # Returns a Tensor of the same dimension and shape 
         # as the input with values in the range [-inf, 0]
         # NLL Loss will expect the shape:
-        # preds.shape[batch_size, num_classes, max_points_per_room] ex 32,6,1024
+        # preds.shape[batch_size, num_classes, max_points_per_room]
         preds = F.log_softmax(x, dim = 1)
         
         # Returning the same values than ClassificationPointNet
         # to keep compatatibility in main.py
         return preds, feature_transform, tnet_out, ix_maxpool
-

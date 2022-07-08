@@ -104,11 +104,9 @@ def create_dataloaders(ds):
 def train_classification(model, dataloaders):
     """
     Train the PointNet network for classification goals
-
     Inputs:
         - model: the PointNet model class
         - dataloaders: train, val and test
-
     Outputs:
         - None
     """
@@ -351,11 +349,9 @@ def test_classification(model, dataloaders):
 def train_segmentation(model, dataloaders):
     """
     Train the PointNet network for semantic segmentation tasks
-
     Inputs:
         - model: the PointNet model class
         - dataloaders: train, val and test
-
     Outputs:
         - None
     """
@@ -470,8 +466,7 @@ def train_segmentation(model, dataloaders):
         for data in tqdm(val_dataloader, desc = tqdm_desc):
             model = model.eval()
     
-            points, targets = data #changed dataset so that data is relative and absolute values at the end and winID. Matrix is either size 6 if no colors added or size 9 if colors are added
-            points=points[:,:,:hparams["dimensions_per_object"]] # CLARA remove absolute points and win ID (use them later)
+            points, targets = data
             points = points.to(device)
             targets = targets.to(device)
                     
@@ -482,15 +477,9 @@ def train_segmentation(model, dataloaders):
             epoch_val_loss.append(loss.cpu().item())
             
             preds = preds.data.max(dim = 1)[1]
-
-            #preds is now batch,1,points_in_win.
             corrects = preds.eq(targets.data).cpu().sum()
             accuracy = corrects.item() / preds.numel()       
             epoch_val_acc.append(accuracy)
-
-            #how to store point values? each point should have an associated label
-            dict[points[:,:,hparams["dimensions_per_object"]:(hparams["dimensions_per_object"]+3)]]=[]
-
 
         epoch_val_end_time = datetime.datetime.now()
         val_time_per_epoch = (epoch_val_end_time - epoch_val_start_time).seconds
@@ -597,9 +586,7 @@ def test_segmentation(model, dataloaders):
     # Test the model
     print("Testing data segmentation")
     for batch_idx, data in enumerate(tqdm(test_dataloader)):
-        points, target_labels = data  
-
-        points[:,:,:hparams["dimensions_per_object"]]      
+        points, target_labels = data        
                 
         points = points.to(device)
         target_labels = target_labels.to(device)
@@ -626,27 +613,21 @@ def test_segmentation(model, dataloaders):
 def watch_segmentation(model, dataloaders, random = False):
     """
     Visualize how PointNet segments objects in a single room.
-
     All the points of a single room are taken for visualization in order to have
     a visually smooth representation of the room.
-
     Since all the points of the rooms are going to be taken, no dataloaders can 
     be used since dataloaders return an smaller amount of points per room/sliding 
     window due to their sampling process.
-
     At least, two ways can be folloed to achieve this goal:
     1.- Read directly the annotated file (e.g., Area_6_office_33_annotated.txt)
     2.- Read from sliding windows (e.g., Area_6_office_33_win14.pt)
-
     The latter option is prefered in order to have the ability to also display 
     per sliding window information, if desired.
-
     Workflow overview:
     1.- Pick randomly one of the available sliding windows
     2.- Get the Area_N Space_X from this randomly selected sliding window
     3.- Get all the sliding windows from Area_N Space_X
     4.- Get object info per sliding window
-
     Output: 
     A dict containing:
     - As keys: The sliding window ID (winID) 
@@ -812,7 +793,6 @@ def watch_segmentation(model, dataloaders, random = False):
     
         # Save the results in a dict
         out_dict[win_id] = point_breakdown
-        #from memorized points find repeated and keep max value
       
     # Confussion Matrix (nested dict)
     # True positives (tp)
@@ -833,7 +813,7 @@ def watch_segmentation(model, dataloaders, random = False):
         print("WinID: ", k)
         for i in v:
             print(i)            
-            # Analyze results
+            # Analyze results
             # The difference between predicted and annotated points
             delta_points = abs(i[3] - i[2])
             # True Positives
@@ -972,7 +952,7 @@ if __name__ == "__main__":
     model = getattr(model, model_to_call)(num_classes = hparams['num_classes'],
                                    point_dimension = hparams['dimensions_per_object']).to(device)
 
-    # Print info about the model with torchinfo
+    # Print info about the model with torchinfo
     # summary(model, input_size=(hparams['batch_size'], hparams['max_points_per_space'], hparams['dimensions_per_object']))
 
     # Carry out the the task to do
@@ -996,8 +976,3 @@ if __name__ == "__main__":
     logger.writer.flush()
     logger.writer.close()
     logger.finish()
-
-
-
-
-

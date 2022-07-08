@@ -825,10 +825,14 @@ def watch_segmentation(model, dataloaders, random = False):
             print(i)            
             # Analyze results
             # The difference between predicted and annotated points
-            delta_points = i[3] - i[2]
+            delta_points = abs(i[3] - i[2])
             # True Positives
             if (i[2].item() != 0) and (i[3].item() != 0):
-                confussion_matrix_dict[i[0]]["tp"].append(delta_points)
+                confussion_matrix_dict[i[0]]["tp"].append(i[2])
+                if i[3] >= i[2]:
+                    confussion_matrix_dict[i[0]]["fp"].append(delta_points)
+                else:
+                    confussion_matrix_dict[i[0]]["fn"].append(delta_points)
             # True Negatives
             elif (i[2].item() == 0) and (i[3].item() == 0):
                 confussion_matrix_dict[i[0]]["tn"].append(delta_points)
@@ -842,11 +846,38 @@ def watch_segmentation(model, dataloaders, random = False):
     print(80 * "-")
     print("Values for confussion matrix for {}".format(model_checkpoint))
     for k,v in confussion_matrix_dict.items():
+        print(20 * "-")
         print("{}: ".format(k))
-        for par, val in v.items():
+        for par, val in v.items():           
             print("\t{}: {}".format(par, sum(val)))
-    
-                
+            
+        tp = 0 if len(v["tp"]) == 0 else sum(v["tp"]).item() 
+        tn = 0 if len(v["tn"]) == 0 else sum(v["tn"]).item() 
+        fp = 0 if len(v["fp"]) == 0 else sum(v["fp"]).item() 
+        fn = 0 if len(v["fn"]) == 0 else sum(v["fn"]).item() 
+
+        # When true positive + false positive == 0, precision is undefined. 
+        # When true positive + false negative == 0, recall is undefined. 
+        try:
+            accuracy = ((tp + tn) / (tp + tn + fp + fn))*100
+            accuracy = "{:.2f} %".format(accuracy)
+        except ZeroDivisionError:
+            accuracy = "N/A"
+        try:    
+            precision = (tp/(tp + fp))*100
+            precision = "{:.2f} %".format(precision)
+        except ZeroDivisionError: 
+            precision = "N/A (tp + fp = 0)"
+        try:
+            recall = (tp/(tp + fn))*100
+            recall = "{:.2f} %".format(recall)
+        except ZeroDivisionError:
+            recall = "N/A (tp + fn = 0)"
+
+        print("\tAccuracy: {}".format(accuracy))
+        print("\tPrecision: {}".format(precision))
+        print("\tRecall: {}".format(recall))
+               
     
     # TODO: Insert Lluis' code here for visualization
     # out_dict contains all the points detected for all objects

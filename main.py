@@ -908,14 +908,22 @@ if __name__ == "__main__":
 
     # Logging hparams for future reference
     logger.log_hparams(hparams)
+
+    #defin chosen_params
+    # The folder will follow this convention: w_X_d_Y_h_Z_o_T
+    chosen_params = 'w' + str(hparams['win_width']) 
+    chosen_params += '_d' + str(hparams['win_depth'])
+    chosen_params += '_h' + str(hparams['win_height']) 
+    chosen_params += '_o' + str(hparams['overlap']) 
     
     # Define the checkpoint name
-    eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_{}_points_{}_dims_{}_num_classes_{}_epochs.pth".format(
+    eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_{}_points_{}_dims_{}_num_classes_{}_epochs_{}.pth".format(
                                             goal,
                                             hparams["num_points_per_object"] if goal == "classification" else hparams["num_points_per_room"],
                                             hparams["dimensions_per_object"],
                                             hparams["num_classes"],
                                             hparams["epochs"],
+                                            chosen_params,
                                             )
     
     # Dataset instance creation (goal-dependent) 

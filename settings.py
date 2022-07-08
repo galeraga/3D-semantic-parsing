@@ -97,8 +97,8 @@ hparams = {
     # Cols to use from the point cloud files (either 3 (xyz) or 6 (xyzrgb))
     'dimensions_per_object': None,
     # Params to create sliding windows
-    'win_width': 1,
-    'win_depth': 1,
+    'win_width': 2,
+    'win_depth': 2,
     'win_height': 4,
     'overlap': 0.5, # Percentage, 0-95%, 100 will create an infinite loop
 }
@@ -116,11 +116,15 @@ hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
 max_workers = 2
 hparams['num_workers'] = max_workers if hparams['device'] == 'cpu' else 0
     
+
+
+
+    
 #------------------------------------------------------------------------------
 # AUX FOLDER CREATION
 #------------------------------------------------------------------------------
 # To store checkpoints
-checkpoint_folder = os.path.join(eparams["pc_data_path"], eparams["checkpoints_folder"])
+checkpoint_folder = os.path.join(eparams["pc_data_path"], eparams["checkpoints_folder"], )
 if not os.path.exists(checkpoint_folder):
     os.makedirs(checkpoint_folder)
 
@@ -196,7 +200,7 @@ if "toy" in args.load:
     hparams["num_points_per_object"] = 10
     hparams["num_points_per_room"] = 1024  #100 originally
     hparams["dimensions_per_object"] = 6
-    hparams["epochs"] = 10 #3 originally
+    hparams["epochs"] = 5 #3 originally
     
 
 if "low" in args.load:
@@ -243,12 +247,6 @@ path_to_root_sliding_windows_folder = os.path.join(eparams["pc_data_path"],
                                         eparams['sliding_windows_folder'])
 if not os.path.exists(path_to_root_sliding_windows_folder):
     os.makedirs(path_to_root_sliding_windows_folder)
-
-# The folder will follow this convention: w_X_d_Y_h_Z_o_T
-chosen_params = 'w' + str(hparams['win_width']) 
-chosen_params += '_d' + str(hparams['win_depth'])
-chosen_params += '_h' + str(hparams['win_height']) 
-chosen_params += '_o' + str(hparams['overlap']) 
 
 path_to_current_sliding_windows_folder = os.path.join(
                 path_to_root_sliding_windows_folder, 

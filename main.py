@@ -655,7 +655,7 @@ def watch_segmentation(model, dataloaders, random = False):
     # If the checkpoint does not exist, train the model
     if not os.path.exists(model_checkpoint):
         print("The model does not seem already trained! Starting the training rigth now from scratch...")
-        train_classification(model, dataloaders)
+        train_segmentation(model, dataloaders)
     
     # Loading the existing checkpoint
     print("Loading checkpoint {} ...".format(model_checkpoint))
@@ -909,14 +909,13 @@ if __name__ == "__main__":
     # Logging hparams for future reference
     logger.log_hparams(hparams)
 
-    #define chosen_params
+     #define chosen_params
     # The folder will follow this convention: w_X_d_Y_h_Z_o_T
     chosen_params = 'w' + str(hparams['win_width']) 
     chosen_params += '_d' + str(hparams['win_depth'])
     chosen_params += '_h' + str(hparams['win_height']) 
     chosen_params += '_o' + str(hparams['overlap']) 
-    
-    # Define the checkpoint name
+
     eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_{}_points_{}_dims_{}_num_classes_{}_epochs_{}.pth".format(
                                             goal,
                                             hparams["num_points_per_object"] if goal == "classification" else hparams["num_points_per_room"],
@@ -925,7 +924,6 @@ if __name__ == "__main__":
                                             hparams["epochs"],
                                             chosen_params,
                                             )
-    
     # Dataset instance creation (goal-dependent) 
     # If goal == classification: 
     #   - S3DISDataset4ClassificationTrain, 

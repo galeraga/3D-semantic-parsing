@@ -196,7 +196,7 @@ if "toy" in args.load:
     hparams["num_points_per_object"] = 10
     hparams["num_points_per_room"] = 1024  #100 originally
     hparams["dimensions_per_object"] = 6
-    hparams["epochs"] = 5 #3 originally
+    hparams["epochs"] = 20 #3 originally
     
 
 if "low" in args.load:

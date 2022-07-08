@@ -1,0 +1,7 @@
+'''    
+import matplotlib.pyplot as mlp
+ 
+ fig = plt.figure()
+ ax = fig.add_subplot()
+ ax.scatter(tri_points[:,0].tolist(), tri_points[:,1].tolist())
+ '''

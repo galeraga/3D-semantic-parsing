@@ -116,15 +116,11 @@ hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
 max_workers = 2
 hparams['num_workers'] = max_workers if hparams['device'] == 'cpu' else 0
     
-
-
-
-    
 #------------------------------------------------------------------------------
 # AUX FOLDER CREATION
 #------------------------------------------------------------------------------
 # To store checkpoints
-checkpoint_folder = os.path.join(eparams["pc_data_path"], eparams["checkpoints_folder"], )
+checkpoint_folder = os.path.join(eparams["pc_data_path"], eparams["checkpoints_folder"])
 if not os.path.exists(checkpoint_folder):
     os.makedirs(checkpoint_folder)
 
@@ -247,6 +243,12 @@ path_to_root_sliding_windows_folder = os.path.join(eparams["pc_data_path"],
                                         eparams['sliding_windows_folder'])
 if not os.path.exists(path_to_root_sliding_windows_folder):
     os.makedirs(path_to_root_sliding_windows_folder)
+
+# The folder will follow this convention: w_X_d_Y_h_Z_o_T
+chosen_params = 'w' + str(hparams['win_width']) 
+chosen_params += '_d' + str(hparams['win_depth'])
+chosen_params += '_h' + str(hparams['win_height']) 
+chosen_params += '_o' + str(hparams['overlap']) 
 
 path_to_current_sliding_windows_folder = os.path.join(
                 path_to_root_sliding_windows_folder, 

@@ -909,7 +909,7 @@ if __name__ == "__main__":
     # Logging hparams for future reference
     logger.log_hparams(hparams)
 
-    #defin chosen_params
+    #define chosen_params
     # The folder will follow this convention: w_X_d_Y_h_Z_o_T
     chosen_params = 'w' + str(hparams['win_width']) 
     chosen_params += '_d' + str(hparams['win_depth'])

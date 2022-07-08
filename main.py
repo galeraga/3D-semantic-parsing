@@ -432,7 +432,7 @@ def train_segmentation(model, dataloaders):
 
             # epoch_train_loss.append(loss.cpu().item())
             epoch_train_loss.append(loss.cpu().item())
-        
+            loss.requires_grad=True
             loss.backward()
             
             optimizer.step()

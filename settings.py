@@ -100,7 +100,7 @@ hparams = {
     'win_width': 1,
     'win_depth': 1,
     'win_height': 4,
-    'overlap': 0, # Percentage, 0-95%, 100 will create an infinite loop
+    'overlap': 0.5, # Percentage, 0-95%, 100 will create an infinite loop
 }
 
 # Checking if the script is running in GCP

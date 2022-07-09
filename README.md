@@ -288,7 +288,7 @@ The output of this network will be a matrix that will be multiplied with the poi
 
 #### Topology of the network
 
-We will present the structure of the first T-Net that appears in the network. In this case, because the number of coordinates of our point cloud is only 3, the output of the network will be a $3\ times 3$ matrix:
+We will present the structure of the first T-Net that appears in the network. In this case, because the number of coordinates of our point cloud is only 3, the output of the network will be a $3 \times 3$ matrix:
 
 ![tnet](https://user-images.githubusercontent.com/97680577/178104139-0f1cba1f-3e0a-4f07-a082-d0967653034f.png)
 

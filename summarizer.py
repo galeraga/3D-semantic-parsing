@@ -554,7 +554,7 @@ class S3DIS_Summarizer():
             win_depth = hparams['win_depth']
             win_height = hparams['win_height']
             overlap = hparams['overlap']
-            overlap_fc = 100 - overlap
+            overlap_fc = 100 - 100*overlap
         
             # Open the proper annotated file
             # (e.g. Area_1\office_1\office_1_annotated.txt)

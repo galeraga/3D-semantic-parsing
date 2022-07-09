@@ -12,7 +12,7 @@ import dataset
 import model    
 from tensorboardlogger import TensorBoardLogger 
 from summarizer import S3DIS_Summarizer
-from visualitzation import tnet_compare, tnet_compare_in_site, infer
+from visualitzation import tnet_compare, tnet_compare_infer,  infer
 
 #------------------------------------------------------------------------------
 # AUX METHODS
@@ -481,7 +481,8 @@ def train_segmentation(model, dataloaders):
 
             # epoch_train_loss.append(loss.cpu().item())
             epoch_train_loss.append(loss.cpu().item())
-        
+            
+            #loss.requires_grad=True #might need toggle on for watch 
             loss.backward()
             
             optimizer.step()
@@ -957,14 +958,21 @@ if __name__ == "__main__":
     # Logging hparams for future reference
     logger.log_hparams(hparams)
     
+    #define chosen_params
+    # The folder will follow this convention: w_X_d_Y_h_Z_o_T
+    chosen_params = 'w' + str(hparams['win_width']) 
+    chosen_params += '_d' + str(hparams['win_depth'])
+    chosen_params += '_h' + str(hparams['win_height']) 
+    chosen_params += '_o' + str(hparams['overlap']) 
+    
     # Define the checkpoint name
-    eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_{}_points_{}_dims_{}_num_classes_{}_epochs.pth".format(
+    eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_{}_points_{}_dims_{}_num_classes_{}_epochs_{}.pth".format(
                                             goal,
                                             hparams["num_points_per_object"] if goal == "classification" else hparams["num_points_per_room"],
                                             hparams["dimensions_per_object"],
                                             hparams["num_classes"],
                                             hparams["epochs"],
-                                            path_to_current_sliding_windows_folder
+                                            chosen_params,
                                             )
     
     # Dataset instance creation (goal-dependent) 
@@ -1010,7 +1018,23 @@ if __name__ == "__main__":
     locals()[task + "_" + goal](model, dataloaders)
     
     # Close TensorBoard logger and send runs to TensorBoard.dev
+    #logger.finish()
+
+    # tnet_compare example here -----------------------
+    # Extracting tnet_out and preds:
+    sample = (ds[0])[0]
+    preds,tnet_out = infer(model, sample[0])
+    logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample[0], preds, tnet_out), global_step=None, close=True, walltime=None)
+    # Using the _infer version that extracts the variables by itself:
+    #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample[0]), global_step=None, close=True, walltime=None)
+    # ---------------------------------------------------
+
+    # We need to close the writer and the logger:
+    logger.writer.flush()
+    logger.writer.close()
     logger.finish()
-    #tnet_compare(model, ds)
+
+
+
 
 

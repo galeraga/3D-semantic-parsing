@@ -293,7 +293,7 @@ We will present the structure of the first T-Net that appears in the network. In
 ![tnet](https://user-images.githubusercontent.com/97680577/178104139-0f1cba1f-3e0a-4f07-a082-d0967653034f.png)
 
 
-*Visualization of the Outputs
+#### Visualization of the Outputs
 
 ## Main Conclusions
 

@@ -12,7 +12,7 @@ import dataset
 import model    
 from tensorboardlogger import TensorBoardLogger 
 from summarizer import S3DIS_Summarizer
-from visualitzation import tnet_compare, tnet_compare_infer,  infer
+#from visualitzation import tnet_compare, tnet_compare_infer,  infer
 
 #------------------------------------------------------------------------------
 # AUX METHODS
@@ -456,6 +456,8 @@ def train_segmentation(model, dataloaders):
     total_val_time = []
     total_train_y_preds = []
     total_train_y_true = []
+    total_val_y_preds = []
+    total_val_y_true = []
 
 
     optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
@@ -464,8 +466,8 @@ def train_segmentation(model, dataloaders):
         epoch_train_loss = []
         epoch_train_acc = []
         epoch_train_start_time = datetime.datetime.now()     
-        epoch_y_preds = []
-        epoch_y_true = []
+        epoch_train_y_preds = []
+        epoch_train_y_true = []
    
 
         tqdm_desc = "{}ing epoch ({}/{})".format(task.capitalize(), epoch, hparams['epochs'])
@@ -533,13 +535,13 @@ def train_segmentation(model, dataloaders):
             # Prepare data for confusion matrix    
             targets = targets.view(-1, targets.numel()).squeeze(dim = 0).tolist()
             preds = preds.view(-1, preds.numel()).squeeze(dim = 0).tolist()
-            epoch_y_true.extend(targets)
-            epoch_y_preds.extend(preds)
+            epoch_train_y_true.extend(targets)
+            epoch_train_y_preds.extend(preds)
             
         
-        compute_confusion_matrix(epoch_y_true, epoch_y_preds)
-        total_train_y_true.extend(epoch_y_true)
-        total_train_y_preds.extend(epoch_y_preds)
+        compute_confusion_matrix(epoch_train_y_true, epoch_train_y_preds)
+        total_train_y_true.extend(epoch_train_y_true)
+        total_train_y_preds.extend(epoch_train_y_preds)
         
 
         epoch_train_end_time = datetime.datetime.now()
@@ -730,6 +732,12 @@ def watch_segmentation(model, dataloaders, random = False):
     # Enter evaluation mode
     model.eval()
 
+    # Define variables to compute confusion matrices
+    per_win_y_true = []
+    per_win_y_preds = []
+    total_y_true = []
+    total_y_preds = []
+
     # Path to the checkpoint file
     model_checkpoint = os.path.join(
             eparams['pc_data_path'], 
@@ -874,83 +882,34 @@ def watch_segmentation(model, dataloaders, random = False):
             i[4] = torch.index_select(points_rel, 0, indices)
             # Points to display (absolute coordinates)
             i[5] =  torch.index_select(points_abs, 0, indices)
-    
-    
+
         # Save the results in a dict
         out_dict[win_id] = point_breakdown
-      
-    # Confussion Matrix (nested dict)
-    # True positives (tp)
-    # False positives (fp)
-    # True negatives (tn)
-    # False negatives (fn)
-    available_values = ("tp", "fp", "tn", "fn")
-    confussion_matrix_dict = dict()
 
-    for k in objects_dict:
-        confussion_matrix_dict[k] = {}
-        for i in available_values:
-            confussion_matrix_dict[k][i] = []
-
-       
-    for k, v in out_dict.items():
-        print(80 * "-")
-        print("WinID: ", k)
-        for i in v:
-            print(i)            
-            # Analyze results
-            # The difference between predicted and annotated points
-            delta_points = abs(i[3] - i[2]).item()
-            # True Positives, False Positives, False Negatives
-            if (i[2] != 0) and (i[3] != 0):    
-                if i[3] == i[2]:
-                    confussion_matrix_dict[i[0]]["tp"].append(i[3])
-                elif i[3] > i[2]:
-                    confussion_matrix_dict[i[0]]["tp"].append(i[2])
-                    confussion_matrix_dict[i[0]]["fp"].append(delta_points)
-                elif i[3] < i[2]:
-                    confussion_matrix_dict[i[0]]["tp"].append(i[3])
-                    confussion_matrix_dict[i[0]]["fn"].append(delta_points)
-            # True Negatives
-            elif (i[2] == 0) and (i[3] == 0):
-                confussion_matrix_dict[i[0]]["tn"].append(delta_points)
-            
-    print(80 * "-")
-    print("Values for confussion matrix for {}".format(model_checkpoint))
-    for k,v in confussion_matrix_dict.items():
-        print(20 * "-")
-        print("{}: ".format(k))
-        for par, val in v.items():           
-            print("\t{}: {}".format(par, sum(val)))
-            
-        tp = 0 if len(v["tp"]) == 0 else sum(v["tp"]).item() 
-        tn = 0 if len(v["tn"]) == 0 else sum(v["tn"]).item() 
-        fp = 0 if len(v["fp"]) == 0 else sum(v["fp"]).item() 
-        fn = 0 if len(v["fn"]) == 0 else sum(v["fn"]).item() 
-
-        # When true positive + false positive == 0, precision is undefined. 
-        # When true positive + false negative == 0, recall is undefined. 
-        try:
-            accuracy = ((tp + tn) / (tp + tn + fp + fn))*100
-            accuracy = "{:.2f} %".format(accuracy)
-        except ZeroDivisionError:
-            accuracy = "N/A"
-        try:    
-            precision = (tp/(tp + fp))*100
-            precision = "{:.2f} %".format(precision)
-        except ZeroDivisionError: 
-            precision = "N/A (tp + fp = 0)"
-        try:
-            recall = (tp/(tp + fn))*100
-            recall = "{:.2f} %".format(recall)
-        except ZeroDivisionError:
-            recall = "N/A (tp + fn = 0)"
-
-        print("\tAccuracy: {}".format(accuracy))
-        print("\tPrecision: {}".format(precision))
-        print("\tRecall: {}".format(recall))
-               
+         # Prepare data for confusion matrix    
+        targets = target_labels.view(-1, target_labels.numel()).squeeze(dim = 0).tolist()
+        preds = preds.view(-1, preds.numel()).squeeze(dim = 0).tolist()
+        per_win_y_true.append(targets)
+        per_win_y_preds.append(preds) 
+        
+    # Computing scores for sliding windows
+    print("Per sliding window")             
+    for i in range(len(all_sliding_windows_for_a_room)):
+        print("WinID: {} ".format(i) + 60 * "-")
+        compute_confusion_matrix(per_win_y_true[i], per_win_y_preds[i])
     
+    print(60 * "-")
+    print("Grand totals per room {}:".format(area_and_office))
+    print(60 * "-")
+    # Create a single list from all the lists
+    for i in per_win_y_true:
+        total_y_true.extend(i)
+
+    for i in per_win_y_preds:
+        total_y_preds.extend(i)
+
+    compute_confusion_matrix(total_y_true, total_y_preds)
+
     # TODO: Insert Lluis' code here for visualization
     # out_dict contains all the points detected for all objects
     # lluis_code(data, segmentation_target_object_id, points_to_display) 
@@ -1052,21 +1011,11 @@ if __name__ == "__main__":
     
     # tnet_compare example here -----------------------
     # Extracting tnet_out and preds:
-    
-    sample = (ds[0])[4]
-    print(sample[0].dtype)
-    preds,tnet_out = infer(model, sample[0])
+    #sample = (ds[0])[0]
+    #preds,tnet_out = infer(model, sample[0])
     #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample[0], preds, tnet_out), global_step=None, close=True, walltime=None)
-    
     # Using the _infer version that extracts the variables by itself:
     #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample[0]), global_step=None, close=True, walltime=None)
-    
-    logger.writer.add_figure('Tnet-out-board.png', tnet_compare_infer(model, board_tensor), global_step=None, close=True, walltime=None)
-    logger.writer.add_figure('Tnet-out-bookcase.png', tnet_compare_infer(model, bookcase_tensor), global_step=None, close=True, walltime=None)
-    logger.writer.add_figure('Tnet-out-chair.png', tnet_compare_infer(model, chair_tensor), global_step=None, close=True, walltime=None)
-    logger.writer.add_figure('Tnet-out-table.png', tnet_compare_infer(model, table_tensor), global_step=None, close=True, walltime=None)
-    logger.writer.add_figure('Tnet-out-sofa.png', tnet_compare_infer(model, sofa_tensor), global_step=None, close=True, walltime=None)
-    
     # ---------------------------------------------------
 
     # We need to close the writer and the logger:
@@ -1074,6 +1023,8 @@ if __name__ == "__main__":
     logger.writer.flush()
     logger.writer.close()
     logger.finish()
+
+
 
 
 

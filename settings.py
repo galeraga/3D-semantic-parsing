@@ -15,17 +15,21 @@ from tqdm import tqdm
 import warnings
 import itertools
 
-# Math and DL imports
+# Math and DL imports
 import numpy as np
 import pandas as pd
 import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, f1_score, jaccard_score
+
 
 # Visualization imports
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
+import seaborn as sns
+from prettytable import PrettyTable
 import torchvision.transforms as transforms
 # from torchinfo import summary
 
@@ -60,15 +64,16 @@ segmentation_target_object = "table"
 # ENVIRONMENT AND MODEL PARAMETERS
 #------------------------------------------------------------------------------
 # Environment (file system and so on) params
+# 'pc_data_path': r"C:\Users\Lluis\Desktop\Projecte2\Stanford3dDataset",    
 eparams = {
-    'pc_data_path': r"C:\Users\Lluis\Desktop\Projecte2\Stanford3dDataset",    
+    'pc_data_path': "/Users/jgalera/datasets/S3DIS/aligned",
     'pc_file_extension': ".txt",
     'pc_file_extension_rgb_norm': "_rgb_norm.txt",
     #'pc_file_extension_sem_seg_suffix': "_annotated",
     'pc_file_extension_sem_seg_suffix': "_annotated_clutter_free",
     'already_rgb_normalized_suffix': "_rgb_norm",
     #'s3dis_summary_file': "s3dis_summary.csv",
-    # The proper summary file to work with depends on the args.parser
+    # The proper summary file to work with depends on the args.parser
     's3dis_summary_file_all': "s3dis_summary_clutter_free_all.csv",
     's3dis_summary_file_movable': "s3dis_summary_clutter_free_movable.csv",
     "checkpoints_folder": "checkpoints",
@@ -179,7 +184,6 @@ vparams = {
     'stairs_color': cparams['Chocolate'],
 }
 
-
 #------------------------------------------------------------------------------
 # AUX FOLDER CREATION
 #------------------------------------------------------------------------------
@@ -196,7 +200,7 @@ if not os.path.exists(tnet_outputs_folder):
 #------------------------------------------------------------------------------
 # PARSER DEFINITION AND DEFAULT SETTINGS
 #------------------------------------------------------------------------------
-# Parser definition
+# Parser definition
 parser_desc = "Provides convenient out-of-the-box options to train or test "
 parser_desc += "a PointNet model based on S3DIS dataset"
 
@@ -221,7 +225,7 @@ parser.add_argument("--task",
                     action = "store",
                     nargs = 1,
                     default = "train",
-                    choices = ["train", "test", "watch"],
+                    choices = ["train", "validation", "test", "watch"],
                     help = "Either train or test")
 
 parser.add_argument("--load",
@@ -254,13 +258,13 @@ args = parser.parse_args()
 # slow or even freeze, lower the worker number to avoid potential 
 # slowness/freeze if necessary"
 
-# Toy is for testing code in a very quick way, where
+# Toy is for testing code in a very quick way, where
 # getting the most of the model is NOT the goal
 if "toy" in args.load:
-    hparams["num_points_per_object"] = 10
-    hparams["num_points_per_room"] = 100
+    hparams["num_points_per_object"] = 128
+    hparams["num_points_per_room"] = 128  #100 originally
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 3
+    hparams["epochs"] = 3 #3 originally
     
 
 if "low" in args.load:
@@ -277,7 +281,7 @@ if "medium" in args.load:
     
 if "high" in args.load:
     hparams["num_points_per_object"] = 2048
-    hparams["num_points_per_room"] = 2048
+    hparams["num_points_per_room"] = 4096
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 10
    
@@ -299,7 +303,7 @@ hparams["num_classes"] = len(objects_set)
 # annotated_clutter_free_all: 
 #   - data and labels for all the objects (except clutter): wall, door, beam,
 # annotated_clutter_free_movable: 
-#   - data and labels for only movable objects (except cluuter): chair, table
+#   - data and labels for only movable objects (except clutter): chair, table
 eparams["pc_file_extension_sem_seg_suffix"] = eparams["pc_file_extension_sem_seg_suffix"] + "_" + ''.join(args.objects)
 
 # To store sliding windows 
@@ -322,5 +326,9 @@ path_to_current_sliding_windows_folder = os.path.join(
 if not os.path.exists(path_to_current_sliding_windows_folder):
     os.makedirs(path_to_current_sliding_windows_folder)
 
+#------------------------------------------------------------------------------
+# VISUALZIATION SETTINGS    
+#------------------------------------------------------------------------------
 
-
+# Rooms with more bookcases and boards (chairs-tables seem to be detected easily)
+target_room_for_visualization = "Area_6_office_10"

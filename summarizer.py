@@ -24,7 +24,6 @@ class S3DIS_Summarizer():
     def __init__(self, path_to_data, logger, rebuild = False, check_consistency = False):
         """
         Inspect the dataset to get the following info:
-
             - Areas
             - Spaces
             - Objects
@@ -33,15 +32,12 @@ class S3DIS_Summarizer():
             - Data health status
         
         S3DIS dataset structure:
-
         Path_to_data\Area_N\space_X
                         \space_Y
                         \space_Z\Annotations\object_1
                         \space_Z\Annotations\object_2
-
         Input: 
             - Path to dataset
-
         Output: A CSV file containing the following columns:
             - Area
             - Space
@@ -52,7 +48,6 @@ class S3DIS_Summarizer():
             - Object label
             - Object ID
             - Health Status
-
         Args:
             - rebuild: If rebuild is set to True, the summary file is 
                 generated again
@@ -170,13 +165,10 @@ class S3DIS_Summarizer():
         """
         Check the point cloud files in order to know whether the files are 
         readable or not. 
-
         To do so, reading the CSV with pandas as np.float32 is enough to know
         whether future conversion to torch tensor will work.
-
         If the conversion is feasible, flag the point cloud file as 
         "Good" in the "Health Status" col of the sumamry file
-
         If not, flag de point cloud file as "Bad" in the "Health Status" 
         col of the sumamry file
         """
@@ -220,9 +212,7 @@ class S3DIS_Summarizer():
     def label_points_for_semantic_segmentation(self):
         """
         Create a single annotated file (per room/space) for semantic segmentation
-
         Method outlook:
-
          - The label to be assigned to each point in the cloud will be based
             on the file name the point is (e.g. all the points in chair_1.txt
             will have the "chair" label). In fact, since the already created 
@@ -245,9 +235,7 @@ class S3DIS_Summarizer():
         Area_1\office_1\office_1_annotated.txt will be created. 
         This file will contain an extra column to host the label for every 
         point in the cloud.
-
         unique_area_space_df (with 272 rows! Note the index is not correlative)
-
         Area_space: 
             Area             Space
         0     Area_1              WC_1
@@ -306,7 +294,7 @@ class S3DIS_Summarizer():
                 # i preserves the index from summary_df (41, 73,...)
                 for idx, i in enumerate(objects_df.index):
                     
-                    # Get line by line info
+                    # Get line by line info
                     summary_line = self.summary_df.iloc[i]
 
                     # Get the proper info from each line
@@ -349,7 +337,6 @@ class S3DIS_Summarizer():
         """
         Provide information about how many objects have issues with 
         their point cloud
-
         
         Return the indexes of the rows/files flagged with bad healthy status
         """     
@@ -483,7 +470,6 @@ class S3DIS_Summarizer():
         """
         Creates the files that will store all the sliding windows used in 
         the semantic segmentation training.
-
         Sliding window parameters are user-defined and read from settings.py.
         These params are: 
         
@@ -495,7 +481,6 @@ class S3DIS_Summarizer():
         All sliding windows are created by splitting the prevously created 
         annotated room file (\Area_N\Space_X\space_x_annotated.txt), according 
         to the user-defined params.
-
         In order to simplify dataset management, all the sliding windows for all
         the available rooms are saved into a single folder and will be saved
         as Pytorch tensors:
@@ -504,7 +489,6 @@ class S3DIS_Summarizer():
         sliding_windows
         ├── w_X_d_Y_h_Z_o_T
             ├── Area_N_Space_J_winK.pt
-
         where:    
         w_X: width of the sliding window
         d_Y: depth of the sliding window
@@ -704,10 +688,3 @@ class S3DIS_Summarizer():
 
                         # Update the sliding window ID
                         win_count += 1
-                       
-                
-
-
-   
-
-    

@@ -1,32 +1,29 @@
 from settings import *
 import model
-from PIL import Image
 
-from dataset import * #imports PointSampler
+from dataset import * # imports PointSampler
 import numpy as np
 import torch
 import open3d as o3d
-import pandas as pd #to read csv file
+import pandas as pd # to read csv file
 
 import pathlib
 import calendar
 import time
 
-
 def infer(model,
-          points,
+          point_cloud_file,
           shuffle_points=False,
           plot_tNet_out=True,
           return_indices_maxpool=False):
     
     '''
     This function allows to return the prediction of the class given a pointcloud.
-
     Parameters
     ----------
     model(model of the network):
         The model that we will pass.
-    points(np array):
+    point_cloud_file(txt):
         The pointcloud that we want to infer saved in a .txt
     shuffle_points(bool, Default = False):
         Not implemented.
@@ -36,7 +33,6 @@ def infer(model,
         Plots the tNet
     return_indices_maxpool(bool, Defalut = False):
         If True returns also the indices of the maxpool operation
-
     Returns
     -------
     preds(numpy array):
@@ -45,7 +41,11 @@ def infer(model,
         An array with the points of our pointCloud multiplicated by the output of the T-Net.
         In other words the points displayed in a canonic way. 
     '''
+    #num_classes = dataset.NUM_CLASSIFICATION_CLASSES
+    points, label = point_cloud_file
+    
     points = points.to(hparams["device"])
+    label = label.to(hparams["device"])
     
     # We ran out of memory in GCP GPU, so all tensors have to be on the same device
     #if torch.cuda.is_available():
@@ -67,21 +67,73 @@ def infer(model,
 
 
 
-def tnet_compare(sample, preds, tnet_out, save=False):
-    '''
-    Comparing this function compares a SINGLE pointCloud with the same PointCloud multiplied by the T-net.
 
+def tnet_compare(model, subdataset, num_samples = 7):
+    '''
+    This function plots the initial pointcloud and the pointcloud represented in the canonical space (the space found by the T-Net).
+    The point of the function is to have a better understanding of what the T-Net is doing.
     Parameters:
     -----------
-    sample(Torch tensor):
+    model(model of the network):
+        The model that we will pass.
+    subdataset(pandas):
+        This subdataset is the dataset where we will extract all the pointclouds samples that we want to plot.
+        Usually, for the sake of rigurosity, it is used the test set.
+    num_samples(int):
+        The number of samples that we want to plot.
+    Returns:
+    --------
+    VOID.
+    '''
+    # Plot 7 samples
+    for SAMPLE in range(num_samples):
+
+        fig = plt.figure(figsize=[12,6]) # height and width, DO NOT CHANGE.
+
+        ax = fig.add_subplot(1, 2, 1, projection='3d')
+
+        # plot input sample
+        # Changed to solve the error "can't convert cuda:0 device type tensor 
+        # to numpy. Use Tensor.cpu() to copy the tensor to host memory first"
+        # in GCP
+        pc = subdataset[SAMPLE][0].cpu().numpy()
+        label = subdataset[SAMPLE][1]
+        sc = ax.scatter(pc[:,0], pc[:,1], pc[:,2], c=pc[:,0] ,s=50, marker='o', cmap="viridis", alpha=0.7)
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        ax.set_zlim3d(-1, 1)
+        ax.title.set_text(f'Input point cloud - Target: {label}')
+
+        # plot transformation
+        ax = fig.add_subplot(1, 2, 2, projection='3d')
+        preds, tnet_out = infer(model,subdataset[SAMPLE])
+        points=tnet_out
+        sc = ax.scatter(points[0,0,:], points[0,1,:], points[0,2,:], c=points[0,0,:] ,s=50, marker='o', cmap="viridis", alpha=0.7)
+        ax.title.set_text(f'Output of "Input Transform" Detected: {preds}')
+        ax.set_xlabel('x')
+        ax.set_ylabel('y')
+        
+        # Saving the plot
+        png_file_name = "Tnet-out-{}.png".format(label)
+        png_path = os.path.join(tnet_outputs_folder, png_file_name)
+        plt.savefig(png_path, dpi=100)
+        #print('Detected class: %s' % preds)
+
+
+def tnet_compare_in_site(model, sample, preds, tnet_out):
+    '''
+    Comparing this function compares a SINGLE pointCloud with the same PointCloud multiplied by the T-net.
+    Parameters:
+    -----------
+    model(model of the network):
+        The model that we will pass.
+    sample(tuple):
         The sample is the object of the dataset that we want to visualize.
     preds(numpy array):
         An array with the predictions of our pointCloud. Each number represents the class.
     tnet_out(numpy array):
         An array with the points of our pointCloud multiplicated by the output of the T-Net.
         In other words the points displayed in a canonic way.
-    save (Bool) Default = False:
-        If True saves the image.
     Returns:
     --------
     VOID.
@@ -92,58 +144,7 @@ def tnet_compare(sample, preds, tnet_out, save=False):
     ax = fig.add_subplot(1, 2, 1, projection='3d')
 
     # plot input sample
-    #pc = sample[0].numpy()
-    pc = sample.numpy()
-    label = sample[1]
-    sc = ax.scatter(pc[:,0], pc[:,1], pc[:,2], c=pc[:,0] ,s=50, marker='o', cmap="viridis", alpha=0.7)
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    ax.set_zlim3d(-1, 1)
-    ax.title.set_text(f'Input point cloud - Target: {label}')
-
-    # plot transformation
-    ax = fig.add_subplot(1, 2, 2, projection='3d')
-    # preds, tnet_out = infer(model,sample) de moment no necessitem aquesta linea.
-    points=tnet_out
-    sc = ax.scatter(points[0,0,:], points[0,1,:], points[0,2,:], c=points[0,0,:] ,s=50, marker='o', cmap="viridis", alpha=0.7)
-    ax.title.set_text(f'Output of "Input Transform" Detected: {preds}')
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    if save == True:
-        plt.savefig(f'C:/Users/marcc/OneDrive/Escritorio/Tnet-out-{label}.png',dpi=100)
-    else:
-        print('To save the fig change save=True')
-    return fig
-
-
-def tnet_compare_infer(model, sample, save=False):
-    '''
-    Comparing this function compares a SINGLE pointCloud with the same PointCloud multiplied by the T-net.
-    This function is used when you don't have the tnet_out and preds.
-
-    Parameters:
-    -----------
-    model(model of the network):
-        The model used to infer.
-    sample(Torch tensor):
-        The sample is the object of the dataset that we want to visualize.
-    save (Bool) Default = False:
-        If True saves the image.
-    Returns:
-    --------
-    VOID.
-    '''
-    # Plot 7 samples
-    fig = plt.figure(figsize=[12,6]) # height and width, DO NOT CHANGE.
-
-    ax = fig.add_subplot(1, 2, 1, projection='3d')
-
-    # plot input sample
-    #pc = sample[0].numpy()
-    pc = sample.numpy()
-    print('Forma sample', sample)
-    print('Printing pc shape:')
-    print(pc.shape)
+    pc = sample[0].numpy()
     label = sample[1]
     sc = ax.scatter(pc[:,0], pc[:,1], pc[:,2], c=pc[:,0] ,s=50, marker='o', cmap="viridis", alpha=0.7)
     ax.set_xlabel('x')
@@ -159,41 +160,8 @@ def tnet_compare_infer(model, sample, save=False):
     ax.title.set_text(f'Output of "Input Transform" Detected: {preds}')
     ax.set_xlabel('x')
     ax.set_ylabel('y')
-    if save == True:
-        plt.savefig(f'C:/Users/marcc/OneDrive/Escritorio/Tnet-out-{label}.png',dpi=100)
-    else:
-        print('To save the fig change save=True')
-    return fig
-
-
-# The follow code will be deprectated in future versions ------------------------
-
-def fig2data (fig):
-    """
-    @brief Convert a Matplotlib figure to a 4D numpy array with RGBA channels and return it
-    @param fig a matplotlib figure
-    @return a numpy 3D array of RGBA values
-    """
-    # If we haven't already shown or saved the plot, then we need to
-    # draw the figure first...
-    fig.canvas.draw()
-    
-    # Now we can save it to a numpy array.
-    data = np.frombuffer(fig.canvas.tostring_rgb(), dtype=np.uint8)
-    data = data.reshape(fig.canvas.get_width_height()[::-1] + (3,))
-    return data
-
-def fig2img ( fig ):
-    """
-    @brief Convert a Matplotlib figure to a PIL Image in RGBA format and return it
-    @param fig a matplotlib figure
-    @return a Python Imaging Library ( PIL ) image
-    """
-    # put the figure pixmap into a numpy array
-    buf = fig2data ( fig )
-    w, h, d = buf.shape
-    return Image.fromstring( "RGBA", ( w ,h ), buf.tostring( ) )
-
+    plt.savefig(f'C:/Users/marcc/OneDrive/Escritorio/Tnet-out-{label}.png',dpi=100)
+    #print('Detected class: %s' % preds)
 
 
 """
@@ -204,44 +172,32 @@ The function after the visualization creates a png file for each image generated
 
 Arguments:
 
-    data: Tensor containing ground truth labelled points. 
-          Each point is informed by its xyz location and rgb color data followed by the segmentation label identifier.
-          Has the x y z r g b label or x y z label structure posible.
+    dict_to_use: Dictonary with the objects to detect 
 
-    segmentation_target_object_id: Integer, label that identifies the object type that has been segmented
+    str_area_and_office: String, area and office
 
-    points_to_display: Tensor, containing the model segmented labelled points.
-            The tensor has the x y z label structure.
+    dict_model_segmented_points: Dictionary with the predicted points per slidding window per object
 
-    gt_label_col: Specifies the number of the column of the data tensor where is the segmentation label.
+    b_multiple_seg: bool, to visualize all segmentations given in the dict_to_use param
 
-    model_label_col: Specifies the number of the column of the points_to_display tensor where is the segmentation label.
-
-    b_model_without_label_col: bool, specifies if the model tensor 
-
-    b_multiple_seg: bool, to visualize all segmentations given in the given tensors.
+    b_hide_wall: bool, hides the points that corresponds to the wall    
 
     draw_original_rgb_data: To render the original rgb color of the data tensor.
 
-    b_hide_wall: bool, hides the points that corresponds to the wall
-    
-    b_hide_column: bool, hides the points that corresponds to the column
-
-    b_show_inside_room: bool, to change camera point of view to the inside of the room
+    b_show_room_points: Boolean, show room points, in grey color if draw_original_rgb_data is set to False
 
 """
 
-# TODO: UPDATE NEW PARAMS EXPLANATION
-
-                        # b_hide_wall = False, 
-                        # b_hide_column = False,
 def render_segmentation(dict_to_use = {},
                         str_area_and_office = "",
                         dict_model_segmented_points = {},
-                        b_multiple_seg = False,                                              
+                        b_multiple_seg = False,    
+                        b_hide_wall = True,                                  
                         draw_original_rgb_data = False,
-                        b_show_inside_room = True,
                         b_show_room_points = True):
+
+    torch.set_printoptions(profile="full")
+
     
     # Open proper annotated file with the room with GT segmented points 
     a = str_area_and_office.split('_')
@@ -287,9 +243,9 @@ def render_segmentation(dict_to_use = {},
                         dict_of_tensors_allpoints_per_object[object[0]] = object[-1]                        
 
     if len(dict_of_tensors_allpoints_per_object.keys()) == 0: 
-        print("------------------------------------------------------------")
+        print(80 * "-")
         print("The model has not detected any points for the class " + vparams["str_object_to_visualize"])
-        print("------------------------------------------------------------")
+        print(80 * "-")
         return
 
 
@@ -306,6 +262,8 @@ def render_segmentation(dict_to_use = {},
    
     for k_object_name, v_object_index in dict_to_use.items():
         if b_multiple_seg: 
+            if b_hide_wall and k_object_name == "wall":
+                continue
             # Get the point coordinates that matches with the object name
             points = room_points[(room_points[:, 6] == v_object_index).nonzero().squeeze(1)]
             # Create pointcloud and add it to be drawn later
@@ -313,6 +271,7 @@ def render_segmentation(dict_to_use = {},
             pc.points = o3d.utility.Vector3dVector(points[ :, :3]) #get xyz coordinates
             pc.paint_uniform_color(vparams[k_object_name + '_color'])
             all_pointcloud_object_gt.append(pc)
+            
 
         elif k_object_name == vparams["str_object_to_visualize"]:
             points = room_points[(room_points[:, 6] == v_object_index).nonzero().squeeze(1)]
@@ -330,13 +289,15 @@ def render_segmentation(dict_to_use = {},
     for k_object_name, v_object_index in dict_to_use.items():
         # loop through all objects from the segmented points detected by the model
         for k_object_model, v_object_model in dict_of_tensors_allpoints_per_object_reduced.items(): 
-        # for k_object_model, v_object_model in dict_of_tensors_allpoints_per_object.items(): 
             # If founded the object with label in the dict_to_use catalog get the points
             if b_multiple_seg and k_object_model == k_object_name:
+                if b_hide_wall and k_object_model == "wall":
+                    continue
                 pc_model = o3d.geometry.PointCloud()
                 pc_model.points = o3d.utility.Vector3dVector(v_object_model[ :, :3]) #get xyz coordinates
                 pc_model.paint_uniform_color(vparams[k_object_name + '_color'])
                 all_pointcloud_object_model.append(pc_model)
+
     
             elif k_object_name == k_object_model and k_object_model == vparams["str_object_to_visualize"]:
                 pc_model = o3d.geometry.PointCloud()
@@ -344,13 +305,17 @@ def render_segmentation(dict_to_use = {},
                 pc_model.paint_uniform_color(vparams[k_object_name + '_color'])
                 all_pointcloud_object_model.append(pc_model)
 
+    # timestamp as reference to stored files
+    ts = calendar.timegm(time.gmtime())
+
     vis_gt = o3d.visualization.Visualizer()
-    vis_model = o3d.visualization.Visualizer()
     vis_gt.create_window(window_name='Segmentation GT id ' + vparams["str_object_to_visualize"])
+    
+    vis_model = o3d.visualization.Visualizer()
     vis_model.create_window(window_name='Segmentation MODEL id ' + vparams["str_object_to_visualize"])
 
     # -----------------------------------
-    # GT SEGMENTATION VISUALIZATION
+    # GT AND ROOM SEGMENTATION VISUALIZATION
     # -----------------------------------
 
     # ROOM
@@ -366,17 +331,6 @@ def render_segmentation(dict_to_use = {},
             # color to grey all room points
             pc_room.paint_uniform_color(cparams['Grey'])
 
-        # VISUALIZATION
-        # get only visualizable room points
-        diameter = np.linalg.norm(np.asarray(pc_room.get_max_bound()) - np.asarray(pc_room.get_min_bound()))
-        radius = diameter * 100
-        camera = [0, 0, diameter]
-
-        # Get points visible from view point
-        if b_show_inside_room:
-            _, pt_map = pc_room.hidden_point_removal(camera, radius)
-            pc_room = pc_room.select_by_index(pt_map)
-
         #add pointclouds
         vis_gt.add_geometry(pc_room) 
         vis_model.add_geometry(pc_room)
@@ -385,66 +339,112 @@ def render_segmentation(dict_to_use = {},
     for segment_gt in all_pointcloud_object_gt:
         vis_gt.add_geometry(segment_gt)
 
-    # delete
-    # for segment_gt_i in range(len(all_pointcloud_object_gt)):
-        # if b_hide_wall and fparams["wall"] == 4:
-        #     continue
-        # if b_hide_column and fparams["column"] == 11:
-        #     continue
-        # vis_gt.add_geometry(all_pointcloud_object_gt[segment_gt_i])
-
-    #camera point of view
-    # ctr = vis_gt.get_view_control()
-    # parameters = o3d.io.read_pinhole_camera_parameters("camera3.json")
-    # ctr.convert_from_pinhole_camera_parameters(parameters)
-    vis_gt.run()
-
-    ts = calendar.timegm(time.gmtime())
+    # ----------------------------
+    # GT camera point of view 1
+    # ----------------------------
+    ctr = vis_gt.get_view_control()
+    parameters = o3d.io.read_pinhole_camera_parameters("camera1.json")
+    ctr.convert_from_pinhole_camera_parameters(parameters)
 
     #save image
     vis_gt.poll_events()
     vis_gt.update_renderer()
-    if b_multiple_seg:
-        filename = str(ts) + '_' + str(str_area_and_office) + '__seg_GT_ALL.png'
-    else:
-        filename = str(ts) + '_' + str(str_area_and_office) + '__seg_GT_' +  str(vparams["str_object_to_visualize"]) + '.png'
+    vis_gt.run()
 
+    filename = get_file_name(ts, str_area_and_office, b_multiple_seg, True, "PV1", "_hidden_wall_")
+    vis_gt.capture_screen_image(str(pathlib.Path().resolve()) + '/' + filename)
+
+    # ----------------------------
+    # GT camera point of view 2
+    # ----------------------------
+    ctr = vis_gt.get_view_control()
+    parameters = o3d.io.read_pinhole_camera_parameters("camera2.json")
+    ctr.convert_from_pinhole_camera_parameters(parameters)
+
+    #save image
+    vis_gt.poll_events()
+    vis_gt.update_renderer()
+    vis_gt.run()
+
+    filename = get_file_name(ts, str_area_and_office, b_multiple_seg, True, "PV2", "_hidden_wall_")
     vis_gt.capture_screen_image(str(pathlib.Path().resolve()) + '/' + filename)
 
     #close window
     vis_gt.destroy_window()
 
-    # -----------------------------------
-    # MODEL SEGMENTATION VISUALIZATION
-    # -----------------------------------
-    # for segment_model_i in range(len(all_pointcloud_object_model)):   
-    #     # if b_hide_wall and segment_model_i == 4:
-    #     #     continue
-    #     # if b_hide_column and segment_model_i == 11:
-    #     #     continue
-    #     vis_model.add_geometry(all_pointcloud_object_model[segment_model_i])
 
     # add only the segmented objects from the GT file that are being studied
     for segment_model in all_pointcloud_object_model:
-        vis_gt.add_geometry(segment_model)
+        vis_model.add_geometry(segment_model)
 
-    #camera point of view
-    # ctr = vis_model.get_view_control()
-    # parameters = o3d.io.read_pinhole_camera_parameters("camera3.json")
-    # ctr.convert_from_pinhole_camera_parameters(parameters)
-    vis_model.run()
+    # ---------------------
+    # MODEL camera point of view 1
+    # ---------------------
+    ctr = vis_model.get_view_control()
+    parameters = o3d.io.read_pinhole_camera_parameters("camera1.json")
+    ctr.convert_from_pinhole_camera_parameters(parameters)
 
     #save image
     vis_model.poll_events()
     vis_model.update_renderer()
+    vis_model.run()
 
-    if b_multiple_seg:
-        filename = str(ts) + '_' + str(str_area_and_office) + '__seg_MODEL_ALL.png'
-    else:
-        filename = str(ts) + '_' + str(str_area_and_office) + '__seg_MODEL_' +  str(vparams["str_object_to_visualize"]) + '.png'
+    filename = get_file_name(ts, str_area_and_office, b_multiple_seg, False, "PV1", "_hidden_wall_")
+    vis_model.capture_screen_image(str(pathlib.Path().resolve()) + '/' + filename)
 
+    # ---------------------
+    # MODEL camera point of view 2
+    # ---------------------
+    ctr = vis_model.get_view_control()
+    parameters = o3d.io.read_pinhole_camera_parameters("camera2.json")
+    ctr.convert_from_pinhole_camera_parameters(parameters)
 
+    #save image
+    vis_model.poll_events()
+    vis_model.update_renderer()
+    vis_model.run()
+
+    filename = get_file_name(ts, str_area_and_office, b_multiple_seg, False, "PV2", "_hidden_wall_")
     vis_model.capture_screen_image(str(pathlib.Path().resolve()) + '/' + filename)
 
     #close window
     vis_model.destroy_window()    
+
+def get_file_name(timestamp, 
+        str_area_and_office = "",
+        b_multiple_seg = False,
+        b_is_GT_file = False,
+        str_PV_version = "",
+        str_sufix_hidden_wall = ""):
+
+    if b_is_GT_file:
+
+        if b_multiple_seg:
+            return str(timestamp) + '__' + str(str_area_and_office) +  "_" + \
+                        str(hparams["dimensions_per_object"]) +  "_dims_" +  \
+                        str(hparams["num_classes"]) +  "_clases_" + str_sufix_hidden_wall + \
+                        "_seg_GT_" + str_PV_version + ".png"
+        else:
+            return str(timestamp) + '__' + str(str_area_and_office) + \
+                        str(hparams["dimensions_per_object"]) +  "_dims_" +  \
+                        str(hparams["num_classes"]) +  "_clases_" + str_sufix_hidden_wall + \
+                        "_seg_" +   str(vparams["str_object_to_visualize"]) + "_ " + \
+                        "_GT_" + str_PV_version + ".png"
+    else:
+        if b_multiple_seg:
+            return str(timestamp) + '__' + str(str_area_and_office) +  "_" + \
+                        str(hparams["num_points_per_room"]) +  "_room_points_" +  \
+                        str(hparams["dimensions_per_object"]) +  "_dims_" +  \
+                        str(hparams["num_classes"]) +  "_clases_" + str_sufix_hidden_wall + \
+                        str(hparams["epochs"]) + "_epochs_seg_" + \
+                        "_MODEL_" + str_PV_version + ".png"
+        else:
+            return str(timestamp) + '__' + str(str_area_and_office) + \
+                    str(hparams["num_points_per_room"]) +  "_room_points_" +  \
+                        str(hparams["dimensions_per_object"]) +  "_dims_" +  \
+                        str(hparams["num_classes"]) +  "_clases_" +  \
+                        str(hparams["epochs"]) + "_epochs_" + str_sufix_hidden_wall + \
+                        str(vparams["str_object_to_visualize"]) + \
+                        "seg_" + \
+                        "_MODEL_" + str_PV_version + ".png"  
+    

@@ -15,6 +15,7 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
     + [Mathematical introduction](#mathematical-introduction)
     + [Topology of the network](#topology-of-the-network)
     + [Visualization of the Outputs](#visualization-of-the-outputs)
+    + [Goal](#goal)
   * [BasePointNet](#basepointnet)
   * [ClassificationPointNet](#classificationpointnet)
   * [SegmentationPointNet](#segmentationpointnet)

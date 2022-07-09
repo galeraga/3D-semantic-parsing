@@ -277,8 +277,10 @@ Estimated Total Size (MB): 9561.66
 ```
 ### The T-Net Network
 *Mathematical introduction
+The T-Net is a network that estimates a affine transformation matrix. Given two afine spaces $\mathds{A}_1$, $\mathds{A}_2$
+Given a point cloud in an Euclidean affine space, we can consider this transformation as an automorphism of this space.
 
-*Explanation of the network
+*Topology of the network
 
 *Visualization of the Outputs
 ## Main Conclusions

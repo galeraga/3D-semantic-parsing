@@ -278,7 +278,7 @@ Estimated Total Size (MB): 9561.66
 ### The T-Net Network
 *Mathematical introduction
 
-The T-Net is a network that estimates a affine transformation matrix. Given two affine spaces $A_1$ and $A_2$, an affine transformation, also called affinity, is a morphism between A1 and A2 such that the induced map f_P between the Euclidean spaces E1 and E2 and with the point P in A1 is a linear map.
+The T-Net is a network that estimates a affine transformation matrix. Given two affine spaces $A_1$ and $A_2$, an affine transformation, also called affinity, is a morphism between $A_1$ and $A_2$ such that the induced map $f_P$ between the Euclidean spaces $E_1$ and $E_2$ and with the point $P$ in $A_1$ is a linear map.
 
 An affinity doesn't necessarily preserve neither the distances nor the angles but it preserves, by definition, the collinearity and the parallelism. In other words, all points belonging to a line will be alinead in, what we call canonical space, after this transformation. All the parallel lines will be preserved too. In fact, is very likely that this transformation changes the distances and the angles of our point cloud as we will see in the examples.
 

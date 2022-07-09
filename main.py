@@ -984,19 +984,27 @@ if __name__ == "__main__":
 
     # tnet_compare example here -----------------------
     # Extracting tnet_out and preds:
-    sample = (ds[0])[0]
+    
+    sample = (ds[0])[4]
+    print(sample[0].dtype)
     preds,tnet_out = infer(model, sample[0])
-    logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample[0], preds, tnet_out), global_step=None, close=True, walltime=None)
+    #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample[0], preds, tnet_out), global_step=None, close=True, walltime=None)
+    
     # Using the _infer version that extracts the variables by itself:
     #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample[0]), global_step=None, close=True, walltime=None)
+    
+    logger.writer.add_figure('Tnet-out-board.png', tnet_compare_infer(model, board_tensor), global_step=None, close=True, walltime=None)
+    logger.writer.add_figure('Tnet-out-bookcase.png', tnet_compare_infer(model, bookcase_tensor), global_step=None, close=True, walltime=None)
+    logger.writer.add_figure('Tnet-out-chair.png', tnet_compare_infer(model, chair_tensor), global_step=None, close=True, walltime=None)
+    logger.writer.add_figure('Tnet-out-table.png', tnet_compare_infer(model, table_tensor), global_step=None, close=True, walltime=None)
+    logger.writer.add_figure('Tnet-out-sofa.png', tnet_compare_infer(model, sofa_tensor), global_step=None, close=True, walltime=None)
+    
     # ---------------------------------------------------
 
     # We need to close the writer and the logger:
     logger.writer.flush()
     logger.writer.close()
     logger.finish()
-
-
 
 
 

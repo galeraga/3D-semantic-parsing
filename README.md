@@ -335,6 +335,7 @@ $$IoU = \frac{|A\cap B|}{|A \cup B|} = \frac{TP}{TP+FN+FP} $$
 
 ![IoU](https://user-images.githubusercontent.com/97680577/178110909-c405e44c-74a9-404f-a355-dad7cedea66e.png)
 
+Considering the green rectangle the correct ones and the red rectangle the prediction.
 
 
 

@@ -209,6 +209,7 @@ When the affine transformation matrix is used again, it is not used directly in 
 
 $$L_{reg} = ||I-AA^T||_{F}^2 $$
 
+Where A is the transformation matrix predicted by the T-Net.
 
 ### BasePointNet
 

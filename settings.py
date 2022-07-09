@@ -77,8 +77,45 @@ eparams = {
     "checkpoints_folder": "checkpoints",
     "tnet_outputs": "tnet_outputs",
     'tensorboard_log_dir': "runs/pointnet_with_s3dis",
-    'sliding_windows_folder': "sliding_windows"
+    'sliding_windows_folder': "sliding_windows",
+    'board_loc': "/Area_1/office_1/Annotations/board_1.txt",
+    'bookcase_loc': "/Area_1/office_1/Annotations/bookcase_1.txt",
+    'chair_loc': "/Area_1/office_1/Annotations/chair_1.txt",
+    'table_loc': "/Area_1/office_1/Annotations/table_1.txt",
+    'sofa_loc':"/Area_1/office_2/Annotations/sofa_1.txt"
+
 }
+
+# INDIVIUAL OBJECT SAMPLES:
+board_path = eparams['pc_data_path']+eparams['board_loc']
+board_pandas = pd.read_csv(board_path, sep=" ", float_precision='high')
+board_tensor = torch.tensor(board_pandas.iloc[:,[0, 1, 2]].values)
+board_tensor = board_tensor.to(torch.float32) # we need to convert it to float32 
+del board_pandas # For the sake of our memory
+
+bookcase_path = eparams['pc_data_path']+eparams['bookcase_loc']
+bookcase_pandas = pd.read_csv(bookcase_path, sep=" ", float_precision='high')
+bookcase_tensor = torch.tensor(bookcase_pandas.iloc[:,[0, 1, 2]].values)
+bookcase_tensor = bookcase_tensor.to(torch.float32) # we need to convert it to float32 
+del bookcase_pandas # For the sake of our memory
+
+chair_path = eparams['pc_data_path']+eparams['chair_loc']
+chair_pandas = pd.read_csv(chair_path, sep=" ", float_precision='high')
+chair_tensor = torch.tensor(chair_pandas.iloc[:,[0, 1, 2]].values)
+chair_tensor = chair_tensor.to(torch.float32) # we need to convert it to float32 
+del chair_pandas # For the sake of our memory
+
+table_path = eparams['pc_data_path']+eparams['table_loc']
+table_pandas = pd.read_csv(table_path, sep=" ", float_precision='high')
+table_tensor = torch.tensor(table_pandas.iloc[:,[0, 1, 2]].values)
+table_tensor = table_tensor.to(torch.float32) # we need to convert it to float32 
+del table_pandas # For the sake of our memory
+
+sofa_path = eparams['pc_data_path']+eparams['sofa_loc']
+sofa_pandas = pd.read_csv(sofa_path, sep=" ", float_precision='high')
+sofa_tensor = torch.tensor(sofa_pandas.iloc[:,[0, 1, 2]].values)
+sofa_tensor = sofa_tensor.to(torch.float32) # we need to convert it to float32 
+del sofa_pandas # For the sake of our memory
 
 # Model hyperparameters
 # None values are set later, based on environment or load profile
@@ -206,7 +243,7 @@ if "low" in args.load:
     hparams["num_points_per_object"] = 100
     hparams["num_points_per_room"] = 512
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 5
+    hparams["epochs"] = 20
    
 if "medium" in args.load:
     hparams["num_points_per_object"] = 1024

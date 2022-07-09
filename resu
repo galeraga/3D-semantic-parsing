@@ -1,0 +1,23 @@
+COLOR
+
+Per object points (Annotated | Predicted):
+- board: (5901|4427) (75.02%)
+- bookcase: (11407|7944) (69.64%)
+- chair: (37169|41699) (112.19%)
+- table: (14909|16586) (111.25%)
+- sofa: (1270|0) (0.00%)
+
+Mean accuracy: Training: 0.6025 | Validation: 0.3017 
+Total time (seconds) for training segmentation: 414 secs
+
+NO COLOR
+
+Epoch 3: train loss: 1.0437, val loss: 1.537900, train accuracy: 0.5742,  val accuracy: 0.433300, time(secs): 50
+Per object points (Annotated | Predicted):
+- board: (5924|5322) (89.84%)
+- bookcase: (11299|9729) (86.10%)
+- chair: (37359|50829) (136.06%)
+- table: (14836|4776) (32.19%)
+- sofa: (1238|0) (0.00%)
+
+Mean accuracy: Training: 0.5383 | Validation: 0.3006

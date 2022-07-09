@@ -212,5 +212,25 @@
             "cwd": "${fileDirname}",
             "args": ["--task", "test", "--goal", "segmentation", "--load", "high", "--objects", "movable"]
         },
+        {
+            "name": "Python: S3DIS Project (Segmentation watch - Toy - Movable)",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${fileDirname}",
+            "args": ["--task", "watch", "--goal", "segmentation", "--load", "toy", "--objects", "movable"]
+        },
+        {
+            "name": "Python: S3DIS Project (Segmentation watch - Low - Movable)",
+            "type": "python",
+            "request": "launch",
+            "program": "${file}",
+            "console": "integratedTerminal",
+            "justMyCode": true,
+            "cwd": "${fileDirname}",
+            "args": ["--task", "watch", "--goal", "segmentation", "--load", "low", "--objects", "movable"]
+        },
     ]
 }

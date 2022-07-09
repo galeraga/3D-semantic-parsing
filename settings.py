@@ -97,8 +97,8 @@ hparams = {
     # Cols to use from the point cloud files (either 3 (xyz) or 6 (xyzrgb))
     'dimensions_per_object': None,
     # Params to create sliding windows
-    'win_width': 2,
-    'win_depth': 2,
+    'win_width': 1,
+    'win_depth': 1,
     'win_height': 4,
     'overlap': 0.5, # Percentage, 0-95%, 100 will create an infinite loop
 }
@@ -194,16 +194,16 @@ args = parser.parse_args()
 # getting the most of the model is NOT the goal
 if "toy" in args.load:
     hparams["num_points_per_object"] = 10
-    hparams["num_points_per_room"] = 1024  #100 originally
+    hparams["num_points_per_room"] =128  #100 originally
     hparams["dimensions_per_object"] = 6
-    hparams["epochs"] = 10 #3 originally
+    hparams["epochs"] = 5 #3 originally
     
 
 if "low" in args.load:
     hparams["num_points_per_object"] = 100
-    hparams["num_points_per_room"] = 512
+    hparams["num_points_per_room"] = 128
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 5
+    hparams["epochs"] = 3
    
 if "medium" in args.load:
     hparams["num_points_per_object"] = 1024

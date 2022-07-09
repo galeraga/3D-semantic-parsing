@@ -357,6 +357,8 @@ $$recall=\frac{TP}{TP+FN}$$
 We can define the $F_1$ Score as the harmonic mean of the precision and the recall:
 
 $$F_1=2\frac{precision\times recall}{precision+recall}=\frac{TP}{TP+\frac{1}{2}(FP+FN)}$$
+
+
 ##### Area Under the Curve (AUC)
 The ROC curve is the curve that represents the relation between True Positive Rate and False Positive Rate:
 $$TPR=\frac{TP}{TP+FN}=recall$$
@@ -366,7 +368,14 @@ The AUC metric stands for the integral of this curve between 0 and 1.
 
 ![AUC](https://user-images.githubusercontent.com/97680577/178116164-b8a46799-99c5-4d8d-8a1b-44a7c9ed912f.png)
 
-The AUC metric is a metric that allows you to compare between different ROC curves, the greater is the area, the better. 
+The AUC metric tells you how capable is a moder to distinguish between classes. A model that have a measure near to 1 means that it has a good separability. In the following example we will see a model whose ROC curve has an area of 1.
+
+![1_HmVIhSKznoW8tFsCLeQjRw](https://user-images.githubusercontent.com/97680577/178118715-d8130218-05aa-4aa2-94e4-08f4463c2953.png)
+In other words, a threashold that distinguish between two classes can easily be found, creating no FN nor FP.
+
+![1_Uu-t4pOotRQFoyrfqEvIEg](https://user-images.githubusercontent.com/97680577/178118753-a3064e6d-2215-4113-b2cf-452957551b3b.png)
+
+
 
 #### For Segmentation
 

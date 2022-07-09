@@ -275,7 +275,10 @@ Params size (MB): 14.12
 Estimated Total Size (MB): 9561.66
 ==========================================================================================
 ```
-
+### The T-Net Network
+Mathematical introduction
+Explanation of the network
+Visualization of the Outputs
 ## Main Conclusions
 
 Segmentation:

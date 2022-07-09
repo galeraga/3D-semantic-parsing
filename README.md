@@ -160,6 +160,26 @@ red squared section of the pictures below from the original paper.
 
 <img width="980" alt="image" src="https://user-images.githubusercontent.com/76537012/174836557-f1a113cd-8953-4e54-bfff-da6a03be40e2.png">
 
+
+#### Mathematical introduction
+
+The T-Net is a network that estimates a affine transformation matrix. Given two affine spaces $A_1$ and $A_2$, an affine transformation, also called affinity, is a morphism between $A_1$ and $A_2$ such that the induced map $f_P: E_1 \rightarrow E_2$ with the point $P \in A_1$  is a linear map.
+
+An affinity doesn't necessarily preserve neither the distances nor the angles but it preserves, by definition, the collinearity and the parallelism. In other words, all points belonging to a line will be alinead in, what we call canonical space, after this transformation. All the parallel lines will be preserved too. In fact, is very likely that this transformation changes the distances and the angles of our point cloud as we will see in the examples.
+
+The output of this network will be a matrix that will be multiplied with the point cloud.
+
+
+#### Topology of the network
+
+We will present the structure of the first T-Net that appears in the network. In this case, because the number of coordinates of our point cloud is only 3, the output of the network will be a $3 \times 3$ matrix:
+
+![tnet](https://user-images.githubusercontent.com/97680577/178104139-0f1cba1f-3e0a-4f07-a082-d0967653034f.png)
+
+
+#### Visualization of the Outputs
+
+
 ### BasePointNet
 
 <img width="962" alt="image" src="https://user-images.githubusercontent.com/76537012/174834124-c25dbcfe-2c46-4616-88dd-af417c0975ee.png">
@@ -300,25 +320,6 @@ Params size (MB): 14.12
 Estimated Total Size (MB): 9561.66
 ==========================================================================================
 ```
-### The T-Net Network
-
-#### Mathematical introduction
-
-The T-Net is a network that estimates a affine transformation matrix. Given two affine spaces $A_1$ and $A_2$, an affine transformation, also called affinity, is a morphism between $A_1$ and $A_2$ such that the induced map $f_P: E_1 \rightarrow E_2$ with the point $P \in A_1$  is a linear map.
-
-An affinity doesn't necessarily preserve neither the distances nor the angles but it preserves, by definition, the collinearity and the parallelism. In other words, all points belonging to a line will be alinead in, what we call canonical space, after this transformation. All the parallel lines will be preserved too. In fact, is very likely that this transformation changes the distances and the angles of our point cloud as we will see in the examples.
-
-The output of this network will be a matrix that will be multiplied with the point cloud.
-
-
-#### Topology of the network
-
-We will present the structure of the first T-Net that appears in the network. In this case, because the number of coordinates of our point cloud is only 3, the output of the network will be a $3 \times 3$ matrix:
-
-![tnet](https://user-images.githubusercontent.com/97680577/178104139-0f1cba1f-3e0a-4f07-a082-d0967653034f.png)
-
-
-#### Visualization of the Outputs
 
 ## Main Conclusions
 

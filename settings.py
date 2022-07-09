@@ -28,6 +28,7 @@ from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, f
 # Visualization imports
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
+import seaborn as sns
 from prettytable import PrettyTable
 import torchvision.transforms as transforms
 # from torchinfo import summary
@@ -160,7 +161,7 @@ parser.add_argument("--task",
                     action = "store",
                     nargs = 1,
                     default = "train",
-                    choices = ["train", "test", "watch"],
+                    choices = ["train", "validation", "test", "watch"],
                     help = "Either train or test")
 
 parser.add_argument("--load",
@@ -196,7 +197,7 @@ args = parser.parse_args()
 # Toy is for testing code in a very quick way, where
 # getting the most of the model is NOT the goal
 if "toy" in args.load:
-    hparams["num_points_per_object"] = 10
+    hparams["num_points_per_object"] = 128
     hparams["num_points_per_room"] = 128  #100 originally
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 3 #3 originally
@@ -216,7 +217,7 @@ if "medium" in args.load:
     
 if "high" in args.load:
     hparams["num_points_per_object"] = 2048
-    hparams["num_points_per_room"] = 2048
+    hparams["num_points_per_room"] = 4096
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 10
    

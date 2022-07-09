@@ -5,8 +5,6 @@ PointNet implementation with S3DIS dataset
 #------------------------------------------------------------------------------
 # IMPORTS
 #------------------------------------------------------------------------------
-# from numpy import double
-#from sklearn.metrics import confusion_matrix
 from settings import * 
 import dataset 
 import model    
@@ -28,7 +26,7 @@ def avoid_MaxPool1d_warning(f):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
             print(80 * "-")
-            print(task.upper()+ "ING")
+            print(task.upper())
             print(80 * "-")
             print("Start time: ", datetime.datetime.now())
             f(*args, **kwargs)
@@ -129,7 +127,7 @@ def compute_confusion_matrix(y_true, y_preds):
     for idx, row in enumerate(cm.tolist()):
         row = [reverse_objects_dict[idx]] + row
         cm_table.add_row(row) 
-    print("\nConfussion Matrix")
+    print("\nConfusion Matrix")
     print(cm_table)
     print("")
     
@@ -139,9 +137,14 @@ def compute_confusion_matrix(y_true, y_preds):
     scores_table.add_row(["Recall"] + ["{:.4f}".format(v) for v in recall.tolist()])
     scores_table.add_row(["F1 Score"] + ["{:.4f}".format(v) for v in fscore.tolist()])
     print(scores_table)
-    print("F1 Score (Macro): {:.4f}".format(f1_score(y_true_text, y_preds_text, average='macro')))
-    print("F1 Score (Micro): {:.4f}".format(f1_score(y_true_text, y_preds_text, average='micro')))
-    print("F1 Score (Weighted): {:.4f}".format(f1_score(y_true_text, y_preds_text, average='weighted')))
+    
+    f1_score_macro = f1_score(y_true_text, y_preds_text, average='macro')
+    f1_score_micro = f1_score(y_true_text, y_preds_text, average='micro')
+    f1_score_weighted = f1_score(y_true_text, y_preds_text, average='weighted')
+
+    print("F1 Score (Macro): {:.4f}".format(f1_score_macro))
+    print("F1 Score (Micro): {:.4f}".format(f1_score_micro))
+    print("F1 Score (Weighted): {:.4f}".format(f1_score_weighted))
     print("")
    
     # Intersection over union
@@ -174,419 +177,139 @@ def compute_confusion_matrix(y_true, y_preds):
     # Overall accuracy
     ACC = (TP+TN)/(TP+FP+FN+TN)
     print("Overall accuracy: {}\n".format(ACC))
+
+    return (f1_score_macro, f1_score_micro, f1_score_weighted)
     
-    
+
 #------------------------------------------------------------------------------
-# CLASSIFICATION METHODS
+# CLASSIFICATION AND SEGMENTATION METHODS FOR TRAINING, VALIDATION AND TESTING
 #------------------------------------------------------------------------------
-@avoid_MaxPool1d_warning
-def train_classification(model, dataloaders):
+
+def process_single_epoch(model, dataloader, optimizer, epoch):
     """
-    Train the PointNet network for classification goals
-
-    Inputs:
-        - model: the PointNet model class
-        - dataloaders: train, val and test
-
-    Outputs:
-        - None
     """
-
-    # Task welcome message
-    task_welcome_msg(task = "train")
-    
-    # Get the proper dataloaders
-    train_dataloader = dataloaders[0]
-    val_dataloader = dataloaders[1]
 
     # Aux vars for grand totals
-    train_loss = []
-    val_loss = []
-    train_acc = []
-    val_acc = []
-    best_loss= np.inf
-    total_train_time = []
-    total_val_time = []
-    
-    optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
+    epoch_loss = []
+    epoch_acc = []
+    epoch_y_true = []
+    epoch_y_preds = []
 
-    for epoch in range(1, hparams['epochs'] + 1):
-        # Aux vars per epoch
-        epoch_train_loss = []
-        epoch_train_acc = []
-        tnet_out_list = []
-        epoch_train_start_time = datetime.datetime.now()
-
-        tqdm_desc = "{}ing epoch ({}/{})".format(task.capitalize(), epoch, hparams['epochs'])
-        # training loop
-        for data in tqdm(train_dataloader, desc = tqdm_desc):
-            model = model.train()
-            
-            points, targets = data  
-            
-            points = points.to(device)
-            targets = targets.to(device)
-
-            optimizer.zero_grad()
-            
-            preds, feature_transform, tnet_out, ix_maxpool = model(points)           
-
-            # Why?  
-            identity = torch.eye(feature_transform.shape[-1]).to(device)
-
-            # Formula (2) in original paper (Lreg)
-            # TODO: According to the original paper, it should only be applied
-            # during the alignment of the feature space (with higher dimension (64))
-            # than the spatial transformation matrix (3)
-            # With the regularization loss, the model optimization becomes more
-            # stable and achieves better performance
-            # A regularization loss (with weight 0.001) is added to the softmax
-            # classification loss to make the matrix close to ortoghonal
-            # (quoted from supplementary info from the original paper)
-            
-            regularization_loss = torch.norm(
-                identity - torch.bmm(feature_transform, feature_transform.transpose(2, 1)))
-            
-            # Loss: The negative log likelihood loss 
-            # It is useful to train a classification problem with C classes.
-            # torch.nn.functional.nll_loss(input, target, ...) 
-            # ----For classification:
-            # input – (N,C) (N: batch_size; C: num_classes) 
-            # target - (N)
-            # preds.shape[batch_size, num_classes]
-            # targets.shape[batch_size], but every item in the target tensor
-            # must be in the range of num_classes - 1 
-            # E.g: if num_classes = 2 -> target[i] < 2 {0, 1}
-            
-            # Why does the loss function return a single scalar for a batch?
-            # It returns, by default, the weighted mean of the output 
-            targets = targets.squeeze(dim = -1)
-            loss = F.nll_loss(preds, targets.long()) + 0.001 * regularization_loss
-            
-            epoch_train_loss.append(loss.cpu().item())
-        
-            loss.backward()
-            optimizer.step()
-            
-            # From the num_classes dimension (dim =1), find out the max value
-            # max() returns a tuple (max_value, idx_of_the_max_value)
-            # Take the index of the max value, since the object class 
-            # classification is based on the position of the max value
-            # https://pytorch.org/docs/stable/generated/torch.max.html
-            # Similar to torch.argmax, that returns the second value
-            # returned by torch.max()
-            preds = preds.data.max(dim = 1)[1]
-            corrects = preds.eq(targets.data).cpu().sum()
-            accuracy = corrects.item() / preds.numel()
-            epoch_train_acc.append(accuracy)
-            tnet_out_list.append(tnet_out)
-
-            
-        epoch_train_end_time = datetime.datetime.now()
-        train_time_per_epoch = (epoch_train_end_time - epoch_train_start_time).seconds
-        total_train_time.append(train_time_per_epoch)
-
-        epoch_val_loss = []
-        epoch_val_acc = []
-        epoch_val_start_time = datetime.datetime.now()
-
-        tqdm_desc = "{} epoch ({}/{})".format("Validating", epoch, hparams['epochs'])
-        # validation loop
-        for data in tqdm(val_dataloader, desc = tqdm_desc):
-            model = model.eval()
-    
-            points, targets = data
-            points = points.to(device)
-            targets = targets.to(device)
-                    
-            preds, feature_transform, tnet_out, ix = model(points)
-            
-            # loss = F.nll_loss(preds, targets)
-            targets = targets.squeeze(dim = -1)
-            loss = F.nll_loss(preds, targets.long()) + 0.001 * regularization_loss
-            
-            
-            epoch_val_loss.append(loss.cpu().item())
-            
-            preds = preds.data.max(dim = 1)[1]
-            corrects = preds.eq(targets.data).cpu().sum()
-            accuracy = corrects.item() / preds.numel()
-            epoch_val_acc.append(accuracy)
-
-        epoch_val_end_time = datetime.datetime.now()
-        val_time_per_epoch = (epoch_val_end_time - epoch_val_start_time).seconds
-        total_val_time.append(val_time_per_epoch)
-
-        print('Epoch %s: train loss: %s, val loss: %f, train accuracy: %s,  val accuracy: %f, time(secs): %s'
-                % (epoch,
-                    round(np.mean(epoch_train_loss), 4),
-                    round(np.mean(epoch_val_loss), 4),
-                    round(np.mean(epoch_train_acc), 4),
-                    round(np.mean(epoch_val_acc), 4),
-                    train_time_per_epoch + val_time_per_epoch
-                    )
-                )
-
-        if np.mean(val_loss) < best_loss:
-            state = {
-                'model': model.state_dict(),
-                'optimizer': optimizer.state_dict()
-            }
-            torch.save(
-                state, 
-                os.path.join(eparams['pc_data_path'], 
-                    eparams["checkpoints_folder"],
-                    eparams["checkpoint_name"])
-                )
-            best_loss=np.mean(val_loss)
-
-        train_loss.append(np.mean(epoch_train_loss))
-        val_loss.append(np.mean(epoch_val_loss))
-        train_acc.append(np.mean(epoch_train_acc))
-        val_acc.append(np.mean(epoch_val_acc))
-
-        # Log results to TensorBoard for every epoch
-        logger.writer.add_scalar(goal.capitalize() + " Loss/Training", train_loss[-1], epoch)
-        logger.writer.add_scalar(goal.capitalize() + " Loss/Validation", val_loss[-1], epoch)
-        logger.writer.add_scalar(goal.capitalize() + " Accuracy/Training", train_acc[-1], epoch)
-        logger.writer.add_scalar(goal.capitalize() + " Accuracy/Validation", val_acc[-1], epoch)
-        logger.writer.add_scalar(goal.capitalize() + " Time/Training", total_train_time[-1], epoch)
-        logger.writer.add_scalar(goal.capitalize() + " Time/Validation", total_val_time[-1], epoch)
-    
-    print("Mean accuracy: Training: {:.4f} | Validation: {:.4f} ".format(
-            sum(train_acc)/len(train_acc),
-            sum(val_acc)/len(val_acc),
-            ))
-    print("Total time (seconds) for {}ing {}: {} secs ".format( 
-                    task,
-                    goal,
-                    sum(total_train_time) + sum(total_val_time))
-                    )
-
-@avoid_MaxPool1d_warning
-@torch.no_grad()
-def test_classification(model, dataloaders):
-    """
-    Test the PointNet classification network
-    """
-
-    # Task welcome message
-    task_welcome_msg(task = "test")
-    
-    # Path to the checkpoint file
-    model_checkpoint = os.path.join(
-            eparams['pc_data_path'], 
-            eparams['checkpoints_folder'], 
-            eparams["checkpoint_name"]
-            )
-    
-    # If the checkpoint does not exist, train the model
-    if not os.path.exists(model_checkpoint):
-        print("The model does not seem already trained! Starting the training rigth now from scratch...")
-        train_classification(model, dataloaders)
-    
-    # Loading the existing checkpoint
-    print("Loading checkpoint {} ...".format(model_checkpoint))
-    state = torch.load(
-                model_checkpoint, 
-                map_location = torch.device(hparams["device"]))
-    model.load_state_dict(state['model'])  
-
-    # Select the proper dataloader
-    test_dataloader = dataloaders[2]
-
-    # Aux test vars
-    accuracies = []
-    
-    # Enter evaluation mode
-    model.eval()
-    
-    # Test the model
-    print("Testing data classification")
-    for batch_idx, data in enumerate(tqdm(test_dataloader)):
-        points, target_labels = data        
-                
+    tqdm_desc = "{}ing epoch ({}/{})".format(task.capitalize(), epoch, hparams['epochs'])
+    for data in tqdm(dataloader, desc = tqdm_desc):
+        points, targets = data  
         points = points.to(device)
-        target_labels = target_labels.to(device)
+        targets = targets.to(device)
         
-        preds, feature_transform, tnet_out, ix = model(points)
+        optimizer.zero_grad()
         
-        # preds.shape([batch_size, num_classes])
-        preds = preds.data.max(1)[1]
+        preds, feature_transform, tnet_out, ix_maxpool = model(points)
+
+        # Why?  
+        identity = torch.eye(feature_transform.shape[-1]).to(device)
+
+        # Formula (2) in original paper (Lreg)
+        # TODO: According to the original paper, it should only be applied
+        # during the alignment of the feature space (with higher dimension (64))
+        # than the spatial transformation matrix (3)
+        # With the regularization loss, the model optimization becomes more
+        # stable and achieves better performance
+        # A regularization loss (with weight 0.001) is added to the softmax
+        # classification loss to make the matrix close to ortoghonal
+        # (quoted from supplementary info from the original paper)    
+    
+        regularization_loss = torch.norm(
+            identity - torch.bmm(feature_transform, feature_transform.transpose(2, 1)))
         
-        corrects = preds.eq(target_labels.data).cpu().sum()
+        # Loss: The negative log likelihood loss 
+        # It is useful to train a classification problem with C classes.
+        # torch.nn.functional.nll_loss(input, target, ...) 
+        # ----For segmentation:
+        # (N: batch_size; C: num_classes) 
+        # input (predictions)– (N,C, d1, d2,...,dk)) 
+        # target - (N, d1, d2,...,dk)
+        # So shapes have to be:
+        # preds.shape[batch_size, num_classes, max_points_per_room]
+        
+        # Why does the loss function return a single scalar for a batch?
+        # It returns, by default, the weighted mean of the output 
+        # https://pytorch.org/docs/stable/generated/torch.nn.NLLLoss.html#torch.nn.NLLLoss
+        loss = F.nll_loss(preds, targets.long()) + 0.001 * regularization_loss
+
+        # epoch_train_loss.append(loss.cpu().item())
+        epoch_loss.append(loss.cpu().item())
+        
+        #loss.requires_grad=True #might need toggle on for watch 
+        loss.backward()
+        
+        optimizer.step()
+        
+        # From the num_classes dimension (dim =1), find out the max value
+        # max() returns a tuple (max_value, idx_of_the_max_value)
+        # Take the index of the max value, since the object class 
+        # classification is based on the position of the max value
+        # https://pytorch.org/docs/stable/generated/torch.max.html
+        preds = preds.data.max(dim = 1)[1]
+        corrects = preds.eq(targets.data).cpu().sum()
         accuracy = corrects.item() / preds.numel()
-        accuracies.append(accuracy)
-        
-        logger.writer.add_scalar(goal.capitalize() + " Accuracy/Test", accuracy, batch_idx)
+        epoch_acc.append(accuracy)
+
+        # Prepare data for confusion matrix    
+        targets = targets.view(-1, targets.numel()).squeeze(dim = 0).tolist()
+        preds = preds.view(-1, preds.numel()).squeeze(dim = 0).tolist()
+        epoch_y_true.extend(targets)
+        epoch_y_preds.extend(preds)
+
+    print("\nLoss: ", round(np.mean(epoch_loss), 4))    
+    print("Accuracy:", round(np.mean(epoch_acc), 4))    
+
+    f1_scores = compute_confusion_matrix(epoch_y_true, epoch_y_preds)
     
-    mean_accuracy = (torch.FloatTensor(accuracies).sum()/len(accuracies))
-    print("Average accuracy: {:.2f} ".format(float(mean_accuracy)))
-               
-#------------------------------------------------------------------------------
-# SEGMENTATION METHODS
-#------------------------------------------------------------------------------
+    return (epoch_y_true, epoch_y_preds, epoch_loss, epoch_acc, f1_scores)
+
+
 @avoid_MaxPool1d_warning
-def train_segmentation(model, dataloaders):
+def run_model(model, dataloaders):
     """
-    Train the PointNet network for semantic segmentation tasks
-
-    Inputs:
-        - model: the PointNet model class
-        - dataloaders: train, val and test
-
-    Outputs:
-        - None
     """
+     # Task welcome message
+    task_welcome_msg(task)
 
-    # Task welcome message
-    task_welcome_msg(task = "train")
+    # Get the proper dataloader for the proper task
+    if task == "train":
+        dataloader = dataloaders[0]
+        model = model.train()
+    elif task == "validation":
+        dataloader = dataloaders[1]
+        model = model.eval()
+    elif task == "test":
+        dataloader = dataloaders[2]
+        model = model.eval()
     
-    # Get the proper dataloaders
-    train_dataloader = dataloaders[0]
-    val_dataloader = dataloaders[1]
-
-    # Aux vars for grand totals
-    train_loss = []
-    val_loss = []
-    train_acc = []
-    val_acc = []
+    # Aux vars to store labels for predictions (to be used by the confusion matrix)
+    total_y_true = []
+    total_y_preds = []
+    total_loss = []
+    total_acc = []
+    # Set the initial best loss to infinity
     best_loss= np.inf
-    total_train_time = []
-    total_val_time = []
-    total_train_y_preds = []
-    total_train_y_true = []
-    total_val_y_preds = []
-    total_val_y_true = []
-
 
     optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
 
     for epoch in range(1, hparams['epochs'] +1):
-        epoch_train_loss = []
-        epoch_train_acc = []
-        epoch_train_start_time = datetime.datetime.now()     
-        epoch_train_y_preds = []
-        epoch_train_y_true = []
-   
 
-        tqdm_desc = "{}ing epoch ({}/{})".format(task.capitalize(), epoch, hparams['epochs'])
-        # training loop
-        for data in tqdm(train_dataloader, desc = tqdm_desc):
-            model = model.train()
-            
-            points, targets = data  
-            points = points.to(device)
-            targets = targets.to(device)
-            
-            optimizer.zero_grad()
-            
-            preds, feature_transform, tnet_out, ix_maxpool = model(points)
-
-            # Why?  
-            identity = torch.eye(feature_transform.shape[-1]).to(device)
-
-            # Formula (2) in original paper (Lreg)
-            # TODO: According to the original paper, it should only be applied
-            # during the alignment of the feature space (with higher dimension (64))
-            # than the spatial transformation matrix (3)
-            # With the regularization loss, the model optimization becomes more
-            # stable and achieves better performance
-            # A regularization loss (with weight 0.001) is added to the softmax
-            # classification loss to make the matrix close to ortoghonal
-            # (quoted from supplementary info from the original paper)    
+        # Run the model
+        scores = process_single_epoch(model, dataloader, optimizer, epoch)
         
-            regularization_loss = torch.norm(
-                identity - torch.bmm(feature_transform, feature_transform.transpose(2, 1)))
-            
-            # Loss: The negative log likelihood loss 
-            # It is useful to train a classification problem with C classes.
-            # torch.nn.functional.nll_loss(input, target, ...) 
-            # ----For segmentation:
-            # (N: batch_size; C: num_classes) 
-            # input (predictions)– (N,C, d1, d2,...,dk)) 
-            # target - (N, d1, d2,...,dk)
-            # So shapes have to be:
-            # preds.shape[batch_size, num_classes, max_points_per_room]
-            
-            # Why does the loss function return a single scalar for a batch?
-            # It returns, by default, the weighted mean of the output 
-            # https://pytorch.org/docs/stable/generated/torch.nn.NLLLoss.html#torch.nn.NLLLoss
-            loss = F.nll_loss(preds, targets.long()) + 0.001 * regularization_loss
+        # Split results
+        total_y_true.extend(scores[0])
+        total_y_preds.extend(scores[1])
+        total_loss.extend(scores[2])
+        total_acc.extend(scores[3])
+        f1_score_macro, f1_score_micro, f1_score_weighted = scores[4]
 
-            # epoch_train_loss.append(loss.cpu().item())
-            epoch_train_loss.append(loss.cpu().item())
-            
-            #loss.requires_grad=True #might need toggle on for watch 
-            loss.backward()
-            
-            optimizer.step()
-            
-            # From the num_classes dimension (dim =1), find out the max value
-            # max() returns a tuple (max_value, idx_of_the_max_value)
-            # Take the index of the max value, since the object class 
-            # classification is based on the position of the max value
-            # https://pytorch.org/docs/stable/generated/torch.max.html
-            preds = preds.data.max(dim = 1)[1]
-            corrects = preds.eq(targets.data).cpu().sum()
-            accuracy = corrects.item() / preds.numel()
-            epoch_train_acc.append(accuracy)
-
-            # Prepare data for confusion matrix    
-            targets = targets.view(-1, targets.numel()).squeeze(dim = 0).tolist()
-            preds = preds.view(-1, preds.numel()).squeeze(dim = 0).tolist()
-            epoch_train_y_true.extend(targets)
-            epoch_train_y_preds.extend(preds)
-            
-        
-        compute_confusion_matrix(epoch_train_y_true, epoch_train_y_preds)
-        total_train_y_true.extend(epoch_train_y_true)
-        total_train_y_preds.extend(epoch_train_y_preds)
-        
-
-        epoch_train_end_time = datetime.datetime.now()
-        train_time_per_epoch = (epoch_train_end_time - epoch_train_start_time).seconds
-        total_train_time.append(train_time_per_epoch)
-
-        epoch_val_loss = []
-        epoch_val_acc = []
-        epoch_val_start_time = datetime.datetime.now()
-
-        tqdm_desc = "{} epoch ({}/{})".format("Validating", epoch, hparams['epochs'])
-        # validation loop
-        for data in tqdm(val_dataloader, desc = tqdm_desc):
-            model = model.eval()
-    
-            points, targets = data
-            points = points.to(device)
-            targets = targets.to(device)
-                    
-            preds, feature_transform, tnet_out, ix = model(points)
-
-            loss = F.nll_loss(preds, targets.long()) + 0.001 * regularization_loss
-        
-            epoch_val_loss.append(loss.cpu().item())
-            
-            preds = preds.data.max(dim = 1)[1]
-            corrects = preds.eq(targets.data).cpu().sum()
-            accuracy = corrects.item() / preds.numel()       
-            epoch_val_acc.append(accuracy)
-
-        epoch_val_end_time = datetime.datetime.now()
-        val_time_per_epoch = (epoch_val_end_time - epoch_val_start_time).seconds
-        total_val_time.append(val_time_per_epoch)
-
-        print('Epoch %s: train loss: %s, val loss: %f, train accuracy: %s,  val accuracy: %f, time(secs): %s'
-            % (epoch,
-                round(np.mean(epoch_train_loss), 4),
-                round(np.mean(epoch_val_loss), 4),
-                round(np.mean(epoch_train_acc), 4),
-                round(np.mean(epoch_val_acc), 4),
-                train_time_per_epoch + val_time_per_epoch
-                )
-            )
-        
-        if np.mean(val_loss) < best_loss:
+        # Save the model only when training
+        if (np.mean(total_loss) < best_loss) and (task == "train"):
             state = {
                 'model': model.state_dict(),
                 'optimizer': optimizer.state_dict()
@@ -597,97 +320,40 @@ def train_segmentation(model, dataloaders):
                     eparams["checkpoints_folder"],
                     eparams["checkpoint_name"])
                 )
-            best_loss=np.mean(val_loss)
-
-        train_loss.append(np.mean(epoch_train_loss))
-        val_loss.append(np.mean(epoch_val_loss))
-        train_acc.append(np.mean(epoch_train_acc))
-        val_acc.append(np.mean(epoch_val_acc))
+            best_loss=np.mean(total_loss)
 
         # Log results to TensorBoard for every epoch
-        logger.writer.add_scalar(goal.capitalize() + " Loss/Training", train_loss[-1], epoch)
-        logger.writer.add_scalar(goal.capitalize() + " Loss/Validation", val_loss[-1], epoch)
-        logger.writer.add_scalar(goal.capitalize() + " Accuracy/Training", train_acc[-1], epoch)
-        logger.writer.add_scalar(goal.capitalize() + " Accuracy/Validation", val_acc[-1], epoch)
-        logger.writer.add_scalar(goal.capitalize() + " Time/Training", total_train_time[-1], epoch)
-        logger.writer.add_scalar(goal.capitalize() + " Time/Validation", total_val_time[-1], epoch)
-    
-    print("Mean accuracy: Training: {:.4f} | Validation: {:.4f} ".format(
-            sum(train_acc)/len(train_acc),
-            sum(val_acc)/len(val_acc),
-            ))
-    
-    print("Overall confusion matrix for training")
-    compute_confusion_matrix(total_train_y_true, total_train_y_preds)
-    
-    print("Total time (seconds) for {}ing {}: {} secs ".format( 
-                task,
-                goal,
-                sum(total_train_time) + sum(total_val_time))
-                )
-
-@avoid_MaxPool1d_warning
-@torch.no_grad()
-def test_segmentation(model, dataloaders):
-    """
-    Test the PointNet segmenatation network
-    """
-
-    # Task welcome message
-    task_welcome_msg(task = "test")
-    
-    # Path to the checkpoint file
-    model_checkpoint = os.path.join(
-            eparams['pc_data_path'], 
-            eparams['checkpoints_folder'], 
-            eparams["checkpoint_name"]
-            )
-    
-    # If the checkpoint does not exist, train the model
-    if not os.path.exists(model_checkpoint):
-        print("The model does not seem already trained! Starting the training rigth now from scratch...")
-        train_classification(model, dataloaders)
-    
-    # Loading the existing checkpoint
-    print("Loading checkpoint {} ...".format(model_checkpoint))
-    state = torch.load(
-                model_checkpoint, 
-                map_location = torch.device(hparams["device"]))
-    model.load_state_dict(state['model'])  
-
-    # Select the proper dataloader
-    test_dataloader = dataloaders[2]
-
-    # Aux test vars
-    accuracies = []
-    
-    # Enter evaluation mode
-    model.eval()
-    
-    # Test the model
-    print("Testing data segmentation")
-    for batch_idx, data in enumerate(tqdm(test_dataloader)):
-        points, target_labels = data        
-                
-        points = points.to(device)
-        target_labels = target_labels.to(device)
+        base_msg = goal.capitalize() + "/" + task.capitalize()   
+        logger.writer.add_scalar(base_msg + " Loss", total_loss[-1], epoch)
+        logger.writer.add_scalar(base_msg + " Accuracy", total_acc[-1], epoch)
+        logger.writer.add_scalar(base_msg + " F1 Score (Macro)", f1_score_macro, epoch)
+        logger.writer.add_scalar(base_msg + " F1 Score (Micro)", f1_score_micro, epoch)
+        logger.writer.add_scalar(base_msg + " F1 Score (Weighted)", f1_score_weighted, epoch)
         
-        preds, feature_transform, tnet_out, ix = model(points)
-        
-        # preds.shape([batch_size, num_classes])
-        preds = preds.data.max(1)[1]
-        
-        corrects = preds.eq(target_labels.data).cpu().sum()
-        accuracy = corrects.item() / preds.numel()
-        accuracies.append(accuracy)
-        
-        logger.writer.add_scalar(goal.capitalize() + " Accuracy/Test", accuracy, batch_idx)
-    
-    mean_accuracy = (torch.FloatTensor(accuracies).sum()/len(accuracies))*100
+    # Print confusion matrix in console
     print(80 * "-")
-    print("Average accuracy: {:.2f}%".format(float(mean_accuracy)))
+    print("Overall confusion matrix (task: {} | checkpoint: {}".format(task, eparams["checkpoint_name"]))
     print(80 * "-")
+    compute_confusion_matrix(total_y_true, total_y_preds)
 
+    # Log confusion matrix in TensorBoard
+    cf_matrix = confusion_matrix(total_y_true, total_y_preds)    
+
+    reversed_objects_dict = [i for i in objects_dict][::-1]
+    df_cm = pd.DataFrame(cf_matrix/np.sum(cf_matrix), index = reversed_objects_dict,
+                        columns = [i for i in objects_dict])
+
+    points = hparams["num_points_per_object"] if goal == "segmentation" else hparams["num_points_per_room"]
+    msg = "Confusion Matrix" + " " + task.capitalize() + " " + goal.capitalize() + "/"
+    msg += str(points) + " points" + " " 
+    msg += str(hparams["epochs"]) + " epochs"  + " " + chosen_params
+    
+    logger.writer.add_figure(msg, sns.heatmap(df_cm, annot=True).get_figure())
+
+    
+#------------------------------------------------------------------------------
+# SEMANTIC SEGMENTATION VISUALIZATION
+#------------------------------------------------------------------------------
 
 @avoid_MaxPool1d_warning
 @torch.no_grad()    
@@ -748,7 +414,8 @@ def watch_segmentation(model, dataloaders, random = False):
     # If the checkpoint does not exist, train the model
     if not os.path.exists(model_checkpoint):
         print("The model does not seem already trained! Starting the training rigth now from scratch...")
-        train_segmentation(model, dataloaders)
+        task = "train"
+        run_model(model, dataloaders)
     
     # Loading the existing checkpoint
     print("Loading checkpoint {} ...".format(model_checkpoint))
@@ -817,11 +484,6 @@ def watch_segmentation(model, dataloaders, random = False):
         points_abs = data[:, 6:9].to(device)
         target_labels = data[:, -1].to(device)
 
-        # Translate labels to the proper dict!
-       # msg = "{} - Translating labels (with {} points)".format(win_id, len(target_labels))    
-       # progress_bar.set_description(msg)
-       # target_labels = dataset.AdaptNumClasses(target_labels, all_dicts).adapt()
-       
         # From all the points in the room, find out how many of them belong to 
         # the different objects
         # We're going to get per object info (a list of lists) containing:
@@ -923,7 +585,7 @@ if __name__ == "__main__":
     # When choices are given in parser add_argument, 
     # the parser returns a list 
     # goal -> either "classification" or "segmentation"
-    # task -> either "train" or "test"
+    # task -> either "train", "validation" or "test"
     goal = ''.join(args.goal)
     task = ''.join(args.task)
     
@@ -936,7 +598,7 @@ if __name__ == "__main__":
     # Create the ground truth file for classification
     summary_file = S3DIS_Summarizer(eparams["pc_data_path"], logger)
 
-    # Get the dicts:
+    # Get the dicts
     objects_dict = summary_file.get_labels()
 
     # Create the ground truth files for semantic segmentation
@@ -949,13 +611,6 @@ if __name__ == "__main__":
 
     # Logging hparams for future reference
     logger.log_hparams(hparams)
-    
-    #define chosen_params
-    # The folder will follow this convention: w_X_d_Y_h_Z_o_T
-    chosen_params = 'w' + str(hparams['win_width']) 
-    chosen_params += '_d' + str(hparams['win_depth'])
-    chosen_params += '_h' + str(hparams['win_height']) 
-    chosen_params += '_o' + str(hparams['overlap']) 
     
     # Define the checkpoint name
     eparams["checkpoint_name"] = "S3DIS_checkpoint_{}_{}_points_{}_dims_{}_num_classes_{}_epochs_{}.pth".format(
@@ -983,7 +638,7 @@ if __name__ == "__main__":
     train_ds = getattr(dataset, train_ds_to_call)(eparams['pc_data_path'], objects_dict, transform = None)
     val_ds = getattr(dataset, val_ds_to_call)(eparams['pc_data_path'], objects_dict, transform = None)
     test_ds = getattr(dataset, test_ds_to_call)(eparams['pc_data_path'], objects_dict, transform = None)
-    
+
     ds = train_ds, val_ds, test_ds    
     
     # Show info about the ds
@@ -1005,9 +660,7 @@ if __name__ == "__main__":
     # summary(model, input_size=(hparams['batch_size'], hparams['max_points_per_space'], hparams['dimensions_per_object']))
 
     # Carry out the the task to do
-    # (e.g, train_classification(), test_segmentation(), watch_segmentation())
-    
-    locals()[task + "_" + goal](model, dataloaders)
+    run_model(model, dataloaders)
     
     # tnet_compare example here -----------------------
     # Extracting tnet_out and preds:

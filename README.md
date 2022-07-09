@@ -348,6 +348,10 @@ First of all we need to define what precision and recall are:
 $$precision = \frac{TP}{TP+FP}$$
 
 $$recall=\frac{TP}{TP+FN}$$
+
+We can define the f1 Score as the harmonic mean of the precision and the recall:
+
+$$F_1=2\frac{precision\times recall}{precision+recall}=\frac{TP}{TP+\frac{1}{2}(FP+FN)}$$
 ##### Area under the curve
 
 #### For Segmentation

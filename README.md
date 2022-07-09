@@ -416,9 +416,13 @@ Segmentation:
 - When very few points are used it's not convenient to use RGB data (revision)
 
 ## Related Work
-
+1. Benjamín Gutíerrez-Becker and Christian Wachinger. _Deep Multi-Structural Shape Analysis:Application to Neuroanatomy_. 2018
+2. 
 ## Contributors
-This is section1 
+Marc Casals i Salvador
+Lluís Culí
+Javier Galera
+Clara Oliver
 
 ## Acknowledgments
 This is section1 

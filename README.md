@@ -53,7 +53,7 @@ The following considerations will be of particular interest:
 - How color impacts object detection and semantic segmentation
 - How the size of the sliding windows impacts the semantic segmentation
 - How the overlap of these windows can improve the training
-- Goal 4
+- Find the optimal number of points and epoch for training
 - Goal 5
 
 ## The dataset

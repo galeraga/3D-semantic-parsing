@@ -331,7 +331,7 @@ Estimated Total Size (MB): 9561.66
 When we are dealing with a Segmentation problem, not only we need to have in consideration the pixels that we labeled wrongly (false positives) but we need to consider the pixels belonging to the class that we didn't label (false negatives). 
 
 
-$$IoU = \frac{\abs{A\cap B}}{\abs{A \cup B}} $$
+$$IoU = \frac{|A\cap B|}{|A \cup B|} $$
 
 ![IoU](https://user-images.githubusercontent.com/97680577/178110909-c405e44c-74a9-404f-a355-dad7cedea66e.png)
 

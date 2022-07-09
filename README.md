@@ -361,6 +361,8 @@ The AUC metric stands for the integral of this curve between 0 and 1.
 
 ![AUC](https://user-images.githubusercontent.com/97680577/178116164-b8a46799-99c5-4d8d-8a1b-44a7c9ed912f.png)
 
+The AUC metric is a metric that allows you to compare between different ROC curves, the greater is the area, the better. 
+
 #### For Segmentation
 
 ##### IoU Score (Intersection over Union):

@@ -325,6 +325,9 @@ Estimated Total Size (MB): 9561.66
 
 #### For Classification
 
+##### f1 Score
+##### Area under the curve
+
 #### For Segmentation
 
 ##### IoU Score (Intersection over Union):

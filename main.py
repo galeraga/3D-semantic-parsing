@@ -6,7 +6,7 @@ PointNet implementation with S3DIS dataset
 # IMPORTS
 #------------------------------------------------------------------------------
 # from numpy import double
-from sklearn.metrics import confusion_matrix
+#from sklearn.metrics import confusion_matrix
 from settings import * 
 import dataset 
 import model    
@@ -144,6 +144,12 @@ def compute_confusion_matrix(y_true, y_preds):
     print("F1 Score (Weighted): {:.4f}".format(f1_score(y_true_text, y_preds_text, average='weighted')))
     print("")
    
+    # Intersection over union
+    print("IoU Score (Macro): {:.4f}".format(jaccard_score(y_true_text, y_preds_text, average="macro")))
+    print("IoU Score (Micro): {:.4f}".format(jaccard_score(y_true_text, y_preds_text, average="micro")))
+    print("IoU Score (Weighted): {:.4f}".format(jaccard_score(y_true_text, y_preds_text, average="weighted")))
+
+
     # From: https://stackoverflow.com/questions/31324218/scikit-learn-how-to-obtain-true-positive-true-negative-false-positive-and-fal
     FP = cm.sum(axis=0) - np.diag(cm)  
     FN = cm.sum(axis=1) - np.diag(cm)
@@ -168,7 +174,8 @@ def compute_confusion_matrix(y_true, y_preds):
     # Overall accuracy
     ACC = (TP+TN)/(TP+FP+FN+TN)
     print("Overall accuracy: {}\n".format(ACC))
-
+    
+    
 #------------------------------------------------------------------------------
 # CLASSIFICATION METHODS
 #------------------------------------------------------------------------------
@@ -1043,19 +1050,17 @@ if __name__ == "__main__":
     
     locals()[task + "_" + goal](model, dataloaders)
     
-    # Close TensorBoard logger and send runs to TensorBoard.dev
-    #logger.finish()
-
     # tnet_compare example here -----------------------
     # Extracting tnet_out and preds:
-    sample = (ds[0])[0]
-    preds,tnet_out = infer(model, sample[0])
-    logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample[0], preds, tnet_out), global_step=None, close=True, walltime=None)
+    #sample = (ds[0])[0]
+    #preds,tnet_out = infer(model, sample[0])
+    #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample[0], preds, tnet_out), global_step=None, close=True, walltime=None)
     # Using the _infer version that extracts the variables by itself:
     #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample[0]), global_step=None, close=True, walltime=None)
     # ---------------------------------------------------
 
     # We need to close the writer and the logger:
+    # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.writer.flush()
     logger.writer.close()
     logger.finish()

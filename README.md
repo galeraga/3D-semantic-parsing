@@ -201,6 +201,9 @@ We will present the structure of the first T-Net that appears in the network. In
 
 #### Visualization of the Outputs
 
+#### Goal
+The main goal of the affine transformation matrix is to make the main network learn faster. It is achieved by aligning the point clouds in a canonical way that makes it easier for the network to work with.
+
 
 ### BasePointNet
 

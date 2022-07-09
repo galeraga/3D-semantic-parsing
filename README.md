@@ -343,6 +343,11 @@ Estimated Total Size (MB): 9561.66
 #### For Classification
 
 ##### f1 Score
+First of all we need to define what precision and recall are:
+
+$$precision = \frac{TP}{TP+FP} $$
+$$recall = \frac{TP}{TP+FN}$$
+
 ##### Area under the curve
 
 #### For Segmentation

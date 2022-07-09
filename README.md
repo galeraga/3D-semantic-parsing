@@ -321,6 +321,21 @@ Estimated Total Size (MB): 9561.66
 ==========================================================================================
 ```
 
+### Metrics
+
+#### For Classification
+
+#### For Segmentation
+
+##### IoU Score (Intersection over Union):
+When we are dealing with a Segmentation problem, not only we need to have in consideration the pixels that we labeled wrongly (false positives) but we need to consider the pixels belonging to the class that we didn't label (false negatives).
+
+
+[IoU.pdf](https://github.com/galeraga/3D-semantic-parsing/files/9077364/IoU.pdf)
+
+
+
+
 ## Main Conclusions
 
 Segmentation:

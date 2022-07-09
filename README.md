@@ -276,7 +276,8 @@ Estimated Total Size (MB): 9561.66
 ==========================================================================================
 ```
 ### The T-Net Network
-*Mathematical introduction
+
+#### Mathematical introduction
 
 The T-Net is a network that estimates a affine transformation matrix. Given two affine spaces $A_1$ and $A_2$, an affine transformation, also called affinity, is a morphism between $A_1$ and $A_2$ such that the induced map $f_P: E_1 \rightarrow E_2$ with the point $P \in A_1$  is a linear map.
 
@@ -285,9 +286,15 @@ An affinity doesn't necessarily preserve neither the distances nor the angles bu
 The output of this network will be a matrix that will be multiplied with the point cloud.
 
 
-*Topology of the network
+#### Topology of the network
+
+We will present the structure of the first T-Net that appears in the network. In this case, because the number of coordinates of our point cloud is only 3, the output of the network will be a $3\ times 3$ matrix:
+
+![tnet](https://user-images.githubusercontent.com/97680577/178104139-0f1cba1f-3e0a-4f07-a082-d0967653034f.png)
+
 
 *Visualization of the Outputs
+
 ## Main Conclusions
 
 Segmentation:

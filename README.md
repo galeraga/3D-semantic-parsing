@@ -352,7 +352,10 @@ $$recall=\frac{TP}{TP+FN}$$
 We can define the $F_1$ Score as the harmonic mean of the precision and the recall:
 
 $$F_1=2\frac{precision\times recall}{precision+recall}=\frac{TP}{TP+\frac{1}{2}(FP+FN)}$$
-##### Area under the curve
+##### Area Under the Curve (AUC)
+The ROC curve is the curve that represents the relation between True Positive Rate and False Positive Rate:
+$$TPR=\frac{TP}{TP+FN}$$
+$$FPR=\frac{FP}{FP+TN}$$
 
 #### For Segmentation
 

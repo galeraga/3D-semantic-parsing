@@ -117,7 +117,7 @@ def compute_confusion_matrix(y_true, y_preds):
         y_true_text.append(reverse_objects_dict[int(n)])
 
     # Compute confusion matrix
-    cm = confusion_matrix(y_true_text, y_preds_text, labels = [k for k in objects_dict]).tolist()
+    cm = confusion_matrix(y_true_text, y_preds_text, labels = [k for k in objects_dict])
     
     # Get other metrics
     precision, recall, fscore, support = precision_recall_fscore_support(y_true_text, y_preds_text, labels = [k for k in objects_dict])
@@ -126,7 +126,7 @@ def compute_confusion_matrix(y_true, y_preds):
     cm_table = PrettyTable()
     scores_table = PrettyTable()
     cm_table.field_names = ["Object"] + [k for k in objects_dict]
-    for idx, row in enumerate(cm):
+    for idx, row in enumerate(cm.tolist()):
         row = [reverse_objects_dict[idx]] + row
         cm_table.add_row(row) 
     print("\nConfussion Matrix")
@@ -139,9 +139,35 @@ def compute_confusion_matrix(y_true, y_preds):
     scores_table.add_row(["Recall"] + ["{:.4f}".format(v) for v in recall.tolist()])
     scores_table.add_row(["F1 Score"] + ["{:.4f}".format(v) for v in fscore.tolist()])
     print(scores_table)
+    print("F1 Score (Macro): {:.4f}".format(f1_score(y_true_text, y_preds_text, average='macro')))
+    print("F1 Score (Micro): {:.4f}".format(f1_score(y_true_text, y_preds_text, average='micro')))
+    print("F1 Score (Weighted): {:.4f}".format(f1_score(y_true_text, y_preds_text, average='weighted')))
     print("")
    
+    # From: https://stackoverflow.com/questions/31324218/scikit-learn-how-to-obtain-true-positive-true-negative-false-positive-and-fal
+    FP = cm.sum(axis=0) - np.diag(cm)  
+    FN = cm.sum(axis=1) - np.diag(cm)
+    TP = np.diag(cm)
+    TN = cm.sum() - (FP + FN + TP)
 
+    # Sensitivity, hit rate, recall, or true positive rate
+    TPR = TP/(TP+FN)
+    # Specificity or true negative rate
+    TNR = TN/(TN+FP) 
+    # Precision or positive predictive value
+    PPV = TP/(TP+FP)
+    # Negative predictive value
+    NPV = TN/(TN+FN)
+    # Fall out or false positive rate
+    FPR = FP/(FP+TN)
+    # False negative rate
+    FNR = FN/(TP+FN)
+    # False discovery rate
+    FDR = FP/(TP+FP)
+
+    # Overall accuracy
+    ACC = (TP+TN)/(TP+FP+FN+TN)
+    print("Overall accuracy: {}\n".format(ACC))
 
 #------------------------------------------------------------------------------
 # CLASSIFICATION METHODS
@@ -972,7 +998,7 @@ if __name__ == "__main__":
                                             hparams["dimensions_per_object"],
                                             hparams["num_classes"],
                                             hparams["epochs"],
-                                            chosen_params,
+                                            chosen_params
                                             )
     
     # Dataset instance creation (goal-dependent) 

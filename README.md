@@ -8,6 +8,7 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
     + [The custom ground truth file](#the-custom-ground-truth-file)
       - [S3DISDataset4Classification](#s3disdataset4classification)
       - [S3DISDataset4Segmentation](#s3disdataset4segmentation)
+    - [Sliding Windows](#sliding-windows)
     + [The final folder structure](#the-final-folder-structure)
   * [The model](#the-model)
     + [TransformationNet](#transformationnet)

@@ -373,6 +373,7 @@ Considering the green rectangle the correct ones and the red rectangle the predi
 Segmentation:
 
 - When very few points are used (i.e., 100 points per space), only walls are learned to be detected
+- When very few points are used it's not convenient to use RGB data (revision)
 
 ## Related Work
 

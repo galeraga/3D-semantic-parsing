@@ -22,10 +22,13 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
+from sklearn.metrics import confusion_matrix, precision_recall_fscore_support
+
 
 # Visualization imports
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
+from prettytable import PrettyTable
 # from torchinfo import summary
 
 #------------------------------------------------------------------------------
@@ -193,9 +196,9 @@ args = parser.parse_args()
 # getting the most of the model is NOT the goal
 if "toy" in args.load:
     hparams["num_points_per_object"] = 10
-    hparams["num_points_per_room"] = 1024  #100 originally
+    hparams["num_points_per_room"] = 128  #100 originally
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 10 #3 originally
+    hparams["epochs"] = 3 #3 originally
     
 
 if "low" in args.load:
@@ -234,7 +237,7 @@ hparams["num_classes"] = len(objects_set)
 # annotated_clutter_free_all: 
 #   - data and labels for all the objects (except clutter): wall, door, beam,
 # annotated_clutter_free_movable: 
-#   - data and labels for only movable objects (except cluuter): chair, table
+#   - data and labels for only movable objects (except clutter): chair, table
 eparams["pc_file_extension_sem_seg_suffix"] = eparams["pc_file_extension_sem_seg_suffix"] + "_" + ''.join(args.objects)
 
 # To store sliding windows 

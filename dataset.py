@@ -378,6 +378,7 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
         self.all_objects_dict = all_objects_dict
         self.proper_area = proper_area
         self.subset = subset
+        self.number_of_points = 0
 
         # Get a sorted list of all the sliding windows
         # Get only Pytorch files, in case other file types exist
@@ -399,7 +400,9 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
                 for f in self.all_sliding_windows:
                     if f.startswith(area):
                         self.sliding_windows.append(f)
-    
+        
+        # Save the amount of points per object for future reference
+        self.get_amount_of_points_per_object()
 
     def __len__(self):
         """
@@ -426,6 +429,7 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
                      map_location = torch.device(hparams["device"]))
 
         # Sample points to make all elements equal size for the dataloader to work 
+        #sliding_window = PointSampler(sliding_window, hparams['num_points_per_room']).sample()
         sliding_window = PointSampler(sliding_window, hparams['num_points_per_room']).sample()
 
         # The amount of cols to return per room point will depend on two factors:
@@ -455,26 +459,56 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
         # movable objects: 5 + clutter
         # structural objects: 8 + clutter
         # all objects: 13 + clutter
-        # point_labels = AdaptNumClasses(point_labels, self.all_objects_dict).adapt()
 
         return sliding_window_points, point_labels
-    
+    def get_amount_of_points_per_object(self):
+        """
+        Returns a dict of the amount of points per object in the proper area
+        """
+        
+        # Will keep all the tensors of the proper training/val/test areas
+        # training_areas = ["Area_1", "Area_2", "Area_3", "Area_4"]
+        # val_areas = ["Area_5"]
+        # test_areas = ["Area_6"]   
+        all_tensors = []
+        for s in self.sliding_windows:
+            # Fetch the sliding window file
+            path_to_sliding_window_file = os.path.join(
+                        path_to_current_sliding_windows_folder, s)
+
+            # Open the sliding window file (they're saved as torch)
+            sliding_window_tensor = torch.load(path_to_sliding_window_file,
+                        map_location = torch.device(hparams["device"]))
+            
+            all_tensors.append(sliding_window_tensor)
+        
+        global_tensor = torch.cat(all_tensors, dim = 0)
+        
+        self.total_number_of_points = len(global_tensor)
+
+        # Calculate the number of points per object
+        self.total_number_of_points_per_object = dict()
+        for k,v in self.all_objects_dict.items():
+            self.total_number_of_points_per_object[k] = global_tensor[:, -1].eq(v).cpu().sum()
+
 
     def __str__(self) -> str:
         """
         """
         
         msg_list = []
-        msg_list.append(80 * "-")
+        msg_list.append(100 * "-")
         msg_list.append("S3DIS DATASET INFORMATION ({})".format(self.__class__.__name__))
-        msg_list.append(80 * "-")
+        msg_list.append(100 * "-")
         msg_list.append("Summary file: {}".format(eparams['s3dis_summary_file']))
         msg_list.append("Data source folder: {} ".format(self.root_dir))
         msg_list.append("Chosen areas: {} ".format(self.proper_area))
+        msg_list.append("Total points (from sliding windows): {} ".format(self.total_number_of_points))
+        msg_list.append("Total points (after sampling sliding windows at {} points/room): {} ".format(
+                hparams["num_points_per_room"], round(self.total_number_of_points/hparams["num_points_per_room"])))
         msg_list.append("Total dataset elements: {} (from a grand total of {})".format(
             len(self.sliding_windows),
             len(self.all_sliding_windows)))
-        
         if not self.subset:
             # Create a dict to know which sliding window files are per area
             sliding_windows_per_area = dict()
@@ -488,6 +522,9 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
         msg += "\n"
 
         return str(msg)
+
+       
+        
 
 
 class S3DISDataset4SegmentationTrain(S3DISDataset4SegmentationBase):

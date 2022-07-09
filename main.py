@@ -6,6 +6,7 @@ PointNet implementation with S3DIS dataset
 # IMPORTS
 #------------------------------------------------------------------------------
 # from numpy import double
+from sklearn.metrics import confusion_matrix
 from settings import * 
 import dataset 
 import model    
@@ -95,6 +96,51 @@ def create_dataloaders(ds):
             )
     
     return train_dataloader, val_dataloader, test_dataloader
+
+def compute_confusion_matrix(y_true, y_preds):
+    """
+    Annotation and predictions must be entered as text to work
+    """
+    # Replace numbers per text
+    # Create a revser dict to speed up process of replacing numbers
+    reverse_objects_dict = dict()
+    for k,v in objects_dict.items():
+        reverse_objects_dict[v] = k
+
+    y_preds_text = []
+    y_true_text = []
+    for n in y_preds:
+        y_preds_text.append(reverse_objects_dict[n])
+    
+    for n in y_true:
+        # Preds are ints, targets are floats
+        y_true_text.append(reverse_objects_dict[int(n)])
+
+    # Compute confusion matrix
+    cm = confusion_matrix(y_true_text, y_preds_text, labels = [k for k in objects_dict]).tolist()
+    
+    # Get other metrics
+    precision, recall, fscore, support = precision_recall_fscore_support(y_true_text, y_preds_text, labels = [k for k in objects_dict])
+    
+    # Print the table
+    cm_table = PrettyTable()
+    scores_table = PrettyTable()
+    cm_table.field_names = ["Object"] + [k for k in objects_dict]
+    for idx, row in enumerate(cm):
+        row = [reverse_objects_dict[idx]] + row
+        cm_table.add_row(row) 
+    print("\nConfussion Matrix")
+    print(cm_table)
+    print("")
+    
+    print("\nScores")
+    scores_table.field_names = ["Scores"] + [k for k in objects_dict]
+    scores_table.add_row(["Precision"] + ["{:.4f}".format(v) for v in precision.tolist()])
+    scores_table.add_row(["Recall"] + ["{:.4f}".format(v) for v in recall.tolist()])
+    scores_table.add_row(["F1 Score"] + ["{:.4f}".format(v) for v in fscore.tolist()])
+    print(scores_table)
+    print("")
+   
 
 
 #------------------------------------------------------------------------------
@@ -375,20 +421,19 @@ def train_segmentation(model, dataloaders):
     best_loss= np.inf
     total_train_time = []
     total_val_time = []
+    total_train_y_preds = []
+    total_train_y_true = []
 
-    # Per object accuracy
-    per_object_accuracy = dict()
-    
+
     optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
 
     for epoch in range(1, hparams['epochs'] +1):
         epoch_train_loss = []
         epoch_train_acc = []
-        epoch_train_start_time = datetime.datetime.now()
-
-        for k,v in objects_dict.items():
-            per_object_accuracy[k] = []
-            
+        epoch_train_start_time = datetime.datetime.now()     
+        epoch_y_preds = []
+        epoch_y_true = []
+   
 
         tqdm_desc = "{}ing epoch ({}/{})".format(task.capitalize(), epoch, hparams['epochs'])
         # training loop
@@ -451,12 +496,18 @@ def train_segmentation(model, dataloaders):
             accuracy = corrects.item() / preds.numel()
             epoch_train_acc.append(accuracy)
 
-            for k,v in objects_dict.items():
-                # From the label tensor, get only the ones of that object
-                annotated_labels_per_object = targets.eq(v).cpu().sum()
-                predicted_labels_per_object = preds.eq(v).cpu().sum()
-                per_object_accuracy[k].append((annotated_labels_per_object, predicted_labels_per_object))
+            # Prepare data for confusion matrix    
+            targets = targets.view(-1, targets.numel()).squeeze(dim = 0).tolist()
+            preds = preds.view(-1, preds.numel()).squeeze(dim = 0).tolist()
+            epoch_y_true.extend(targets)
+            epoch_y_preds.extend(preds)
             
+        
+        compute_confusion_matrix(epoch_y_true, epoch_y_preds)
+        total_train_y_true.extend(epoch_y_true)
+        total_train_y_preds.extend(epoch_y_preds)
+        
+
         epoch_train_end_time = datetime.datetime.now()
         train_time_per_epoch = (epoch_train_end_time - epoch_train_start_time).seconds
         total_train_time.append(train_time_per_epoch)
@@ -498,20 +549,6 @@ def train_segmentation(model, dataloaders):
                 train_time_per_epoch + val_time_per_epoch
                 )
             )
-
-        msg = 'Per object points (Annotated | Predicted): \n'
-        for k,v in per_object_accuracy.items():
-            total_annotated = sum(a.item() for a,p in v)
-            total_predicted = sum(p.item() for a,p in v)
-            msg += "- {}: ({}|{}) ({:.2f}%) \n".format(k, total_annotated, 
-                    total_predicted, (total_predicted/total_annotated)*100)
-            
-            tb_desc = goal.capitalize() + " Accuracy Per Object " + "(" + task + ")/" + k
-            logger.writer.add_scalars(tb_desc, 
-                    {"Annotated": total_annotated, 
-                    "Predicted": total_predicted}, 
-                    epoch)     
-        print(msg)
         
         if np.mean(val_loss) < best_loss:
             state = {
@@ -543,6 +580,10 @@ def train_segmentation(model, dataloaders):
             sum(train_acc)/len(train_acc),
             sum(val_acc)/len(val_acc),
             ))
+    
+    print("Overall confusion matrix for training")
+    compute_confusion_matrix(total_train_y_true, total_train_y_preds)
+    
     print("Total time (seconds) for {}ing {}: {} secs ".format( 
                 task,
                 goal,
@@ -665,7 +706,7 @@ def watch_segmentation(model, dataloaders, random = False):
     # If the checkpoint does not exist, train the model
     if not os.path.exists(model_checkpoint):
         print("The model does not seem already trained! Starting the training rigth now from scratch...")
-        train_classification(model, dataloaders)
+        train_segmentation(model, dataloaders)
     
     # Loading the existing checkpoint
     print("Loading checkpoint {} ...".format(model_checkpoint))
@@ -731,7 +772,7 @@ def watch_segmentation(model, dataloaders, random = False):
         # room -> [x_rel y_rel z_rel r g b x_abs y_abs x_abs winID label] (11 cols)
         points_rel = data[:, :hparams["dimensions_per_object"]].to(device)
         points_color = data[:, 3:6].to(device)
-        points_abs = data[:, -3:].to(device)
+        points_abs = data[:, 6:9].to(device)
         target_labels = data[:, -1].to(device)
 
         # Translate labels to the proper dict!
@@ -825,24 +866,21 @@ def watch_segmentation(model, dataloaders, random = False):
             print(i)            
             # Analyze results
             # The difference between predicted and annotated points
-            delta_points = abs(i[3] - i[2])
-            # True Positives
-            if (i[2].item() != 0) and (i[3].item() != 0):
-                confussion_matrix_dict[i[0]]["tp"].append(i[2])
-                if i[3] >= i[2]:
+            delta_points = abs(i[3] - i[2]).item()
+            # True Positives, False Positives, False Negatives
+            if (i[2] != 0) and (i[3] != 0):    
+                if i[3] == i[2]:
+                    confussion_matrix_dict[i[0]]["tp"].append(i[3])
+                elif i[3] > i[2]:
+                    confussion_matrix_dict[i[0]]["tp"].append(i[2])
                     confussion_matrix_dict[i[0]]["fp"].append(delta_points)
-                else:
+                elif i[3] < i[2]:
+                    confussion_matrix_dict[i[0]]["tp"].append(i[3])
                     confussion_matrix_dict[i[0]]["fn"].append(delta_points)
             # True Negatives
-            elif (i[2].item() == 0) and (i[3].item() == 0):
+            elif (i[2] == 0) and (i[3] == 0):
                 confussion_matrix_dict[i[0]]["tn"].append(delta_points)
-            # False Positives
-            elif (i[2].item() == 0) and (i[3].item() != 0):
-                confussion_matrix_dict[i[0]]["fp"].append(delta_points)
-            # False Negatives
-            elif (i[2].item() != 0) and (i[3].item() == 0):
-                confussion_matrix_dict[i[0]]["fn"].append(delta_points)
-
+            
     print(80 * "-")
     print("Values for confussion matrix for {}".format(model_checkpoint))
     for k,v in confussion_matrix_dict.items():
@@ -926,6 +964,7 @@ if __name__ == "__main__":
                                             hparams["dimensions_per_object"],
                                             hparams["num_classes"],
                                             hparams["epochs"],
+                                            path_to_current_sliding_windows_folder
                                             )
     
     # Dataset instance creation (goal-dependent) 

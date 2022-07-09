@@ -202,7 +202,12 @@ We will present the structure of the first T-Net that appears in the network. In
 #### Visualization of the Outputs
 
 #### Goal
-The main goal of the affine transformation matrix is to make the main network learn faster. It is achieved by aligning the point clouds in a canonical way that makes it easier for the network to work with.
+
+When we are dealing with point clouds it is normal that our data undergoes some geometric transformations. The purpose of the T-Net is to align all of the point cloud in a canonical way so it is invariant to these transformations. After doing that feature extraction can be done.
+
+When the affine transformation matrix is used again, it is not used directly in the point cloud but in the features that had been extracted before. So in this case we are in a high dimensional space and it is possible that we have some optimization problems. In order to avoid those it is added a regularization term in the softmax training loss so the transformation matrix is close to the orthogonal matrix.
+
+$$L_{reg} = ||I-AA^T||_{F}^2 $$
 
 
 ### BasePointNet

@@ -346,8 +346,8 @@ Estimated Total Size (MB): 9561.66
 First of all we need to define what precision and recall are:
 
 $$precision = \frac{TP}{TP+FP}$$
-$$recall = \frac{TP}{TP+FN}$$
 
+$$recall=\frac{TP}{TP+FN}$$
 ##### Area under the curve
 
 #### For Segmentation

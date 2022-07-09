@@ -131,6 +131,7 @@ def compute_confusion_matrix(y_true, y_preds):
     print(cm_table)
     print("")
     
+    # Precision, Recall and F1 scores
     print("\nScores")
     scores_table.field_names = ["Scores"] + [k for k in objects_dict]
     scores_table.add_row(["Precision"] + ["{:.4f}".format(v) for v in precision.tolist()])
@@ -138,20 +139,23 @@ def compute_confusion_matrix(y_true, y_preds):
     scores_table.add_row(["F1 Score"] + ["{:.4f}".format(v) for v in fscore.tolist()])
     print(scores_table)
     
-    f1_score_macro = f1_score(y_true_text, y_preds_text, average='macro')
-    f1_score_micro = f1_score(y_true_text, y_preds_text, average='micro')
-    f1_score_weighted = f1_score(y_true_text, y_preds_text, average='weighted')
+    f1_score_macro = f1_score(y_true_text, y_preds_text, average = 'macro')
+    f1_score_micro = f1_score(y_true_text, y_preds_text, average = 'micro')
+    f1_score_weighted = f1_score(y_true_text, y_preds_text, average = 'weighted')
 
     print("F1 Score (Macro): {:.4f}".format(f1_score_macro))
     print("F1 Score (Micro): {:.4f}".format(f1_score_micro))
     print("F1 Score (Weighted): {:.4f}".format(f1_score_weighted))
     print("")
-   
+    
     # Intersection over union
-    print("IoU Score (Macro): {:.4f}".format(jaccard_score(y_true_text, y_preds_text, average="macro")))
-    print("IoU Score (Micro): {:.4f}".format(jaccard_score(y_true_text, y_preds_text, average="micro")))
-    print("IoU Score (Weighted): {:.4f}".format(jaccard_score(y_true_text, y_preds_text, average="weighted")))
+    iou_score_macro = jaccard_score(y_true_text, y_preds_text, average = "macro")
+    iou_score_micro = jaccard_score(y_true_text, y_preds_text, average = "micro")
+    iou_score_weighted = jaccard_score(y_true_text, y_preds_text, average = "weighted")
 
+    print("IoU Score (Macro): {:.4f}".format(iou_score_macro))
+    print("IoU Score (Micro): {:.4f}".format(iou_score_micro))
+    print("IoU Score (Weighted): {:.4f}".format(iou_score_weighted))
 
     # From: https://stackoverflow.com/questions/31324218/scikit-learn-how-to-obtain-true-positive-true-negative-false-positive-and-fal
     FP = cm.sum(axis=0) - np.diag(cm)  
@@ -176,9 +180,10 @@ def compute_confusion_matrix(y_true, y_preds):
 
     # Overall accuracy
     ACC = (TP+TN)/(TP+FP+FN+TN)
-    print("Overall accuracy: {}\n".format(ACC))
+    #print("Overall accuracy: {}\n".format(ACC))
 
-    return (f1_score_macro, f1_score_micro, f1_score_weighted)
+    return (f1_score_macro, f1_score_micro, f1_score_weighted, 
+            iou_score_macro, iou_score_micro, iou_score_weighted)
     
 
 #------------------------------------------------------------------------------
@@ -306,7 +311,7 @@ def run_model(model, dataloaders):
         total_y_preds.extend(scores[1])
         total_loss.extend(scores[2])
         total_acc.extend(scores[3])
-        f1_score_macro, f1_score_micro, f1_score_weighted = scores[4]
+        f1_score_macro, f1_score_micro, f1_score_weighted, iou_macro, iou_micro, iou_weighted = scores[4]
 
         # Save the model only when training
         if (np.mean(total_loss) < best_loss) and (task == "train"):
@@ -329,6 +334,9 @@ def run_model(model, dataloaders):
         logger.writer.add_scalar(base_msg + " F1 Score (Macro)", f1_score_macro, epoch)
         logger.writer.add_scalar(base_msg + " F1 Score (Micro)", f1_score_micro, epoch)
         logger.writer.add_scalar(base_msg + " F1 Score (Weighted)", f1_score_weighted, epoch)
+        logger.writer.add_scalar(base_msg + " IoU Score (Macro)", iou_macro, epoch)
+        logger.writer.add_scalar(base_msg + " IoU Score (Micro)", iou_micro, epoch)
+        logger.writer.add_scalar(base_msg + " IoU Score (Weighted)", iou_weighted, epoch)
         
     # Print confusion matrix in console
     print(80 * "-")
@@ -344,9 +352,10 @@ def run_model(model, dataloaders):
                         columns = [i for i in objects_dict])
 
     points = hparams["num_points_per_object"] if goal == "segmentation" else hparams["num_points_per_room"]
-    msg = "Confusion Matrix" + " " + task.capitalize() + " " + goal.capitalize() + "/"
-    msg += str(points) + " points" + " " 
-    msg += str(hparams["epochs"]) + " epochs"  + " " + chosen_params
+    msg = "Confusion Matrix" + " " + goal.capitalize() + "/"
+    msg += task.capitalize() + " " + str(points) + " points" + " " 
+    msg += str(hparams["epochs"]) + " epochs"  + " " + chosen_params + " "
+    msg += str(hparams["dimensions_per_object"]) + " dimensions per object"
     
     logger.writer.add_figure(msg, sns.heatmap(df_cm, annot=True).get_figure())
 

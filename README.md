@@ -34,8 +34,8 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
 - [Acknowledgments](#acknowledgments)
 
 ## Abstract
-A point cloud is a type of 3D geometric data structure, based on unordered set of vectors.
-Each point is a vector of its (x, y, z) coordinate plus extra feature channels such as color, normal, etc.
+A point cloud is a type of 3D geometric data structure, based on unordered set of points.
+Each point is a vector of its (x, y, z) coordinates plus extra feature channels such as color, normal, etc.
 
 PointNet: Respects invariance of input points and no voxel grids are needed
 
@@ -51,8 +51,8 @@ The main goal is to implement a PointNet architecture in Pytorch that uses the S
 
 The following considerations will be of particular interest:
 - How color impacts object detection and semantic segmentation
-- Goal 2
-- Goal 3
+- How the size of the sliding windows impacts the semantic segmentation
+- How the overlap of these windows can improve the training
 - Goal 4
 - Goal 5
 

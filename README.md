@@ -28,6 +28,7 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
       - [Area Under the Curve (AUC)](#area-under-the-curve--auc-)
     + [For Segmentation](#for-segmentation)
       - [IoU Score (Intersection over Union):](#iou-score--intersection-over-union--)
+- [Obstacles](#obstacles)
 - [Main Conclusions](#main-conclusions)
 - [Related Work](#related-work)
 - [Contributors](#contributors)
@@ -406,7 +407,7 @@ $$IoU = \frac{|A\cap B|}{|A \cup B|} = \frac{TP}{TP+FN+FP} $$
 
 Considering the green rectangle the correct ones and the red rectangle the prediction.
 
-
+## Obstacles
 
 ## Main Conclusions
 

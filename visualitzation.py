@@ -2,11 +2,6 @@ from settings import *
 import model
 
 from dataset import * # imports PointSampler
-import open3d as o3d
-
-import pathlib
-import calendar
-import time
 
 def infer(model,
           point_cloud_file,
@@ -161,29 +156,7 @@ def tnet_compare_in_site(model, sample, preds, tnet_out):
     #print('Detected class: %s' % preds)
 
 
-"""
-Function to visualize the object segmentation generated both by the model and the ground truth data. 
 
-The function after the visualization creates a png file for each image generated.
-
-
-Arguments:
-
-    dict_to_use: Dictonary with the objects to detect 
-
-    str_area_and_office: String, area and office
-
-    dict_model_segmented_points: Dictionary with the predicted points per slidding window per object
-
-    b_multiple_seg: bool, to visualize all segmentations given in the dict_to_use param
-
-    b_hide_wall: bool, hides the points that corresponds to the wall    
-
-    draw_original_rgb_data: To render the original rgb color of the data tensor.
-
-    b_show_room_points: Boolean, show room points, in grey color if draw_original_rgb_data is set to False
-
-"""
 
 def render_segmentation(dict_to_use = {},
                         str_area_and_office = "",
@@ -192,6 +165,30 @@ def render_segmentation(dict_to_use = {},
                         b_hide_wall = True,                                  
                         draw_original_rgb_data = False,
                         b_show_room_points = True):
+                        
+    """
+    Function to visualize the object segmentation generated both by the model and the ground truth data. 
+
+    The function after the visualization creates a png file for each image generated.
+
+
+    Arguments:
+
+        dict_to_use: Dictonary with the objects to detect 
+
+        str_area_and_office: String, area and office
+
+        dict_model_segmented_points: Dictionary with the predicted points per slidding window per object
+
+        b_multiple_seg: bool, to visualize all segmentations given in the dict_to_use param
+
+        b_hide_wall: bool, hides the points that corresponds to the wall    
+
+        draw_original_rgb_data: To render the original rgb color of the data tensor.
+
+        b_show_room_points: Boolean, show room points, in grey color if draw_original_rgb_data is set to False
+
+    """                        
 
     torch.set_printoptions(profile="full")
 
@@ -336,12 +333,13 @@ def render_segmentation(dict_to_use = {},
     for segment_gt in all_pointcloud_object_gt:
         vis_gt.add_geometry(segment_gt)
 
+
+
     # ----------------------------
     # GT camera point of view 1
     # ----------------------------
     ctr = vis_gt.get_view_control()
-    parameters = o3d.io.read_pinhole_camera_parameters("Stanford3dDataset/camera_point_views/camera1.json")
-    ctr.convert_from_pinhole_camera_parameters(parameters)
+    ctr.convert_from_pinhole_camera_parameters(parameters_camera1)
 
     #save image
     vis_gt.poll_events()
@@ -349,14 +347,13 @@ def render_segmentation(dict_to_use = {},
     vis_gt.run()
 
     filename = get_file_name(ts, str_area_and_office, b_multiple_seg, True, "PV1", "_hidden_wall_")
-    vis_gt.capture_screen_image(str(pathlib.Path().resolve()) + '/' + filename)
+    vis_gt.capture_screen_image(camera_folder+ '/' + filename)
 
     # ----------------------------
     # GT camera point of view 2
     # ----------------------------
     ctr = vis_gt.get_view_control()
-    parameters = o3d.io.read_pinhole_camera_parameters("Stanford3dDataset/camera_point_views/camera2.json")
-    ctr.convert_from_pinhole_camera_parameters(parameters)
+    ctr.convert_from_pinhole_camera_parameters(parameters_camera2)
 
     #save image
     vis_gt.poll_events()
@@ -364,7 +361,7 @@ def render_segmentation(dict_to_use = {},
     vis_gt.run()
 
     filename = get_file_name(ts, str_area_and_office, b_multiple_seg, True, "PV2", "_hidden_wall_")
-    vis_gt.capture_screen_image(str(pathlib.Path().resolve()) + '/' + filename)
+    vis_gt.capture_screen_image(camera_folder + '/' + filename)
 
     #close window
     vis_gt.destroy_window()
@@ -378,8 +375,7 @@ def render_segmentation(dict_to_use = {},
     # MODEL camera point of view 1
     # ---------------------
     ctr = vis_model.get_view_control()
-    parameters = o3d.io.read_pinhole_camera_parameters("Stanford3dDataset/camera_point_views/camera1.json")
-    ctr.convert_from_pinhole_camera_parameters(parameters)
+    ctr.convert_from_pinhole_camera_parameters(parameters_camera1)
 
     #save image
     vis_model.poll_events()
@@ -387,14 +383,13 @@ def render_segmentation(dict_to_use = {},
     vis_model.run()
 
     filename = get_file_name(ts, str_area_and_office, b_multiple_seg, False, "PV1", "_hidden_wall_")
-    vis_model.capture_screen_image(str(pathlib.Path().resolve()) + '/' + filename)
+    vis_model.capture_screen_image(camera_folder + '/' + filename)
 
     # ---------------------
     # MODEL camera point of view 2
     # ---------------------
     ctr = vis_model.get_view_control()
-    parameters = o3d.io.read_pinhole_camera_parameters("Stanford3dDataset/camera_point_views/camera2.json")
-    ctr.convert_from_pinhole_camera_parameters(parameters)
+    ctr.convert_from_pinhole_camera_parameters(parameters_camera2)
 
     #save image
     vis_model.poll_events()
@@ -402,7 +397,7 @@ def render_segmentation(dict_to_use = {},
     vis_model.run()
 
     filename = get_file_name(ts, str_area_and_office, b_multiple_seg, False, "PV2", "_hidden_wall_")
-    vis_model.capture_screen_image(str(pathlib.Path().resolve()) + '/' + filename)
+    vis_model.capture_screen_image(camera_folder + '/' + filename)
 
     #close window
     vis_model.destroy_window()    

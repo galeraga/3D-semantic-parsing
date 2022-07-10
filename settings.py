@@ -8,6 +8,8 @@ File use to store global vars and required libraries among modules
 import os
 import argparse
 import datetime
+import time
+import calendar
 import sys
 import logging
 import random
@@ -25,12 +27,15 @@ import torch.nn.functional as F
 from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, f1_score, jaccard_score, ConfusionMatrixDisplay
 
 
+
 # Visualization imports
 from torch.utils.tensorboard import SummaryWriter
 import matplotlib.pyplot as plt
 import seaborn as sns
 from prettytable import PrettyTable
 import torchvision.transforms as transforms
+import open3d as o3d
+
 # from torchinfo import summary
 
 #------------------------------------------------------------------------------
@@ -78,8 +83,10 @@ eparams = {
     "checkpoints_folder": "checkpoints",
     "tnet_outputs": "tnet_outputs",
     'tensorboard_log_dir': "runs/pointnet_with_s3dis",
-    'sliding_windows_folder': "sliding_windows"
+    'sliding_windows_folder': "sliding_windows",
+    'camera_point_views': "camera_point_views"
 }
+
 
 # Model hyperparameters
 # None values are set later, based on environment or load profile
@@ -197,6 +204,12 @@ tnet_outputs_folder = os.path.join(eparams["pc_data_path"], eparams["tnet_output
 if not os.path.exists(tnet_outputs_folder):
     os.makedirs(tnet_outputs_folder)
 
+# To store camera point views
+camera_folder = os.path.join(eparams["pc_data_path"], eparams["camera_point_views"])
+if not os.path.exists(camera_folder):
+    os.makedirs(camera_folder)
+
+
 #------------------------------------------------------------------------------
 # PARSER DEFINITION AND DEFAULT SETTINGS
 #------------------------------------------------------------------------------
@@ -214,7 +227,7 @@ parser.add_argument("--goal",
                     type = str,
                     action = "store",
                     nargs = 1,
-                    default = "classification",
+                    default = "segmentation",
                     choices = ["classification", "segmentation"],
                     help = "Either classification (class) or segmentation (seg)")
 
@@ -224,7 +237,7 @@ parser.add_argument("--task",
                     type = str,
                     action = "store",
                     nargs = 1,
-                    default = "train",
+                    default = "watch",
                     choices = ["train", "validation", "test", "watch"],
                     help = "Either train or test")
 
@@ -234,7 +247,7 @@ parser.add_argument("--load",
                     type = str,
                     action = "store",
                     nargs = 1,
-                    default = "low",
+                    default = "toy",
                     choices = ["toy", "low", "medium", "high"],
                     help = "Either toy, low, medium or high")
 
@@ -262,9 +275,9 @@ args = parser.parse_args()
 # getting the most of the model is NOT the goal
 if "toy" in args.load:
     hparams["num_points_per_object"] = 128
-    hparams["num_points_per_room"] = 256  #100 originally
+    hparams["num_points_per_room"] = 128  #100 originally
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 20 #3 originally
+    hparams["epochs"] = 1 #3 originally
     
 
 if "low" in args.load:
@@ -329,6 +342,10 @@ if not os.path.exists(path_to_current_sliding_windows_folder):
 #------------------------------------------------------------------------------
 # VISUALZIATION SETTINGS    
 #------------------------------------------------------------------------------
+
+#get parameters from camera point of views for room of study
+parameters_camera1 = o3d.io.read_pinhole_camera_parameters(os.path.join(camera_folder, "camera1.json"))
+parameters_camera2 = o3d.io.read_pinhole_camera_parameters(os.path.join(camera_folder, "camera2.json"))
 
 # Rooms with more bookcases and boards (chairs-tables seem to be detected easily)
 target_room_for_visualization = "Area_6_office_10"

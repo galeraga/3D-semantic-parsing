@@ -339,6 +339,10 @@ def run_model(model, dataloaders, task):
         dataloader = dataloaders[2]
         model = load_checkpoint(model)
         model = model.eval()
+    elif task == "watch":
+        dataloader = dataloaders[2]
+        model = load_checkpoint(model)
+        model = model.eval()
     
     # Aux vars to store labels for predictions (to be used by the confusion matrix)
     total_y_true = []

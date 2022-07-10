@@ -200,7 +200,7 @@ def compute_confusion_matrix(y_true, y_preds):
    
     avg_scores.field_names = ["Score", "Macro", "Micro", "Weighted"]  
     avg_scores.add_row(["F1", "{:.4f}".format(f1_score_macro), "{:.4f}".format(f1_score_micro), "{:.4f}".format(f1_score_weighted)])
-    avg_scores.add_row(["IoU", "{:.4f}".format(f1_score_macro), "{:.4f}".format(f1_score_micro), "{:.4f}".format(f1_score_weighted)])
+    avg_scores.add_row(["IoU", "{:.4f}".format(iou_score_macro), "{:.4f}".format(iou_score_micro), "{:.4f}".format(iou_score_weighted)])
     print(avg_scores)
     print("")
     

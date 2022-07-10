@@ -8,12 +8,15 @@ File use to store global vars and required libraries among modules
 import os
 import argparse
 import datetime
+import time
+import calendar
 import sys
 import logging
 import random
 from tqdm import tqdm
 import warnings
 import itertools
+import shutil
 
 # Math and DL imports
 import numpy as np
@@ -31,15 +34,13 @@ import matplotlib.pyplot as plt
 import seaborn as sns
 from prettytable import PrettyTable
 import torchvision.transforms as transforms
+from PIL import Image
+import open3d as o3d
 # from torchinfo import summary
 
 #------------------------------------------------------------------------------
 # S3DIS DATASET SPECIFIC INFORMATION
 #------------------------------------------------------------------------------
-#movable_objects_set = {"board", "bookcase", "chair", "table", "sofa", "clutter"}
-#movable_objects_set = {"board", "bookcase", "chair", "table", "sofa"}
-#structural_objects_set = {"ceiling", "door", "floor", "wall", "beam", "column", "window", "stairs", "clutter"}
-
 
 movable_objects_set = {"board", "bookcase", "chair", "table", "sofa"}
 structural_objects_set = {"ceiling", "door", "floor", "wall", "beam", "column", "window", "stairs"}
@@ -78,7 +79,9 @@ eparams = {
     "checkpoints_folder": "checkpoints",
     "tnet_outputs": "tnet_outputs",
     'tensorboard_log_dir': "runs/pointnet_with_s3dis",
-    'sliding_windows_folder': "sliding_windows"
+    'sliding_windows_folder': "sliding_windows",
+    # To store segmentation visualization with open3d
+    'camera_point_views': "cameras" 
 }
 
 # Model hyperparameters
@@ -132,6 +135,12 @@ if not os.path.exists(checkpoint_folder):
 tnet_outputs_folder = os.path.join(eparams["pc_data_path"], eparams["tnet_outputs"])
 if not os.path.exists(tnet_outputs_folder):
     os.makedirs(tnet_outputs_folder)
+
+# To store camera point views
+camera_folder = os.path.join(eparams["pc_data_path"], eparams["camera_point_views"])
+if not os.path.exists(camera_folder):
+    tmp_camera_folder = os.path.join(os.getcwd(), eparams['camera_point_views'])
+    shutil.move(tmp_camera_folder, eparams["pc_data_path"])
 
 #------------------------------------------------------------------------------
 # PARSER DEFINITION AND DEFAULT SETTINGS
@@ -198,9 +207,9 @@ args = parser.parse_args()
 # getting the most of the model is NOT the goal
 if "toy" in args.load:
     hparams["num_points_per_object"] = 128
-    hparams["num_points_per_room"] = 256  #100 originally
+    hparams["num_points_per_room"] = 128  #100 originally
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 20 #3 originally
+    hparams["epochs"] = 3 #3 originally
     
 
 if "low" in args.load:
@@ -265,6 +274,52 @@ if not os.path.exists(path_to_current_sliding_windows_folder):
 #------------------------------------------------------------------------------
 # VISUALZIATION SETTINGS    
 #------------------------------------------------------------------------------
-
+# Target room for visualization when random mode is NOT selected
 # Rooms with more bookcases and boards (chairs-tables seem to be detected easily)
 target_room_for_visualization = "Area_6_office_10"
+
+# Get parameters from camera point of views for room of study
+parameters_camera1 = o3d.io.read_pinhole_camera_parameters(os.path.join(camera_folder, "camera1.json"))
+parameters_camera2 = o3d.io.read_pinhole_camera_parameters(os.path.join(camera_folder, "camera2.json"))
+
+cparams = {
+    'Red': [1,0,0],
+    'Lime': [0,1,0],
+    'Blue': [0,0,1],
+    'Yellow': [1,1,0],
+    'Cyan': [0,1,1],
+    'Magenta': [1,0,1],
+    'Dark_green': [0,0.39,0],
+    'Deep_sky_blue': [0,0.75,1],
+    'Saddle_brown': [0.54,0.27,0.07],
+    'Lemon_chiffon': [1,0.98,0.8],
+    'Turquoise': [0.25,0.88,0.81],
+    'Gold': [1,0.84,0],
+    'Orange': [1,0.65,0],
+    'Chocolate': [0.82,0.41,0.12],
+    'Peru': [0.8,0.52,0.25],
+    'Blue_violet': [0.54,0.17,0.88],
+    'Dark_grey': [0.66,0.66,0.66],
+    'Grey': [0.5,0.5,0.5],
+}
+
+vparams = {    
+    'str_object_to_visualize': "chair",
+    'num_max_points_from_GT_file': 50000,
+    'num_max_points_1_object_model': 50000,    
+    'board_color': cparams['Red'],
+    'bookcase_color': cparams['Lime'],
+    'chair_color': cparams['Blue'],
+    'table_color': cparams['Yellow'],
+    'sofa_color': cparams['Cyan'],
+    'ceiling_color': cparams['Magenta'],
+    'clutter_color': cparams['Dark_green'],
+    'door_color': cparams['Deep_sky_blue'],
+    'floor_color': cparams['Saddle_brown'],
+    'wall_color': cparams['Lemon_chiffon'],
+    'beam_color': cparams['Turquoise'],
+    'column_color': cparams['Gold'],
+    'window_color': cparams['Orange'],
+    'stairs_color': cparams['Chocolate'],
+}
+

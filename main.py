@@ -10,6 +10,9 @@ import dataset
 import model    
 from tensorboardlogger import TensorBoardLogger 
 from summarizer import S3DIS_Summarizer
+import visualization 
+
+# from visualization import render_segmentation
 #from visualitzation import tnet_compare, tnet_compare_infer,  infer
 
 #------------------------------------------------------------------------------
@@ -47,7 +50,7 @@ def task_welcome_msg(task = None):
         msg += "\n- {} points per object ".format(hparams['num_points_per_object'])
     
     if "segmentation" in args.goal:
-        msg += "\n- {} points per room ".format(hparams['num_points_per_room'])
+        msg += "\n- {} points per sliding window ".format(hparams['num_points_per_room'])
 
     msg += "\n- {} dimensions per object ".format(hparams['dimensions_per_object'])
     msg += "\n- {} batch_size ".format(hparams['batch_size'])
@@ -340,6 +343,12 @@ def run_model(model, dataloaders, task):
         dataloader = dataloaders[2]
         model = load_checkpoint(model)
         model = model.eval()
+    elif task == "watch":
+        dataloader = dataloaders[2]
+        model = load_checkpoint(model)
+        model = model.eval()
+        hparams["epochs"] = 1
+    
     
     # Aux vars to store labels for predictions (to be used by the confusion matrix)
     total_y_true = []
@@ -390,7 +399,9 @@ def run_model(model, dataloaders, task):
         
     # Print confusion matrix in console
     print(80 * "-")
-    print("Overall confusion matrix (task: {} | checkpoint: {}".format(task, eparams["checkpoint_name"]))
+    print("Overall Confusion Matrix")
+    print("Task: {}".format(task.capitalize()))
+    print("Checkpoint: {}".format(eparams["checkpoint_name"]))
     print(80 * "-")
     compute_confusion_matrix(total_y_true, total_y_preds)
 
@@ -401,17 +412,8 @@ def run_model(model, dataloaders, task):
     df_cm = pd.DataFrame(cf_matrix/np.sum(cf_matrix), index = reversed_objects_dict,
                         columns = [i for i in objects_dict])
 
-    
-    # TODO: Replace seaborn confusion matrix with onfusionMatrixDisplay from sklearn
-    # to avoid having another import
-    #fig = plt.figure()
-    #fig = ConfusionMatrixDisplay(confusion_matrix=cf_matrix, display_labels=[i for i in objects_dict])
-    #fig.canvas.draw()
-    #fig.plot()
-    #plt.show()
-    #logger.writer.add_figure("Test", fig.plot())
 
-    points = hparams["num_points_per_object"] if goal == "segmentation" else hparams["num_points_per_room"]
+    points = hparams["num_points_per_room"] if goal == "segmentation" else hparams["num_points_per_object"]
     msg = "Confusion Matrix" + " " + goal.capitalize() + "/"
     msg += task.capitalize() + " " + str(points) + " points" + " " 
     msg += str(hparams["epochs"]) + " epochs"  + " " + chosen_params + " "
@@ -437,7 +439,7 @@ def watch_segmentation(model, dataloaders, random = False):
     be used since dataloaders return an smaller amount of points per room/sliding 
     window due to their sampling process.
 
-    At least, two ways can be folloed to achieve this goal:
+    At least, two ways can be followed to achieve this goal:
     1.- Read directly the annotated file (e.g., Area_6_office_33_annotated.txt)
     2.- Read from sliding windows (e.g., Area_6_office_33_win14.pt)
 
@@ -624,10 +626,14 @@ def watch_segmentation(model, dataloaders, random = False):
 
     compute_confusion_matrix(total_y_true, total_y_preds)
 
-    # TODO: Insert Lluis' code here for visualization
-    # out_dict contains all the points detected for all objects
-    # lluis_code(data, segmentation_target_object_id, points_to_display) 
-
+    # Visualize ground truth and resultant segmented points
+    visualization.render_segmentation(dict_to_use = dict_to_use,
+                        str_area_and_office = area_and_office,
+                        dict_model_segmented_points = out_dict,
+                        b_multiple_seg = True,    
+                        b_hide_wall = True,                                  
+                        draw_original_rgb_data = False,
+                        b_show_room_points = False)   
 
 #------------------------------------------------------------------------------
 # MAIN
@@ -712,7 +718,10 @@ if __name__ == "__main__":
     # summary(model, input_size=(hparams['batch_size'], hparams['max_points_per_space'], hparams['dimensions_per_object']))
 
     # Carry out the the task to do
-    run_model(model, dataloaders, task)
+    if task != "watch":
+        run_model(model, dataloaders, task)
+    else:
+        watch_segmentation(model, dataloaders)
     
     # tnet_compare example here -----------------------
     # Extracting tnet_out and preds:

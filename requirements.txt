@@ -9,4 +9,6 @@ pandas==1.4.2
 PyYAML==6.0
 open3d
 tensorboard==2.9.0
-tensorflow==2.9.1
+prettytable==3.3.0
+open3d==0.15.1
+seaborn==0.11.2

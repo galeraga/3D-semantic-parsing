@@ -1,4 +1,3 @@
-
 #from tensorboard import summary
 from settings import *
 
@@ -67,11 +66,8 @@ class AdaptNumClasses():
     movable objects: 5 + clutter
     structural objects: 8 + clutter
     all objects: 13 + clutter
-
     movable_objects = set("board", "bookcase", "chair", "table", "sofa", "clutter")
     structural_objects = set("ceiling", "door", "floor", "wall", "beam", "column", "window", "stairs", "clutter")
-
-
     """
     def __init__(self, point_labels, all_dicts):
         """
@@ -86,7 +82,6 @@ class AdaptNumClasses():
         """
         Assign a clutter label (object_ID: 1) to any point not intended to be
         trained and remap the object IDs to values expected by the loss function
-
         From the summary file, these are the available dicts:
         'all': {'ceiling': 0, 'clutter': 1, 'door': 2, 'floor': 3, 'wall': 4, 'beam': 5, 'board': 6, 'bookcase': 7, 'chair': 8, 'table': 9, 'column': 10, 'sofa': 11, 'window': 12, 'stairs': 13}, 
         'movable': {'clutter': 0, 'board': 1, 'bookcase': 2, 'chair': 3, 'table': 4, 'sofa': 5}, 
@@ -95,7 +90,6 @@ class AdaptNumClasses():
         The 'all' dict is computed during summary file creation, whereas 
         'movable' and 'structural' are created afterwards in method get_labels() 
         from summarizer.py
-
         Example on how remapping works for a chair:
         - From summary_file, chair has object_ID = 8
         - If working only with movable objects, the 'movable' dict has valur 3 for chair
@@ -120,14 +114,15 @@ class AdaptNumClasses():
             for i in range(len(self.point_labels)):            
                     # Get the textual label of the point from the "old/from" dict
                     textual_label = ''.join([k for k,v in from_dict.items() if v == self.point_labels[i]])
-                    
+                    """
                     # If the object is not defined in the "new/to" dict, flag it as clutter
                     if textual_label not in to_dict.keys():
                         self.point_labels[i] = to_dict["clutter"]
                     
                     # Remap/translate the rest of the objects
                     else:
-                        self.point_labels[i] = to_dict[textual_label]
+                    """
+                    self.point_labels[i] = to_dict[textual_label]
 
          
         return self.point_labels
@@ -139,12 +134,9 @@ class AdaptNumClasses():
 class S3DISDataset4ClassificationBase(torch.utils.data.Dataset):
     """
     Python base class for creating the S3DIS datasets for classification goals.
-
     The datasets are created from the summary_file.csv, using Pandas DataFrames.
-
     Dataset elements are chosen based on the area (proper_area list arg, defined 
     in settings.py) they belong to:
-
     - Training dataset: Areas 1, 2, 3 and 4
     - Validation dataset: Area 5
     - Test dataset: Area 6
@@ -162,7 +154,6 @@ class S3DISDataset4ClassificationBase(torch.utils.data.Dataset):
         5810  Area_4  storage_4  storage  7      wall_1.txt    6733     wall  4  Good
         5811  Area_4  storage_4  storage  7      wall_2.txt   30409     wall  4  Good
         5812  Area_4  storage_4  storage  7      wall_3.txt   19603     wall  4  Good
-
         [5813 rows x 9 columns]
     
     Validation dataset:
@@ -178,7 +169,6 @@ class S3DISDataset4ClassificationBase(torch.utils.data.Dataset):
         2343  Area_5  storage_4  storage  7      wall_2.txt   90417     wall  4  Good
         2344  Area_5  storage_4  storage  7      wall_3.txt   82434     wall  4  Good
         2345  Area_5  storage_4  storage  7      wall_4.txt  145942     wall  4  Good
-
         [2346 rows x 9 columns]
     
     Test dataset
@@ -194,9 +184,7 @@ class S3DISDataset4ClassificationBase(torch.utils.data.Dataset):
         1671  Area_6          pantry_1          pantry  5     wall_2.txt   47069     wall  4  Good
         1672  Area_6          pantry_1          pantry  5     wall_3.txt   13703     wall  4  Good
         1673  Area_6          pantry_1          pantry  5     wall_4.txt   27985     wall  4  Good
-
         [1674 rows x 9 columns]
-
     """
     
     def __init__(self, root_dir, all_objects_dict,  transform = None, proper_area = None):
@@ -235,7 +223,7 @@ class S3DISDataset4ClassificationBase(torch.utils.data.Dataset):
         # object point cloud info
         summary_line = self.proper_df.iloc[idx]
 
-        # Get the point cloud info from the summary line
+        # Get the point cloud info from the summary line
         area = summary_line[0]
         space = summary_line[1]
         space_label = summary_line[2]
@@ -264,7 +252,7 @@ class S3DISDataset4ClassificationBase(torch.utils.data.Dataset):
             # Convert the Pandas DataFrame to tensor
             obj = torch.tensor(obj_df.values).to(hparams["device"])
 
-            # Make all the point clouds equal size
+            # Make all the point clouds equal size
             obj = PointSampler(obj, hparams['num_points_per_object']).sample()
 
             # Adapt the labels to num classes
@@ -274,8 +262,8 @@ class S3DISDataset4ClassificationBase(torch.utils.data.Dataset):
             # structural objects: 8 + clutter
             # all objects: 13 + clutter
             
-            labels = AdaptNumClasses(obj_label_id, self.all_objects_dict).adapt()
-            labels = torch.tensor(labels, dtype = torch.float)    
+            #labels = AdaptNumClasses(obj_label_id, self.all_objects_dict).adapt()
+            labels = torch.tensor(obj_label_id , dtype = torch.float)    
 
             return obj, labels
     
@@ -327,27 +315,21 @@ class S3DISDataset4ClassificationTest(S3DISDataset4ClassificationBase):
 class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
     """
     Python base class for creating the S3DIS datasets for segmentation goals.
-
     The datasets are created from the contents of the sliding windows folder
-
     Dataset elements are chosen based on the area (proper_area list arg, defined 
     in settings.py) they belong to:
-
     - Training dataset: Areas 1, 2, 3 and 4
     - Validation dataset: Area 5
     - Test dataset: Area 6
-
     From the S3DIS_Summarizer.create_sliding_windows() method, 
     there's a folder containing all the pre-processed 
     sliding block for all the spaces/rooms in the dataset. 
     
     Naming guideline:
-
     Area_N
     sliding_windows
     ├── w_X_d_Y_h_Z_o_T
         ├── Area_N_Space_J_winK.pt
-
     where:    
     w_X: width of the sliding window
     d_Y: depth of the sliding window
@@ -356,7 +338,7 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
     winK: sequential ID of the sliding window
     """
     
-    def __init__(self, root_dir, all_objects_dict, transform = None, proper_area = None):
+    def __init__(self, root_dir, all_objects_dict, transform = None, proper_area = None, subset = None):
         """
         Args:
             root_dir (string): Directory with all the pre-processed 
@@ -364,28 +346,44 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
             all_objects_dict: dict containing the mapping object_ID <-> object_name    
             transform (callable, optional): Optional transform 
                 to be applied on a sample.
+            proper_area (list): Areas to be used in order to create the proper dataset
+                        Areas 1, 2, 3 and 4 for training
+                        Area 5 for validation
+                        Area 6 for test
+            subset (list): A subset of sliding windows belonging to the test area
+                         (mainly intended to help visualization of a single room)
         """
         
         self.root_dir = root_dir
         self.transform = transform
         self.all_objects_dict = all_objects_dict
         self.proper_area = proper_area
+        self.subset = subset
+        self.number_of_points = 0
 
         # Get a sorted list of all the sliding windows
         # Get only Pytorch files, in case other file types exist
         self.all_sliding_windows = sorted(
             [f for f in os.listdir(path_to_current_sliding_windows_folder) if ".pt" in f])
 
-        # Get the sliding windows for proper area and purpose
-        # sliding windows for training: Area 1, Area 2, Area 3 and Area 4
-        # sliding windows for val: Area 5
-        # sliding windows for test: Area 6
         self.sliding_windows = []
-        for area in self.proper_area:
-            for f in self.all_sliding_windows:
-                if f.startswith(area):
-                    self.sliding_windows.append(f)
-    
+        
+        # If we're going to visualize, the sliding windows are already known and passed
+        if subset:
+            self.sliding_windows = subset
+        
+        else:
+            # Get the sliding windows for proper area and purpose
+            # sliding windows for training: Area 1, Area 2, Area 3 and Area 4
+            # sliding windows for val: Area 5
+            # sliding windows for test: Area 6
+            for area in self.proper_area:
+                for f in self.all_sliding_windows:
+                    if f.startswith(area):
+                        self.sliding_windows.append(f)
+        
+        # Save the amount of points per object for future reference
+        self.get_amount_of_points_per_object()
 
     def __len__(self):
         """
@@ -394,11 +392,6 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
 
     def __getitem__(self, idx):
         """
-        In order to follow the original paper implmenetation, the size of this
-        method output will be based on the task type:
-
-        - If task == train, only 4096 points will be returned per sliding windows
-        - If task == test, all the points in the proper sliding window will be returned
         """
 
         if torch.is_tensor(idx):
@@ -416,25 +409,29 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
         sliding_window = torch.load(path_to_sliding_window_file,
                      map_location = torch.device(hparams["device"]))
 
-        # For training:
-        #   - We set the max points per sliding windows as per original paper (4096)
-        # For testing:
-        #   - If we're in a batch mode, we limit the amount of points per room to
-        #     make all the rooms equal size
-        #   - If we're not in a batch mode, no dataset is used (to room to test 
-        #     is directly selected in the test_segmentation() method)
-        
+        # Sample points to make all elements equal size for the dataloader to work 
+        #sliding_window = PointSampler(sliding_window, hparams['num_points_per_room']).sample()
         sliding_window = PointSampler(sliding_window, hparams['num_points_per_room']).sample()
 
-        # The amount of cols to return per room will depend on whether or not
-        # we're taking the color into account
+        # The amount of cols to return per room point will depend on two factors:
+        #  1) Are we taking the color into account? (No: 3 cols | Yes: 6 cols )
+        #  2) Are we visualizing a single room? (No: 3 cols | Yes: 6 cols)
+        # If we're visualing, we need to take (x_rel y_rel z_rel) and (x y z)
+        # (x y z) will be saved for plotting from the original room, if they match an object
         # Sliding window cols: (x_rel y_rel z_rel R G B x y z win_ID label)
         # - 3 relative normalized points (x_rel y_rel z_rel)
         # - 3 colors (R G B)
         # - 3 absolute coordinates (x y z)
         # - 1 sliding window identifier (win_ID)
         # - 1 point label for that point (label)
-        sliding_window_points = sliding_window[ :, :hparams["dimensions_per_object"]]
+        
+        # Slicing the tensor 
+        # [start_row_index:end_row_index, start_column_index:end_column_index]
+        if self.subset:
+            sliding_window_points = sliding_window[ :, :8]
+        else:
+            sliding_window_points = sliding_window[ :, :hparams["dimensions_per_object"]]
+
         point_labels = sliding_window[ :, -1]
         
         # Adapt the labels to num classes
@@ -443,38 +440,72 @@ class S3DISDataset4SegmentationBase(torch.utils.data.Dataset):
         # movable objects: 5 + clutter
         # structural objects: 8 + clutter
         # all objects: 13 + clutter
-        point_labels = AdaptNumClasses(point_labels, self.all_objects_dict).adapt()
 
         return sliding_window_points, point_labels
-    
+    def get_amount_of_points_per_object(self):
+        """
+        Returns a dict of the amount of points per object in the proper area
+        """
+        
+        # Will keep all the tensors of the proper training/val/test areas
+        # training_areas = ["Area_1", "Area_2", "Area_3", "Area_4"]
+        # val_areas = ["Area_5"]
+        # test_areas = ["Area_6"]   
+        all_tensors = []
+        for s in self.sliding_windows:
+            # Fetch the sliding window file
+            path_to_sliding_window_file = os.path.join(
+                        path_to_current_sliding_windows_folder, s)
+
+            # Open the sliding window file (they're saved as torch)
+            sliding_window_tensor = torch.load(path_to_sliding_window_file,
+                        map_location = torch.device(hparams["device"]))
+            
+            all_tensors.append(sliding_window_tensor)
+        
+        global_tensor = torch.cat(all_tensors, dim = 0)
+        
+        self.total_number_of_points = len(global_tensor)
+
+        # Calculate the number of points per object
+        self.total_number_of_points_per_object = dict()
+        for k,v in self.all_objects_dict.items():
+            self.total_number_of_points_per_object[k] = global_tensor[:, -1].eq(v).cpu().sum()
+
 
     def __str__(self) -> str:
         """
         """
         
         msg_list = []
-        msg_list.append(80 * "-")
+        msg_list.append(100 * "-")
         msg_list.append("S3DIS DATASET INFORMATION ({})".format(self.__class__.__name__))
-        msg_list.append(80 * "-")
+        msg_list.append(100 * "-")
         msg_list.append("Summary file: {}".format(eparams['s3dis_summary_file']))
         msg_list.append("Data source folder: {} ".format(self.root_dir))
         msg_list.append("Chosen areas: {} ".format(self.proper_area))
+        msg_list.append("Total points (from sliding windows): {} ".format(self.total_number_of_points))
+        msg_list.append("Total points (after sampling sliding windows at {} points/room): {} ".format(
+                hparams["num_points_per_room"], round(self.total_number_of_points/hparams["num_points_per_room"])))
         msg_list.append("Total dataset elements: {} (from a grand total of {})".format(
             len(self.sliding_windows),
             len(self.all_sliding_windows)))
+        if not self.subset:
+            # Create a dict to know which sliding window files are per area
+            sliding_windows_per_area = dict()
+            for area in self.proper_area:
+                    sliding_windows_per_area[area] = [f for f in self.sliding_windows if f.startswith(area)]
 
-        # Create a dict to know which sliding window files are per area
-        sliding_windows_per_area = dict()
-        for area in self.proper_area:
-                sliding_windows_per_area[area] = [f for f in self.sliding_windows if f.startswith(area)]
-
-        for k,v in sliding_windows_per_area.items():
-            msg_list.append("From {} : {} ({}...{})".format(k, len(v), v[:3], v[-3:]))     
+            for k,v in sliding_windows_per_area.items():
+                msg_list.append("From {} : {} ({}...{})".format(k, len(v), v[:3], v[-3:]))     
 
         msg = '\n'.join(msg_list)
         msg += "\n"
 
         return str(msg)
+
+       
+        
 
 
 class S3DISDataset4SegmentationTrain(S3DISDataset4SegmentationBase):
@@ -500,3 +531,11 @@ class S3DISDataset4SegmentationTest(S3DISDataset4SegmentationBase):
     """
     def __init__(self, root_dir, all_objects_dict, transform = None, proper_area = None):
         S3DISDataset4SegmentationBase.__init__(self, root_dir, all_objects_dict, transform = None, proper_area = test_areas)
+
+class S3DISDataset4SegmentationVisualization(S3DISDataset4SegmentationBase):
+    """
+    Augmented S3DISDataset4SegmentationBase class to create the dataset used
+    when visualizing (if needed)
+    """
+    def __init__(self, root_dir, all_objects_dict, subset = None):
+        S3DISDataset4SegmentationBase.__init__(self, root_dir, all_objects_dict, subset = subset)

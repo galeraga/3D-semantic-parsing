@@ -167,7 +167,9 @@ def compute_confusion_matrix(y_true, y_preds):
     
     # Print the table
     cm_table = PrettyTable()
-    scores_table = PrettyTable()
+    per_object_scores = PrettyTable()
+    avg_scores = PrettyTable()
+    
     cm_table.field_names = ["Object"] + [k for k in objects_dict]
     for idx, row in enumerate(cm.tolist()):
         row = [reverse_objects_dict[idx]] + row
@@ -176,31 +178,32 @@ def compute_confusion_matrix(y_true, y_preds):
     print(cm_table)
     print("")
     
-    # Precision, Recall and F1 scores
-    print("\nScores")
-    scores_table.field_names = ["Scores"] + [k for k in objects_dict]
-    scores_table.add_row(["Precision"] + ["{:.4f}".format(v) for v in precision.tolist()])
-    scores_table.add_row(["Recall"] + ["{:.4f}".format(v) for v in recall.tolist()])
-    scores_table.add_row(["F1 Score"] + ["{:.4f}".format(v) for v in fscore.tolist()])
-    print(scores_table)
+    # Per object Precision, Recall and F1 scores
+    print("\nScores (per object)")
+    per_object_scores.field_names = ["Scores"] + [k for k in objects_dict]
+    per_object_scores.add_row(["Precision"] + ["{:.4f}".format(v) for v in precision.tolist()])
+    per_object_scores.add_row(["Recall"] + ["{:.4f}".format(v) for v in recall.tolist()])
+    per_object_scores.add_row(["F1 Score"] + ["{:.4f}".format(v) for v in fscore.tolist()])
+    print(per_object_scores)
     
+    # Average scores
+    # 1.- F1
+    print("\nScores (averages)")
     f1_score_macro = f1_score(y_true_text, y_preds_text, average = 'macro')
     f1_score_micro = f1_score(y_true_text, y_preds_text, average = 'micro')
     f1_score_weighted = f1_score(y_true_text, y_preds_text, average = 'weighted')
 
-    print("F1 Score (Macro): {:.4f}".format(f1_score_macro))
-    print("F1 Score (Micro): {:.4f}".format(f1_score_micro))
-    print("F1 Score (Weighted): {:.4f}".format(f1_score_weighted))
-    print("")
-    
-    # Intersection over union
+    # 2.-Intersection over union
     iou_score_macro = jaccard_score(y_true_text, y_preds_text, average = "macro")
     iou_score_micro = jaccard_score(y_true_text, y_preds_text, average = "micro")
     iou_score_weighted = jaccard_score(y_true_text, y_preds_text, average = "weighted")
-
-    print("IoU Score (Macro): {:.4f}".format(iou_score_macro))
-    print("IoU Score (Micro): {:.4f}".format(iou_score_micro))
-    print("IoU Score (Weighted): {:.4f}".format(iou_score_weighted))
+   
+    avg_scores.field_names = ["Score", "Macro", "Micro", "Weighted"]  
+    avg_scores.add_row(["F1", "{:.4f}".format(f1_score_macro), "{:.4f}".format(f1_score_micro), "{:.4f}".format(f1_score_weighted)])
+    avg_scores.add_row(["IoU", "{:.4f}".format(f1_score_macro), "{:.4f}".format(f1_score_micro), "{:.4f}".format(f1_score_weighted)])
+    print(avg_scores)
+    print("")
+    
 
     # From: https://stackoverflow.com/questions/31324218/scikit-learn-how-to-obtain-true-positive-true-negative-false-positive-and-fal
     FP = cm.sum(axis=0) - np.diag(cm)  

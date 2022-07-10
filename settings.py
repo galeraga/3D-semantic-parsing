@@ -22,7 +22,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, f1_score, jaccard_score
+from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, f1_score, jaccard_score, ConfusionMatrixDisplay
 
 
 # Visualization imports
@@ -64,7 +64,6 @@ segmentation_target_object = "table"
 # ENVIRONMENT AND MODEL PARAMETERS
 #------------------------------------------------------------------------------
 # Environment (file system and so on) params
-# 'pc_data_path': r"C:\Users\Lluis\Desktop\Projecte2\Stanford3dDataset",    
 eparams = {
     'pc_data_path': "/Users/jgalera/datasets/S3DIS/aligned",
     'pc_file_extension': ".txt",
@@ -120,7 +119,7 @@ hparams['device'] = 'cuda' if torch.cuda.is_available() else 'cpu'
 # Num workers bigger than 0 doesn't work with GPUs (coding parallelization required)
 max_workers = 2
 hparams['num_workers'] = max_workers if hparams['device'] == 'cpu' else 0
-
+    
 #------------------------------------------------------------------------------
 # VISUALIZATION PARAMETERS
 #------------------------------------------------------------------------------
@@ -183,6 +182,7 @@ vparams = {
     'window_color': cparams['Orange'],
     'stairs_color': cparams['Chocolate'],
 }
+
 
 #------------------------------------------------------------------------------
 # AUX FOLDER CREATION
@@ -262,9 +262,9 @@ args = parser.parse_args()
 # getting the most of the model is NOT the goal
 if "toy" in args.load:
     hparams["num_points_per_object"] = 128
-    hparams["num_points_per_room"] = 128  #100 originally
+    hparams["num_points_per_room"] = 256  #100 originally
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 3 #3 originally
+    hparams["epochs"] = 20 #3 originally
     
 
 if "low" in args.load:
@@ -283,7 +283,7 @@ if "high" in args.load:
     hparams["num_points_per_object"] = 2048
     hparams["num_points_per_room"] = 4096
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 10
+    hparams["epochs"] = 20
    
 # Adapt params depending on the target objects we're going to work
 if "movable" in args.objects:

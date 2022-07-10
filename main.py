@@ -10,7 +10,7 @@ import dataset
 import model    
 from tensorboardlogger import TensorBoardLogger 
 from summarizer import S3DIS_Summarizer
-# from visualitzation import tnet_compare, tnet_compare_infer,  infer, render_segmentation
+#from visualitzation import tnet_compare, tnet_compare_infer,  infer
 from visualitzation import render_segmentation
 
 #------------------------------------------------------------------------------
@@ -26,9 +26,6 @@ def avoid_MaxPool1d_warning(f):
     def function_with_warnings_removed(*args, **kwargs):
         with warnings.catch_warnings():
             warnings.simplefilter("ignore")
-            print(80 * "-")
-            print(task.upper())
-            print(80 * "-")
             print("Start time: ", datetime.datetime.now())
             f(*args, **kwargs)
             print("End time: ", datetime.datetime.now())
@@ -39,6 +36,10 @@ def task_welcome_msg(task = None):
     """
     Info message to be displayed when training/testing by epoch
     """
+
+    print(80 * "-")
+    print(task.upper())
+    print(80 * "-")
 
     msg = "Starting {}-{} with:".format(task, goal)
     msg += "\n- {} classes ({})".format(hparams['num_classes'], objects_dict)
@@ -96,9 +97,51 @@ def create_dataloaders(ds):
     
     return train_dataloader, val_dataloader, test_dataloader
 
+def load_checkpoint(model):
+    """
+    """
+     # Path to the checkpoint file
+    model_checkpoint = os.path.join(
+            eparams['pc_data_path'], 
+            eparams['checkpoints_folder'], 
+            eparams["checkpoint_name"]
+            )
+    
+    # If the checkpoint does not exist, train the model
+    if not os.path.exists(model_checkpoint):
+        print("\n -> The model does not seem already trained! Starting the training rigth now from scratch...\n")
+        task = "train"
+        run_model(model, dataloaders, task)
+    
+    # Loading the existing checkpoint
+    print("Loading checkpoint {} ...".format(model_checkpoint))
+    state = torch.load(
+                model_checkpoint, 
+                map_location = torch.device(hparams["device"]))
+    model.load_state_dict(state['model'])  
+    
+    return model
+
 def compute_confusion_matrix(y_true, y_preds):
     """
+    Calculate and print confusion matrix and other several metrics 
+    to evaluate model performance.
+    Args:
+    - y_true: A vector containing ground truth labels
+    - y_preds: A vector containing the model output prediction
+    
     Annotation and predictions must be entered as text to work
+    
+    Returns:
+        - F1 Score (Macro), 
+        - F1 Score (Micro),
+        - F1 Score (Weighted),
+        - Intersection over Union (IoU) (Macro)
+        - Intersection over Union (IoU) (Micro)
+        - Intersection over Union (IoU) (Weighted) 
+        
+    More info about thsese metrics can be found here:
+    https://scikit-learn.org/stable/modules/model_evaluation.html#confusion-matrix
     """
     # Replace numbers per text
     # Create a revser dict to speed up process of replacing numbers
@@ -123,7 +166,9 @@ def compute_confusion_matrix(y_true, y_preds):
     
     # Print the table
     cm_table = PrettyTable()
-    scores_table = PrettyTable()
+    per_object_scores = PrettyTable()
+    avg_scores = PrettyTable()
+    
     cm_table.field_names = ["Object"] + [k for k in objects_dict]
     for idx, row in enumerate(cm.tolist()):
         row = [reverse_objects_dict[idx]] + row
@@ -132,31 +177,32 @@ def compute_confusion_matrix(y_true, y_preds):
     print(cm_table)
     print("")
     
-    # Precision, Recall and F1 scores
-    print("\nScores")
-    scores_table.field_names = ["Scores"] + [k for k in objects_dict]
-    scores_table.add_row(["Precision"] + ["{:.4f}".format(v) for v in precision.tolist()])
-    scores_table.add_row(["Recall"] + ["{:.4f}".format(v) for v in recall.tolist()])
-    scores_table.add_row(["F1 Score"] + ["{:.4f}".format(v) for v in fscore.tolist()])
-    print(scores_table)
+    # Per object Precision, Recall and F1 scores
+    print("\nScores (per object)")
+    per_object_scores.field_names = ["Scores"] + [k for k in objects_dict]
+    per_object_scores.add_row(["Precision"] + ["{:.4f}".format(v) for v in precision.tolist()])
+    per_object_scores.add_row(["Recall"] + ["{:.4f}".format(v) for v in recall.tolist()])
+    per_object_scores.add_row(["F1 Score"] + ["{:.4f}".format(v) for v in fscore.tolist()])
+    print(per_object_scores)
     
+    # Average scores
+    # 1.- F1
+    print("\nScores (averages)")
     f1_score_macro = f1_score(y_true_text, y_preds_text, average = 'macro')
     f1_score_micro = f1_score(y_true_text, y_preds_text, average = 'micro')
     f1_score_weighted = f1_score(y_true_text, y_preds_text, average = 'weighted')
 
-    print("F1 Score (Macro): {:.4f}".format(f1_score_macro))
-    print("F1 Score (Micro): {:.4f}".format(f1_score_micro))
-    print("F1 Score (Weighted): {:.4f}".format(f1_score_weighted))
-    print("")
-    
-    # Intersection over union
+    # 2.-Intersection over union
     iou_score_macro = jaccard_score(y_true_text, y_preds_text, average = "macro")
     iou_score_micro = jaccard_score(y_true_text, y_preds_text, average = "micro")
     iou_score_weighted = jaccard_score(y_true_text, y_preds_text, average = "weighted")
-
-    print("IoU Score (Macro): {:.4f}".format(iou_score_macro))
-    print("IoU Score (Micro): {:.4f}".format(iou_score_micro))
-    print("IoU Score (Weighted): {:.4f}".format(iou_score_weighted))
+   
+    avg_scores.field_names = ["Score", "Macro", "Micro", "Weighted"]  
+    avg_scores.add_row(["F1", "{:.4f}".format(f1_score_macro), "{:.4f}".format(f1_score_micro), "{:.4f}".format(f1_score_weighted)])
+    avg_scores.add_row(["IoU", "{:.4f}".format(iou_score_macro), "{:.4f}".format(iou_score_micro), "{:.4f}".format(iou_score_weighted)])
+    print(avg_scores)
+    print("")
+    
 
     # From: https://stackoverflow.com/questions/31324218/scikit-learn-how-to-obtain-true-positive-true-negative-false-positive-and-fal
     FP = cm.sum(axis=0) - np.diag(cm)  
@@ -191,7 +237,7 @@ def compute_confusion_matrix(y_true, y_preds):
 # CLASSIFICATION AND SEGMENTATION METHODS FOR TRAINING, VALIDATION AND TESTING
 #------------------------------------------------------------------------------
 
-def process_single_epoch(model, dataloader, optimizer, epoch):
+def process_single_epoch(model, dataloader, optimizer, epoch, task):
     """
     """
 
@@ -275,7 +321,7 @@ def process_single_epoch(model, dataloader, optimizer, epoch):
 
 
 @avoid_MaxPool1d_warning
-def run_model(model, dataloaders):
+def run_model(model, dataloaders, task):
     """
     """
      # Task welcome message
@@ -287,9 +333,11 @@ def run_model(model, dataloaders):
         model = model.train()
     elif task == "validation":
         dataloader = dataloaders[1]
+        model = load_checkpoint(model)
         model = model.eval()
     elif task == "test":
         dataloader = dataloaders[2]
+        model = load_checkpoint(model)
         model = model.eval()
     
     # Aux vars to store labels for predictions (to be used by the confusion matrix)
@@ -305,7 +353,7 @@ def run_model(model, dataloaders):
     for epoch in range(1, hparams['epochs'] +1):
 
         # Run the model
-        scores = process_single_epoch(model, dataloader, optimizer, epoch)
+        scores = process_single_epoch(model, dataloader, optimizer, epoch, task)
         
         # Split results
         total_y_true.extend(scores[0])
@@ -351,6 +399,16 @@ def run_model(model, dataloaders):
     reversed_objects_dict = [i for i in objects_dict][::-1]
     df_cm = pd.DataFrame(cf_matrix/np.sum(cf_matrix), index = reversed_objects_dict,
                         columns = [i for i in objects_dict])
+
+    
+    # TODO: Replace seaborn confusion matrix with onfusionMatrixDisplay from sklearn
+    # to avoid having another import
+    #fig = plt.figure()
+    #fig = ConfusionMatrixDisplay(confusion_matrix=cf_matrix, display_labels=[i for i in objects_dict])
+    #fig.canvas.draw()
+    #fig.plot()
+    #plt.show()
+    #logger.writer.add_figure("Test", fig.plot())
 
     points = hparams["num_points_per_object"] if goal == "segmentation" else hparams["num_points_per_room"]
     msg = "Confusion Matrix" + " " + goal.capitalize() + "/"
@@ -408,25 +466,8 @@ def watch_segmentation(model, dataloaders, random = False):
     total_y_true = []
     total_y_preds = []
 
-    # Path to the checkpoint file
-    model_checkpoint = os.path.join(
-            eparams['pc_data_path'], 
-            eparams['checkpoints_folder'], 
-            eparams["checkpoint_name"]
-            )
-    
-    # If the checkpoint does not exist, train the model
-    if not os.path.exists(model_checkpoint):
-        print("The model does not seem already trained! Starting the training rigth now from scratch...")
-        task = "train"
-        run_model(model, dataloaders)
-    
-    # Loading the existing checkpoint
-    print("Loading checkpoint {} ...".format(model_checkpoint))
-    state = torch.load(
-                model_checkpoint, 
-                map_location = torch.device(hparams["device"]))
-    model.load_state_dict(state['model'])  
+    # Load checkpoint
+    model = load_checkpoint(model)
   
     # Select the object to detect
     # segmentation_target_object is defined in settings.py
@@ -583,8 +624,7 @@ def watch_segmentation(model, dataloaders, random = False):
                         b_multiple_seg = True,    
                         b_hide_wall = True,                                  
                         draw_original_rgb_data = False,
-                        b_show_room_points = False)         
-
+                        b_show_room_points = False)   
 
 #------------------------------------------------------------------------------
 # MAIN
@@ -669,7 +709,7 @@ if __name__ == "__main__":
     # summary(model, input_size=(hparams['batch_size'], hparams['max_points_per_space'], hparams['dimensions_per_object']))
 
     # Carry out the the task to do
-    run_model(model, dataloaders)
+    run_model(model, dataloaders, task)
     
     # tnet_compare example here -----------------------
     # Extracting tnet_out and preds:
@@ -687,4 +727,3 @@ if __name__ == "__main__":
     logger.writer.flush()
     logger.writer.close()
     logger.finish()
-

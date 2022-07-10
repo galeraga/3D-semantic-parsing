@@ -2,3 +2,6 @@
 __pycache__/
 __pycache__/visualitzation.cpython-38.pyc
 __pycache__/visualitzation.cpython-38.pyc
+renders/
+Stanford3dDataset/runs/
+runs/

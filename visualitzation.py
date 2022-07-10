@@ -343,7 +343,7 @@ def render_segmentation(dict_to_use = {},
     # GT camera point of view 1
     # ----------------------------
     ctr = vis_gt.get_view_control()
-    parameters = o3d.io.read_pinhole_camera_parameters("camera1.json")
+    parameters = o3d.io.read_pinhole_camera_parameters("Stanford3dDataset/camera_point_views/camera1.json")
     ctr.convert_from_pinhole_camera_parameters(parameters)
 
     #save image
@@ -358,7 +358,7 @@ def render_segmentation(dict_to_use = {},
     # GT camera point of view 2
     # ----------------------------
     ctr = vis_gt.get_view_control()
-    parameters = o3d.io.read_pinhole_camera_parameters("camera2.json")
+    parameters = o3d.io.read_pinhole_camera_parameters("Stanford3dDataset/camera_point_views/camera2.json")
     ctr.convert_from_pinhole_camera_parameters(parameters)
 
     #save image
@@ -381,7 +381,7 @@ def render_segmentation(dict_to_use = {},
     # MODEL camera point of view 1
     # ---------------------
     ctr = vis_model.get_view_control()
-    parameters = o3d.io.read_pinhole_camera_parameters("camera1.json")
+    parameters = o3d.io.read_pinhole_camera_parameters("Stanford3dDataset/camera_point_views/camera1.json")
     ctr.convert_from_pinhole_camera_parameters(parameters)
 
     #save image
@@ -396,7 +396,7 @@ def render_segmentation(dict_to_use = {},
     # MODEL camera point of view 2
     # ---------------------
     ctr = vis_model.get_view_control()
-    parameters = o3d.io.read_pinhole_camera_parameters("camera2.json")
+    parameters = o3d.io.read_pinhole_camera_parameters("Stanford3dDataset/camera_point_views/camera2.json")
     ctr.convert_from_pinhole_camera_parameters(parameters)
 
     #save image

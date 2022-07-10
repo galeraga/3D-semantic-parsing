@@ -198,7 +198,7 @@ args = parser.parse_args()
 # getting the most of the model is NOT the goal
 if "toy" in args.load:
     hparams["num_points_per_object"] = 128
-    hparams["num_points_per_room"] = 40  #100 originally
+    hparams["num_points_per_room"] = 128  #100 originally
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 1 #3 originally
     

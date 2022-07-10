@@ -5,9 +5,14 @@ class TensorBoardLogger():
 
     def __init__(self, args):
         # Define the folder where we will store all the tensorboard logs
-        logdir = os.path.join(eparams['pc_data_path'], 
-            eparams['tensorboard_log_dir'],
-            f"{''.join(args.goal)}-{''.join(args.task)}-{''.join(args.load)}-{datetime.datetime.now().strftime('%Y%m%d-%H%M%S')}")
+        points = hparams["num_points_per_room"] if args.goal == "segmentation" else hparams["num_points_per_object"]
+        desc = ''.join(args.goal) + "_" + ''.join(args.task) + "_"
+        desc += str(points) + "_points_" + str(hparams["epochs"]) + "_epochs_" 
+        desc += str(hparams["dimensions_per_object"]) + "_dims_" 
+        desc += str(hparams["num_classes"]) + "_classes_" + chosen_params + "_"
+        desc += datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+        
+        logdir = os.path.join(eparams['pc_data_path'], eparams['tensorboard_log_dir'], desc)
 
         # Initialize Tensorboard Writer with the previous folder 'logdir'
         self.writer = SummaryWriter(logdir)

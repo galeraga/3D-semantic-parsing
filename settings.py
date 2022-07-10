@@ -22,7 +22,7 @@ import torch
 import torch.nn as nn
 import torch.optim as optim
 import torch.nn.functional as F
-from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, f1_score, jaccard_score
+from sklearn.metrics import confusion_matrix, precision_recall_fscore_support, f1_score, jaccard_score, ConfusionMatrixDisplay
 
 
 # Visualization imports
@@ -198,9 +198,9 @@ args = parser.parse_args()
 # getting the most of the model is NOT the goal
 if "toy" in args.load:
     hparams["num_points_per_object"] = 128
-    hparams["num_points_per_room"] = 128  #100 originally
+    hparams["num_points_per_room"] = 40  #100 originally
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 3 #3 originally
+    hparams["epochs"] = 1 #3 originally
     
 
 if "low" in args.load:
@@ -219,7 +219,7 @@ if "high" in args.load:
     hparams["num_points_per_object"] = 2048
     hparams["num_points_per_room"] = 4096
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 10
+    hparams["epochs"] = 20
    
 # Adapt params depending on the target objects we're going to work
 if "movable" in args.objects:

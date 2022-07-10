@@ -35,7 +35,7 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
 - [Acknowledgments](#acknowledgments)
 
 ## Abstract
-A point cloud is a type of 3D geometric data structure, based on unordered set of points.
+A point cloud is a type of 3D geometric data structure, based on an unordered set of points.
 Each point is a vector of its (x, y, z) coordinates plus extra feature channels such as color, normal, etc.
 
 PointNet: Respects invariance of input points and no voxel grids are needed
@@ -45,7 +45,7 @@ PointNet provides a unified deep learning architecture for the following applica
 2) Shape part segmentation
 3) Scene semantic parsing
 
-This project'll be focus on implementing only **object classification** and **scene semantic parsing** (no shape part segementation is carried out). As a dataset, the **S3DIS dataset** is going to be used, where every point includes both its spatial coordinates and its color info (xyzrgb).
+This project'll be focus on implementing only **object classification** and **scene semantic parsing** (no shape part segmentation is carried out). As a dataset, the **S3DIS dataset** is going to be used, where every point includes both its spatial coordinates and its color info (xyzrgb).
 
 ## Main goals
 The main goal is to implement a PointNet architecture in Pytorch that uses the S3DIS dataset in order to perform object classification and indoor scene semantic segmentation. 
@@ -66,11 +66,11 @@ The **basic dataset statistics** are:
   - Building 1: Area_1, Area_3, Area_6 
   - Building 2: Area_2, Area_4 
   - Building 3: Area_5 
-- There're **11 different room types** (WCs, conference rooms, copy rooms, hallways, offices, pantries, auditoriums, storage rooms, lounges, lobbies and open spaces) for a grand total of  **272 rooms** (or spaces) diitributed among all areas.  
+- There are **11 different room types** (WCs, conference rooms, copy rooms, hallways, offices, pantries, auditoriums, storage rooms, lounges, lobbies and open spaces) for a grand total of  **272 rooms** (or spaces) distributed among all areas.  
 - Every room can have up to **14 different object types**. These objects can be classified as:
   - **movable** (boards, bookcases, chairs, tables and sofas)  
   - **structural** (ceilings, doors, floors, walls, beams, columns, windows and stairs). 
-  - **clutter** (if an object doesn't belong to any of the previous catagories)
+  - **clutter** (if an object doesn't belong to any of the previous categories)
 
 More **advanced statistics** can be found after a slightly deeper analysis:
 
@@ -92,15 +92,15 @@ The original **folder structure** of the S3DIS dataset is the following one:
 │   │   │   ├── object_Y.txt (the file with the point cloud for object_Y that can be found in Space_X. It contains 6 cols per row: XYZRGB)
 ```  
 
-- `object_Y.txt` is a file containing the point cloud of this particular object that belongs to Space_X (e.g., objects *chair_1.txt, chair_2.txt* or *table_1.txt* from an space/room called *office_1*). This point cloud file has 6 columns (non-normalized XYXRGB values).
-- `space_x.txt` is a non-annotated point cloud file containing the sum of of all the point cloud object files (object_1, object_2, ...) located within the `Annotations` folder (e.g., the space file called *Area_1\office_1\office_1.txt* contains the sum of the object files *chair_1.txt, chair_2.txt* and the rest of all the object files located inside the `Annotations` directory). As a consequence, the space/room point cloud file has only 6 columns too (non-normalized XYZRGB values).
+- `object_Y.txt` is a file containing the point cloud of this particular object that belongs to Space_X (e.g., objects *chair_1.txt, chair_2.txt* or *table_1.txt* from a space/room called *office_1*). This point cloud file has 6 columns (non-normalized XYXRGB values).
+- `space_x.txt` is a non-annotated point cloud file containing the sum of all the point cloud object files (object_1, object_2, ...) located within the `Annotations` folder (e.g., the space file called *Area_1\office_1\office_1.txt* contains the sum of the object files *chair_1.txt, chair_2.txt* and the rest of all the object files located inside the `Annotations` directory). As a consequence, the space/room point cloud file has only 6 columns too (non-normalized XYZRGB values).
 
 Comprehensive information about the original S3DIS dataset can be found at: http://buildingparser.stanford.edu/dataset.html 
 
 From this original S3DIS dataset:
 
 - A custom ground truth file (called s3dis_summary.csv) has been created to speed up the process to get to the point cloud files, avoiding recurrent operating system folder traversals.  
-- Two custom datasets have been created to feed the dataloaders, depending on the desired goal (S3DISDataset4Classification and S3DISDataset4Segmentation). 
+- Two custom datasets have been created to feed the data loaders, depending on the desired goal (S3DISDataset4Classification and S3DISDataset4Segmentation). 
 
 ### The custom ground truth file
 
@@ -189,7 +189,7 @@ red squared section of the pictures below from the original paper.
 
 The T-Net is a network that estimates a affine transformation matrix. Given two affine spaces $A_1$ and $A_2$, an affine transformation, also called affinity, is a morphism between $A_1$ and $A_2$ such that the induced map $f_P: E_1 \rightarrow E_2$ with the point $P \in A_1$  is a linear map.
 
-An affinity doesn't necessarily preserve neither the distances nor the angles but it preserves, by definition, the collinearity and the parallelism. In other words, all points belonging to a line will be alinead in, what we call canonical space, after this transformation. All the parallel lines will be preserved too. In fact, is very likely that this transformation changes the distances and the angles of our point cloud as we will see in the examples.
+An affinity doesn't necessarily preserve neither the distances nor the angles, but it preserves, by definition, the collinearity and the parallelism. In other words, all points belonging to a line will be aligned in, what we call canonical space, after this transformation. All the parallel lines will be preserved too. In fact, it is very likely that this transformation changes the distances and the angles of our point cloud as we will see in the examples.
 
 The output of this network will be a matrix that will be multiplied with the point cloud.
 
@@ -205,9 +205,9 @@ We will present the structure of the first T-Net that appears in the network. In
 
 #### Goal
 
-When we are dealing with point clouds it is normal that our data undergoes some geometric transformations. The purpose of the T-Net is to align all of the point cloud in a canonical way so it is invariant to these transformations. After doing that feature extraction can be done.
+When we are dealing with point clouds, it is normal that our data undergoes some geometric transformations. The purpose of the T-Net is to align all the point cloud in a canonical way, so it is invariant to these transformations. After doing that, feature extraction can be done.
 
-When the affine transformation matrix is used again, it is not used directly in the point cloud but in the features that had been extracted before. So in this case we are in a high dimensional space and it is possible that we have some optimization problems. In order to avoid those it is added a regularization term in the softmax training loss so the transformation matrix is close to the orthogonal matrix.
+When the affine transformation matrix is used again, it is not used directly in the point cloud, but in the features that had been extracted before. So in this case we are in a high dimensional space, and it is possible that we have some optimization problems. In order to avoid those, it is added a regularization term in the softmax training loss so the transformation matrix is close to the orthogonal matrix.
 
 $$L_{reg} = ||I-AA^T||_{F}^2 $$
 

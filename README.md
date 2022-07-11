@@ -43,14 +43,13 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
 A point cloud is a type of 3D geometric data structure, based on an unordered set of points.
 Each point is a vector of its (x, y, z) coordinates plus extra feature channels such as color, normal, etc.
 
-PointNet: Respects invariance of input points and no voxel grids are needed
-
-PointNet provides a unified deep learning architecture for the following application recognition tasks, based on point cloud inputs:
+PointNet provides a unified deep learning architecture for the following recognition tasks, based on point cloud inputs:
 1) Shape classification 
 2) Shape part segmentation
 3) Scene semantic parsing
 
 This project'll be focus on implementing only **object classification** and **scene semantic parsing** (no shape part segmentation is carried out). As a dataset, the **S3DIS dataset** is going to be used, where every point includes both its spatial coordinates and its color info (xyzrgb).
+
 
 ## Main goals
 The main goal is to implement a PointNet architecture in Pytorch that uses the S3DIS dataset in order to perform object classification and indoor scene semantic segmentation. 
@@ -60,7 +59,6 @@ The following considerations will be of particular interest:
 - How the size of the sliding windows impacts the semantic segmentation
 - How the overlap of these windows can improve the training
 - Find the optimal number of points and epoch for training
-- Goal 5
 
 ## The dataset
 The **3D Semantic Parsing of Large-Scale Indoor Spaces (S3DIS)** dataset is going to be used in order to work with the PointNet architecture. 
@@ -97,7 +95,7 @@ The original **folder structure** of the S3DIS dataset is the following one:
 │   │   │   ├── object_Y.txt (the file with the point cloud for object_Y that can be found in Space_X. It contains 6 cols per row: XYZRGB)
 ```  
 
-- `object_Y.txt` is a file containing the point cloud of this particular object that belongs to Space_X (e.g., objects *chair_1.txt, chair_2.txt* or *table_1.txt* from a space/room called *office_1*). This point cloud file has 6 columns (non-normalized XYXRGB values).
+- `object_Y.txt` is a file containing the point cloud of this particular object that belongs to Space_X (e.g., objects *chair_1.txt, chair_2.txt* or *table_1.txt* from a space/room called *office_1*). This point cloud file has 6 columns (non-normalized XYZRGB values).
 - `space_x.txt` is a non-annotated point cloud file containing the sum of all the point cloud object files (object_1, object_2, ...) located within the `Annotations` folder (e.g., the space file called *Area_1\office_1\office_1.txt* contains the sum of the object files *chair_1.txt, chair_2.txt* and the rest of all the object files located inside the `Annotations` directory). As a consequence, the space/room point cloud file has only 6 columns too (non-normalized XYZRGB values).
 
 Comprehensive information about the original S3DIS dataset can be found at: http://buildingparser.stanford.edu/dataset.html 
@@ -137,10 +135,16 @@ This is the dataset used in conjunction with the **classification** network of t
 
 #### S3DISDataset4Segmentation
 
-This is the dataset used for **semantic segmentation**. Since semantic segmentation needs every point in the cloud to be labeled, a new file is generated for every space/room with the suitable object labels. To do so, all files located in the `Annotations` folder are concatenated (along with the proper label) to create a single file per space/room with all the object points that belong to this space already labeled. This file is called `space_x_annotated.txt` (e.g., *office_1_annotated.txt*) and contains 7 cols (instead of 6): XYZRGB+*Object ID*. 
+This is the dataset used for **semantic segmentation**. Since semantic segmentation needs every point in the cloud to be labeled, a new file is generated for every space/room with the suitable object labels. To do so, all files located in the `Annotations` folder are concatenated (along with the proper label) to create a single file per space/room with all the object points that belong to this space already labeled. This file is called `space_x_annotated.txt` (e.g., *office_1_annotated.txt*) and contains 7 cols (instead of 6): XYZRGB+*Object ID*.
 
-Since every `space_x_annotated.txt` might have millions of points, point clouds for rooms are "sliced" into smaller blocks (called *sliding windows*) to improve model training performance. 
+Since every `space_x_annotated.txt` might have millions of points, point clouds for rooms are "sliced" into smaller blocks (called *sliding windows*) to improve model training performance. The slicing is a pre-process carried out only once per defined sliding window settings. The slices will be saved as Pytorch files (\*.pt) inside the *sliding_windows* folder.
 
+So:
+
+- **Input data**: The room slices.
+
+- **Labels**: The label for the object data is directly extracted from the custom ground truth file *Object ID* col.
+- 
 So the S3DISDataset4Segmentation will use the contents of the sliding windows folder to get both the **input data** and **labels**
 
 ### Sliding windows
@@ -366,19 +370,19 @@ Estimated Total Size (MB): 9561.66
 ##### $F_1$ Score
 First of all we need to define what precision and recall are:
 
-$$\text{precision} = \frac{\text{TP}}{\text{TP}+\text{FP}}$$
+$$precision = \frac{TP}{TP+FP}$$
 
-$$\text{recall}=\frac{\text{TP}}{\text{TP}+\text{FN}}$$
+$$recall=\frac{TP}{TP+FN}$$
 
 We can define the $F_1$ Score as the harmonic mean of the precision and the recall:
 
-$$F_1=2\times \frac{\text{precision}\times \text{recall}}{\text{precision}+\text{recall}}=\frac{\text{TP}}{\text{TP}+\frac{1}{2}(\text{FP}+\text{FN})}$$
+$$F_1=2\frac{precision\times recall}{precision+recall}=\frac{TP}{TP+\frac{1}{2}(FP+FN)}$$
 
 
 ##### Area Under the Curve (AUC)
 The ROC curve is the curve that represents the relation between True Positive Rate and False Positive Rate:
-$$\text{TPR}=\frac{\text{TP}}{\text{TP}+\text{FN}}=\text{recall}$$
-$$\text{FPR}=\frac{\text{FP}}{\text{FP}+\text{TN}}=1-\text{precision}$$
+$$TPR=\frac{TP}{TP+FN}=recall$$
+$$FPR=\frac{FP}{FP+TN}=1-precision$$
 
 The AUC metric stands for the integral of this curve between 0 and 1.
 
@@ -406,7 +410,7 @@ So if we visualise the threshold it might be like this:
 When we are dealing with a Segmentation problem, not only we need to have in consideration the pixels that we labeled wrongly (false positives) but we need to consider the pixels belonging to the class that we didn't label (false negatives). 
 
 
-$$\text{IoU} = \frac{|A\cap B|}{|A \cup B|} = \frac{\text{TP}}{\text{TP}+\text{FN}+\text{FP}} $$
+$$IoU = \frac{|A\cap B|}{|A \cup B|} = \frac{TP}{TP+FN+FP} $$
 
 ![IoU](https://user-images.githubusercontent.com/97680577/178110909-c405e44c-74a9-404f-a355-dad7cedea66e.png)
 
@@ -432,7 +436,14 @@ Segmentation:
 - When very few points are used it's not convenient to use RGB data (revision)
 
 ## How to run the code
+### Download the S3DIS dataset
+
+1.- Fork this repo.
+2.- Go to the  http://buildingparser.stanford.edu/dataset.html and download the aligned version of the S3DIS dataset.
+3.- Once downloaded, edit your forked *settings.py* file and set the 'pc_data_path' key of the *eparams* dict to the folder you downloaded tha dataset (e.g, /datasets/S3DIS/aligned)
+
 ### Create a conda virtual environment
+
 Install conda (or miniconda) and follow the usual directions to create and switch to a new conda virtual environment (replace *project_name* with the name you want to give to your virtual env):
 
 ```
@@ -442,7 +453,8 @@ pip install -r requirements.txt
 ```
 
 ### Running the code
-The code supports multiple arguments to be specified, depending on:
+
+The code supports multiple arguments to be parsed, depending on:
 
 - The **task** to be performed: either train, test or watch.
 - The **goal**: either classification or segmentation.
@@ -453,7 +465,7 @@ So run the code from the previously created virtual environment with the followi
 
 python main.py --task *{train, test, watch}* --goal *{classification, segmentation}* --load *{toy, low, medium, high}* --objects *{all, movable}*
 
-The load profiles include the following settings:
+The load profiles include the following settings by default:
 
 | Load profile | Num points per object/room (class/seg) | Epochs | Dimensions per object
 |:-------------:|:-------------------------------------:|:------:|:----------------------:|

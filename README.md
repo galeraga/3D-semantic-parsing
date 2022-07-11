@@ -57,11 +57,12 @@ The general stategy is to implement a PointNet architecture in Pytorch that uses
 -Classification of movable elements given its own point cloud 
 -Semantic segmentation of each object given a room point cloud.
 -See impact of considering several hyperparameters and dataset preparation strategies on accuracy. For this point the following considerations will be of particular interest:
+    - Find the impact that considering the rest of the non-movable "clutter" classes as well as using one or other "window discard" strategies will have on the results.
     - How color impacts object detection and semantic segmentation
     - How the size of the sliding windows impacts the semantic segmentation
-    - How the overlap of these windows can improve the training
-    - Find the optimal number of points and epoch for training
-    - Find the impact that considering the rest of the non-movable "clutter" classes as well as using one or other "window discard" strategies will have on the results.
+    - How the overlap of these windows can improve/hinder the training
+    - The optimal number of points in the input and epoch for training
+    
 
 ## The dataset
 The **3D Semantic Parsing of Large-Scale Indoor Spaces (S3DIS)** dataset is going to be used in order to work with the PointNet architecture. 
@@ -150,13 +151,13 @@ So:
 - 
 So the S3DISDataset4Segmentation will use the contents of the sliding windows folder to get both the **input data** and **labels**
 
-### Discarding non-movable classes
+### Discarding non-movable classes for segmentation
 
 The original S3DIS dataset comes with some non-movable classes (structural and clutter defined above), one possible strategy is to train the model withouth any of those points. The hypothesis is that removing this information will allow the model to focus on the target classes and prevent it from focusing on classes that are not of interest. 
 
 ![image](https://user-images.githubusercontent.com/104381341/178322532-8e1e77e2-0ad8-4673-a685-bda9f3718932.png)
 
-### Sliding windows
+### Sliding windows for segmentation
 
 To train room segmentation, we divide each room into sections of specific dimensions, and output only the points inside said section separately from the others. 
 
@@ -167,7 +168,7 @@ The window height can be specified as a hyperparameter and the model is ready in
 
 ![image](https://user-images.githubusercontent.com/104381341/178322875-9338303c-0135-4395-9938-2106fde64911.png)
 
-Said sections or windows can overlap with and overlap factor going from 0%(no overlapping) to 99%(almost complete overlapping, choosing 100% overlap would lead to an infinite loop always outputting the same window).
+Said sections or windows can overlap with and overlap factor going from 0%(no overlapping) to 99%(almost complete overlapping, choosing 100% overlap would lead to an infinite loop always outputting the same window). The efect of this variable will be considered in the study
 
 ![image](https://user-images.githubusercontent.com/104381341/178322944-865dc454-cac9-44d2-b501-0d1550f533b1.png)
 
@@ -191,7 +192,11 @@ Since the rooms are of an irregular shape, during the window sweep we might run 
 
 In the first case, the script will discard any window that is completely empty.
 
-For the second case, if one of the resulting windows has at least one point, we have put in place a strategy that allows us to select a desirable percentage of "window filling". If we wanted the window to be at least 80% filled, the script will create the window, find the coordinates of the points that are further to the left, further to the right further to the front and further to the back of said window, and find the distances betweem them (left-right, front-back). If one of those distances is smaller than 80% of the window size, the window wil be discarded, considered not filled enough. The default is 90% filled.
+For the second case, if one of the resulting windows has at least one point, we have put in place a strategy that allows us to select a desirable percentage of "window filling". If we wanted the window to be at least 80% filled, the script will create the window, find the coordinates of the points that are further to the left, further to the right further to the front and further to the back of said window, and find the distances betweem them (left-right, front-back). If one of those distances is smaller than 80% of the window size, the window wil be discarded, considered not filled enough. The default is 90% filled. This variable will be studied
+
+###Number of input points for both segmentation and classification
+
+For the pointnet to work, the dimensions of all the inputs must be the same. However both the object point clouds to be inputted into the classification model and the window point clouds previously prepared to be used with the segmentation model have a different number of points. Hence, prior to entering the data in the model, these point clouds must be modified to fit this variable. At the same time, this is one of the effects that will be studied as a hyperparameter.
 
 ### The final folder structure 
 
@@ -460,10 +465,23 @@ An alternative of these two methods is **Weighted Average**. It consists of calc
 
 ## Main Conclusions
 
+Classification:
+
+- Very few points (128) already lead to good results
+
 Segmentation:
 
-- When very few points are used (i.e., 100 points per space), only walls are learned to be detected
-- When very few points are used it's not convenient to use RGB data (revision)
+- About dataset preparation and discard:
+   - Not implementing the discard of non-movable classes leads to the model learning only structural classes (i-e walls, specially if very few points are used) if the original dataset is kept or, if the structural points are transformed into "clutter" points, to the model learning to identify clutter but not the rest of the classes. The strategy of discarding all non-movable points is then correct.
+
+- About RGB information:
+   - RGB information is only useful when the model is in a "sweet spot". In cases where weighted IoU is over 0.45, RGB increases the value by 10%. Else it can hinder training. This prevails when the model has a high number of points, so the hypothesis that there is too much to learn (rgb on top of everything else) from too little information (number of points) does not apply.
+
+-About window size:
+   - Increasing window size from 1 to 2 leads to poor results, even when the number of points is 
+   - Depending on both window size and overlap, the number of points considered the optimal point varies.
+    
+- About 
 
 ## How to run the code
 ### Download the S3DIS dataset

@@ -31,7 +31,7 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
 - [Obstacles](#obstacles)
 - [Main Conclusions](#main-conclusions)
 - [How to run the code](#how-to-run-the-code)
-  * [Step 1: Download the S3DIS dataset](#step-1\:-download-the-s3dis-dataset)
+  * [Download the S3DIS dataset](#step-1\:-download-the-s3dis-dataset)
   * [Create a conda virtual environment](#create-a-conda-virtual-environment)
   * [Running the code](#running-the-code)
 - [Related Work](#related-work)

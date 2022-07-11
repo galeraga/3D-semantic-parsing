@@ -57,9 +57,9 @@ This project'll be focus on implementing only **object classification** and **sc
 ## Main goals
 The general stategy is to implement a PointNet architecture in Pytorch that uses the S3DIS dataset in order to perform object classification and indoor scene semantic segmentation. We will focus only on the 5 movable classes presented in the dataset. 
 
--Classification of movable elements given its own point cloud 
--Semantic segmentation of each object given a room point cloud.
--See impact of considering several hyperparameters and dataset preparation strategies on accuracy. For this point the following considerations will be of particular interest:
+- Classification of movable elements given its own point cloud 
+- Semantic segmentation of each object given a room point cloud.
+- See impact of considering several hyperparameters and dataset preparation strategies on accuracy. For this point the following considerations will be of particular interest:
     - Find the impact that considering the rest of the non-movable "clutter" classes as well as using one or other "window discard" strategies will have on the results.
     - How color impacts object detection and semantic segmentation
     - How the size of the sliding windows impacts the semantic segmentation
@@ -89,6 +89,14 @@ More **advanced statistics** can be found after a slightly deeper analysis:
 | <sub> Object classes dict: {0:ceiling, 1:clutter, 2:door, 3:floor, 4:wall, 5:beam, 6:board, 7:bookcase, 8:chair, 9:table, 10:column, 11:sofa, 12:window, 12:window, 13:stairs } </sub>|
 | <sub> Room types dict: {0:WC, 1:conferenceRoom, 2:copyRoom, 3:hallway, 4:office, 5:pantry, 6:auditorium, 7:storage, 8:lounge, 9:lobby, 10:openSpace}</sub>|
 
+Some illustrative rough figures, from aproximately **273M** total points:
+
+
+| Object           | Ceiling | Door | Floor | Wall | Beam | Board | Bookcase | Chair | Table | Column | Sofa | Window | Stairs | Clutter
+|:----------------:|:-------:|:----:|:-----:|:----:|:----:|:----:|:---------:|:-----:|:-----:|:------:|:----:|:------:|:----- :|:-------|
+| Total Points (M) | 53      | 13   | 45    | 76   | 5    |  3   |    17     |   9   |  9    |  5     | 1    |  7     |  0.6   |  28 
+
+
 
 The original **folder structure** of the S3DIS dataset is the following one:
 
@@ -110,7 +118,12 @@ Comprehensive information about the original S3DIS dataset can be found at: http
 From this original S3DIS dataset:
 
 - A custom ground truth file (called s3dis_summary.csv) has been created to speed up the process to get to the point cloud files, avoiding recurrent operating system folder traversals.  
-- Two custom datasets have been created to feed the data loaders, depending on the desired goal (S3DISDataset4Classification and S3DISDataset4Segmentation). 
+- Two custom datasets have been created to feed the dataloaders, depending on the desired goal (S3DISDataset4Classification and S3DISDataset4Segmentation). 
+- Since dataloaders expect the same amount of input points and rooms/objects might differ considerably, a user-defined threshold can be set to limit the number of points to sample per room/object when datasets are created. 
+- The available areas have been splitted and assigned to the following tasks:
+  - Training: Areas 1, 2, 3 and 4
+  - Validation: Area 5
+  - Test: Area 6
 
 ### The custom ground truth file
 
@@ -208,8 +221,9 @@ Taking into account the previous information, the final folder structure for the
 ├── s3dis_summary.csv (the ground truth file)
 ├── Area_N
 │   ├── space_X
-│   │   ├── space_x.txt (the non-annotated file with the point cloud for this space. It only contains 6 cols per row: XYZRGB)
-│   │   ├── space_x_annotated.txt (the annotated file with the point cloud for this space. It contains 7 cols per row: XYZRGB+*Object ID*)
+│   │   ├── space_x.txt (the original non-annotated file with the point cloud for this space. It only contains 6 cols per row: XYZRGB)
+│   │   ├── space_x_annotated.txt (the annotated file with the point cloud for this space (including clutter) It contains 7 cols per row: XYZRGB+*Object ID*)
+│   │   ├── space_x_annotated_clutter_free.txt (the annotated file for this space (excluding clutter). It contains 7 cols per row: XYZRGB+*Object ID*)
 │   │   ├── Annotations
 │   │   │   ├── object_1.txt (the file with the point cloud for object_1 that can be found in Space_X. It contains 6 cols per row: XYZRGB)
 |   |   |   ├── ...
@@ -217,6 +231,7 @@ Taking into account the previous information, the final folder structure for the
 ├── sliding_windows (sliced portions of all the the space_x_annotated.txt files)
 │   └── w1_d1_h3_o0 
 ├── checkpoints 
+├── cameras (to store required JSON files to visualize segmentation with Open3D)
 ├── runs (for TensorBoard logging)
 └── tnet_outputs (output images of T-Net features)
 ```  
@@ -477,19 +492,61 @@ Segmentation:
 - About dataset preparation and discard:
    - Not implementing the discard of non-movable classes leads to the model learning only structural classes (i-e walls, specially if very few points are used) if the original dataset is kept or, if the structural points are transformed into "clutter" points, to the model learning to identify clutter but not the rest of the classes. The strategy of discarding all non-movable points is then correct.
    - Changing the "window filling" parameter from 90% to 1% diminishes accuracy. The explanation is that if we take windows that might only have a small part of an object, the model finds it harder to identify those objects than if we already give them windows that contain the majority of an object. The same way a person would find it harder to separate a table leg from a chair leg if we only had that information, than to separate half a chair from half a table. There is probably a sweet spot in this parameter, related to window size.
+   - However, the script also discards windows that might contain a full object even if the window is not completely filled. For example narrow objects like boards and bookcases or objects that might be against a wall. When we visualize the results and compare them to the ground truth we see that those objects where not even considered, the window system discarded them. 
+
+       ![image](https://user-images.githubusercontent.com/104381341/178340888-74d2c431-15ee-4946-8028-3fb76157aa7e.png)
 
 - About RGB information:
    - RGB information is only useful when the model is in a "sweet spot". In cases where weighted IoU is over 0.45, RGB increases the value by 10%. Else it can hinder training. This prevails when the model has a high number of points, so the hypothesis that there is too much to learn (rgb on top of everything else) from too little information (number of points) does not apply.
 
--About window size:
+- About window size:
    - Increasing window size from 1 to 2 leads to poor results, even when the number of points is adapted so that the "density" is equivalent. 
    - Depending on both window size and overlap, the number of points considered the optimal point varies. For window size 1 with 50% overlap, 128 already leads to almost the best results. For window size 1 with 0% overlap, the number is 512. This makes sense since with 0.5 overlap we are increasing the number of input windows by two, so it's sensible to think that we might need less points per window.
-   - 
     
 - About overlap:
-   -As expected, overlap of 50% achieves the best results. Although it slightly increases the time of dataset preparation (done only once) and the time of training (sinze there are more input windows), it also allows to have best results even with a few points.
+   - As expected, overlap of 50% achieves the best results. Although it slightly increases the time of dataset preparation (done only once) and the time of training (since there are more input windows), it also allows to have best results even with a few points.
+
+- About number of epochs:
    
-- About
+- General results:
+   - Based on IoU we get the best cost/results with:
+      -128 points
+      -50% overlap
+      -RGB (although this applies only to this optimal spot, for the rest of the combination RGB hinders training)
+      -90% Window filling discard criteria
+      -Window size =1
+      
+   - The model is only able to correctly identify mainly tables and chairs. This is possibly due to the window discard strategy. This needs to be worked on.
+   - Visualization of this parameter combination leads to an image where everything is detected as a table. However this is probably due to the fact that when labels are doubled because of overlap, the chosen one is always the last label. This would lead to confusion even if the statistical results are ok.
+
+Confusion Matrix
+
+|   Object  | board  | bookcase | chair  | table  |  sofa  |
+|:---------:|:------:|:--------:|:------:|:------:|:------:|
+|  board   |  1558 |    63    |  5726  | 13070  |  6   |
+| bookcase |  575  |    75    | 24807  | 24268  |  59  |
+|  chair   |  378  |   295    | 167682 | 52964  | 988  |
+|  table   |  511  |   213    | 71347  | 339137 | 610  |
+|   sofa   |  174  |    0     | 12829  |  7062  | 3923 |
+
+
+Scores (per object)
+
+|   Scores  | board  | bookcase | chair  | table  |  sofa  |
+|:---------:|:------:|:--------:|:------:|:------:|:------:|
+| Precision | 0.4875 |  0.1161  | 0.5938 | 0.7769 | 0.7023 |
+|   Recall  | 0.0763 |  0.0015  | 0.7543 | 0.8235 | 0.1635 |
+
+
+Scores (averages)
+      
+
+| Score | Macro  | Micro  | Weighted |
+|:------:|:--------:|:-------:|:----------:|
+|  IoU  | 0.2777 | 0.5426 |  0.5356  |
+
+
+
 
 ## How to run the code
 ### Download the S3DIS dataset

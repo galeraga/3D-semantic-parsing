@@ -107,7 +107,8 @@ hparams = {
     'win_width': 1,
     'win_depth': 1,
     'win_height': 4,
-    'overlap': 0, # Percentage, 0-95%, 100 will create an infinite loop
+    'overlap': 0.5, # 0-1, 0.5 is half the window overlap. 1 would create an infinite loop
+    'window_filling': 0.9, # 0-1 part of the sliding window that needs to be filled for it to not be discarded
 }
 
 # Checking if the script is running in GCP

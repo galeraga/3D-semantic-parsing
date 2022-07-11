@@ -5,7 +5,7 @@ class TensorBoardLogger():
 
     def __init__(self, args):
         # Define the folder where we will store all the tensorboard logs
-        points = hparams["num_points_per_room"] if args.goal == "segmentation" else hparams["num_points_per_object"]
+        points = hparams["num_points_per_room"] if "segmentation" in args.goal else hparams["num_points_per_object"]
         desc = ''.join(args.goal) + "_" + ''.join(args.task) + "_"
         desc += str(points) + "_points_" + str(hparams["epochs"]) + "_epochs_" 
         desc += str(hparams["dimensions_per_object"]) + "_dims_" 

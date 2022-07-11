@@ -355,15 +355,23 @@ def run_model(model, dataloaders, task):
     total_y_preds = []
     total_loss = []
     total_acc = []
+    time_per_epoch = []
     # Set the initial best loss to infinity
     best_loss= np.inf
 
     optimizer = optim.Adam(model.parameters(), lr = hparams['learning_rate'])
 
     for epoch in range(1, hparams['epochs'] +1):
+        
+        # Time it
+        epoch_start_time = datetime.datetime.now()
 
         # Run the model
         scores = process_single_epoch(model, dataloader, optimizer, epoch, task)
+        
+        # Save time (in secs)
+        epoch_end_time = datetime.datetime.now()
+        time_per_epoch.append((epoch_end_time - epoch_start_time).seconds)
         
         # Split results
         total_y_true.extend(scores[0])
@@ -390,6 +398,7 @@ def run_model(model, dataloaders, task):
         base_msg = goal.capitalize() + "/" + task.capitalize()   
         logger.writer.add_scalar(base_msg + " Loss", total_loss[-1], epoch)
         logger.writer.add_scalar(base_msg + " Accuracy", total_acc[-1], epoch)
+        logger.writer.add_scalar(base_msg + " Time (secs)", time_per_epoch[-1], epoch)
         logger.writer.add_scalar(base_msg + " F1 Score (Macro)", f1_score_macro, epoch)
         logger.writer.add_scalar(base_msg + " F1 Score (Micro)", f1_score_micro, epoch)
         logger.writer.add_scalar(base_msg + " F1 Score (Weighted)", f1_score_weighted, epoch)

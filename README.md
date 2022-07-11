@@ -482,7 +482,7 @@ Segmentation:
 - About RGB information:
    - RGB information is only useful when the model is in a "sweet spot". In cases where weighted IoU is over 0.45, RGB increases the value by 10%. Else it can hinder training. This prevails when the model has a high number of points, so the hypothesis that there is too much to learn (rgb on top of everything else) from too little information (number of points) does not apply.
 
--About window size:
+- About window size:
    - Increasing window size from 1 to 2 leads to poor results, even when the number of points is adapted so that the "density" is equivalent. 
    - Depending on both window size and overlap, the number of points considered the optimal point varies. For window size 1 with 50% overlap, 128 already leads to almost the best results. For window size 1 with 0% overlap, the number is 512. This makes sense since with 0.5 overlap we are increasing the number of input windows by two, so it's sensible to think that we might need less points per window.
    - 
@@ -501,7 +501,7 @@ Segmentation:
       -90% Window filling discard criteria
       -Window size =1
       
- -  The model is only able to correctly identify mainly tables and chairs. This is possibly due to the window discard strategy. This needs to be worked on.
+   - The model is only able to correctly identify mainly tables and chairs. This is possibly due to the window discard strategy. This needs to be worked on.
  
  
  Confusion Matrix

@@ -179,13 +179,19 @@ Additionally, so the training is easier, we will normalize every window so that 
 
 Each window will have information on the relative coordinates of each point in it, their color, and the absolute coordinates those points had before the transformation. We also store the window identifier and the associated label. This allows us to have the spatial information if we would wish to visualize the whole room results afterwards. Keep in mind that in cases where the overlap is higher than 0, some points will be in several windows at the same time, and will potentially have different predictions in each. This will have to be taken into account in case the implementation of a room prediction visualizer using overlap were desired.
 
+The structure of each individual window file will be: 
+
+| Rel. Coord.   |   RGB         | Abs. Coord   | Window ID  | Object Label |
+|:-------------:|:-------------:|:------------:|:----------:|:------------:|
+|   [3 x int]   |    [3 x int]  |   [3 x int]  | integer    |    [0-5]     | 
+
 #### Discarding inadequate windows
 
 Since the rooms are of an irregular shape, during the window sweep we might run into both empty and partially filled windows.
 
 In the first case, the script will discard any window that is completely empty.
 
-For the second case, if one of the resulting windows has at least one point, we have put in place a strategy that allows us to select a desirable percentage of "window filling". If we wanted the window to be at least 80% filled, the script will create the window, find the coordinates that are further to the left, further to the right further to the front further to the back of said window, and find the distances betweem them (left-right, front-back). If one of those distances is smaller than 80% of the window size, the window wil be discarded, it's considered not filled enough. The default is 90%.
+For the second case, if one of the resulting windows has at least one point, we have put in place a strategy that allows us to select a desirable percentage of "window filling". If we wanted the window to be at least 80% filled, the script will create the window, find the coordinates of the points that are further to the left, further to the right further to the front and further to the back of said window, and find the distances betweem them (left-right, front-back). If one of those distances is smaller than 80% of the window size, the window wil be discarded, considered not filled enough. The default is 90% filled.
 
 ### The final folder structure 
 

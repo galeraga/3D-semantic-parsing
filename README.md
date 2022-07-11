@@ -421,7 +421,7 @@ Segmentation:
 
 ## How to run the code
 ### Create a conda virtual environment
-Install conda and follow the usual directions to create and switch to a new conda virtual environment (replace *project_name* with the name you want to give to your virtual env):
+Install conda (or miniconda) and follow the usual directions to create and switch to a new conda virtual environment (replace *project_name* with the name you want to give to your virtual env):
 
 ```
 conda create -n project_name python=3.8.1

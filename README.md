@@ -421,18 +421,30 @@ Segmentation:
 
 ## How to run the code
 ### Create a conda virtual environment
+Install conda and follow the usual directions to create and switch to a new conda virtual environment:
 
-conda create -n project_name python=3.8.1
-conda activate t2
-
+```
+conda create -n *project_name* python=3.8.1
+conda activate *project_name*
+pip install -r requirements.txt
+```
 ### Running the code
+The code supports multiple args to be specified, depending on:
 
+- The task to be performed: Either train, test or watch
+- The goal: Either classification or segmentation
+- The target objects we want to work with (either all objects or only the movable objects)
+- The load profile (
+
+All these args can be changed and specified in the file *settings.py*
 python main.py
+
 
 
 ## Related Work
 1. Benjamín Gutíerrez-Becker and Christian Wachinger. _Deep Multi-Structural Shape Analysis:Application to Neuroanatomy_. 2018
 2. 
+
 ## Contributors
 Marc Casals i Salvador
 Lluís Culí

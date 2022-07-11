@@ -437,12 +437,13 @@ The code supports multiple args to be specified, depending on:
 - The target objects we want to work with: either all objects or only the movable objects.
 - The load profile: either toy, low, medium, high.
 
-All these args can be changed and specified in the file *settings.py*
+All these args are specified in the file *settings.py* and can be freely cjanged to meet your needs.
 
 
-python main.py
+python main.py --task *my_task* --goal *my_goal* --load *my_load* --objects *my_objects*
 
-
+Load profiles created for convenience
+List them
 
 ## Related Work
 1. Benjamín Gutíerrez-Becker and Christian Wachinger. _Deep Multi-Structural Shape Analysis:Application to Neuroanatomy_. 2018

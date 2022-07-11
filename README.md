@@ -157,12 +157,6 @@ This is the dataset used for **semantic segmentation**. Since semantic segmentat
 
 Since every `space_x_annotated.txt` might have millions of points, point clouds for rooms are "sliced" into smaller blocks (called *sliding windows*) to improve model training performance. The slicing is a pre-process carried out only once per defined sliding window settings. The slices will be saved as Pytorch files (\*.pt) inside the *sliding_windows* folder.
 
-So:
-
-- **Input data**: The room slices.
-
-- **Labels**: The label for the object data is directly extracted from the custom ground truth file *Object ID* col.
-- 
 So the S3DISDataset4Segmentation will use the contents of the sliding windows folder to get both the **input data** and **labels**
 
 ### Discarding non-movable classes for segmentation

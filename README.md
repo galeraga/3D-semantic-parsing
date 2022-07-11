@@ -421,22 +421,25 @@ Segmentation:
 
 ## How to run the code
 ### Create a conda virtual environment
-Install conda and follow the usual directions to create and switch to a new conda virtual environment:
+Install conda and follow the usual directions to create and switch to a new conda virtual environment (change *project_name* with the name you want to give to your virtual env):
 
 ```
-conda create -n *project_name* python=3.8.1
-conda activate *project_name*
+conda create -n project_name python=3.8.1
+conda activate project_name
 pip install -r requirements.txt
 ```
+
 ### Running the code
 The code supports multiple args to be specified, depending on:
 
-- The task to be performed: Either train, test or watch
-- The goal: Either classification or segmentation
-- The target objects we want to work with (either all objects or only the movable objects)
-- The load profile (
+- The task to be performed: either train, test or watch.
+- The goal: either classification or segmentation.
+- The target objects we want to work with: either all objects or only the movable objects.
+- The load profile: either toy, low, medium, high.
 
 All these args can be changed and specified in the file *settings.py*
+
+
 python main.py
 
 

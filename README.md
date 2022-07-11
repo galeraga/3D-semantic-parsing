@@ -54,11 +54,14 @@ This project'll be focus on implementing only **object classification** and **sc
 ## Main goals
 The main goal is to implement a PointNet architecture in Pytorch that uses the S3DIS dataset in order to perform object classification and indoor scene semantic segmentation. 
 
-The following considerations will be of particular interest:
-- How color impacts object detection and semantic segmentation
-- How the size of the sliding windows impacts the semantic segmentation
-- How the overlap of these windows can improve the training
-- Find the optimal number of points and epoch for training
+-Classification of movable elements given its own point cloud (5 classes)
+-Semantic segmentation of each object given a room point cloud.
+-See impact of considering several hyperparameters and dataset preparation strategies on accuracy. For this point the following considerations will be of particular interest:
+    - How color impacts object detection and semantic segmentation
+    - How the size of the sliding windows impacts the semantic segmentation
+    - How the overlap of these windows can improve the training
+    - Find the optimal number of points and epoch for training
+    - Find the impact that considering the rest of the non-movable "clutter" classes as well as using one or other "window discard" strategies will have on the results.
 
 ## The dataset
 The **3D Semantic Parsing of Large-Scale Indoor Spaces (S3DIS)** dataset is going to be used in order to work with the PointNet architecture. 
@@ -147,20 +150,25 @@ So:
 - 
 So the S3DISDataset4Segmentation will use the contents of the sliding windows folder to get both the **input data** and **labels**
 
+### 
 ### Sliding windows
 
 To train room segmentation, we divide each room into sections of specific dimensions, and output only the points inside said section separately from the others. 
 
-Said sections or windows can overlap with and overlap factor going from 0%(no overlapping) to 99%(almost complete overlapping, choosing 100% overlap would lead to an infinite loop always outputting the same window).
 The window width (X) and depth(Y) are specified as hyperparameters. They can be defined separately, but it makes sense that they would be the same value since objects in a room are commonly rotated on the X-Y plane.
 The window height can be specified as a hyperparameter and the model is ready in case windowing in Z is necessary, but as the selected classes for segmentation are movable objects, and these are usually laid on the floor, the most logical solution is to consider all points inside a window defined by only their X-Y coordinates, and to just take all the points height-wise. The height parameter is thus ignored in the current script. This configuration would lead to the windows having a pillar-shape, from the floor to the ceiling of each room.
 
-Having defined the parameters, we take each of the defined windows and select only the points of the room point cloud whose coordinates fall inside said windows. Because the window point clouds will be the inputs to our segmentation model, they must be independent from one another and from the room coordinates. We must then create a new reference system for every window, where the coordinates of each point refer to the origin point of each window (winX=0 winY=0) instead of to the origin of the original room point cloud.
+Said sections or windows can overlap with and overlap factor going from 0%(no overlapping) to 99%(almost complete overlapping, choosing 100% overlap would lead to an infinite loop always outputting the same window).
+
+Having defined the parameters, we take each of the defined windows and select only the points of the room point cloud whose coordinates fall inside said windows. 
+
+Because the window point clouds will be the inputs to our segmentation model, they must be independent from one another and from the room coordinates. We must then create a new reference system for every window, where the coordinates of each point refer to the origin point of each window (winX=0 winY=0) instead of to the origin of the original room point cloud. 
 
 Additionally, so the training is easier, we will normalize every window so that the point coordinates range only from 0-1.
 
-Each window will have information on the relative coordinates of each point in it, their color, and the absolute coordinates those points had before the transformation. We also store the window identifier and the associated label. This allows us to have the spatial information if we wish to visualize the whole room results afterwards. Keep in mind that in cases where the overlap is higher than 0, some points will be in several windows at the same time, and will potentially have different predictions in each. This will have to take into account in case the implementation of a room prediction visualizer using overlap were desired.
+Each window will have information on the relative coordinates of each point in it, their color, and the absolute coordinates those points had before the transformation. We also store the window identifier and the associated label. This allows us to have the spatial information if we would wish to visualize the whole room results afterwards. Keep in mind that in cases where the overlap is higher than 0, some points will be in several windows at the same time, and will potentially have different predictions in each. This will have to be taken into account in case the implementation of a room prediction visualizer using overlap were desired.
 
+###
 Since the rooms are of an irregular shape, during the window sweep we might run into both empty and partially filled windows. In these cases the script will discard any window which space is not filled up to at least 90% of it's boundaries, so as to train allways with filled windows. If overlap is low, this means that some points near the walls might not be taken into account, so objects that are typically against walls might not be fully represented.
 
 ### The final folder structure 

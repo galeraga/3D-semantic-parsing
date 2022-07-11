@@ -368,17 +368,17 @@ First of all we need to define what precision and recall are:
 
 $$\text{precision} = \frac{\text{TP}}{\text{TP}+\text{FP}}$$
 
-$$recall=\frac{TP}{TP+FN}$$
+$$\text{recall}=\frac{\text{TP}}{\text{TP}+\text{FN}}$$
 
 We can define the $F_1$ Score as the harmonic mean of the precision and the recall:
 
-$$F_1=2\times \frac{precision\times recall}{precision+recall}=\frac{TP}{TP+\frac{1}{2}(FP+FN)}$$
+$$F_1=2\times \frac{\text{precision}\times \text{recall}}{\text{precision}+\text{recall}}=\frac{\text{TP}}{\text{TP}+\frac{1}{2}(\text{FP}+\text{FN})}$$
 
 
 ##### Area Under the Curve (AUC)
 The ROC curve is the curve that represents the relation between True Positive Rate and False Positive Rate:
-$$TPR=\frac{TP}{TP+FN}=recall$$
-$$FPR=\frac{FP}{FP+TN}=1-precision$$
+$$\text{TPR}=\frac{\text{TP}}{\text{TP}+\text{FN}}=\text{recall}$$
+$$\text{FPR}=\frac{\text{FP}}{\text{FP}+\text{TN}}=1-\text{precision}$$
 
 The AUC metric stands for the integral of this curve between 0 and 1.
 
@@ -406,7 +406,7 @@ So if we visualise the threshold it might be like this:
 When we are dealing with a Segmentation problem, not only we need to have in consideration the pixels that we labeled wrongly (false positives) but we need to consider the pixels belonging to the class that we didn't label (false negatives). 
 
 
-$$IoU = \frac{|A\cap B|}{|A \cup B|} = \frac{TP}{TP+FN+FP} $$
+$$\text{IoU} = \frac{|A\cap B|}{|A \cup B|} = \frac{\text{TP}}{\text{TP}+\text{FN}+\text{FP}} $$
 
 ![IoU](https://user-images.githubusercontent.com/97680577/178110909-c405e44c-74a9-404f-a355-dad7cedea66e.png)
 

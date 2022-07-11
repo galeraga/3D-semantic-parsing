@@ -430,20 +430,30 @@ pip install -r requirements.txt
 ```
 
 ### Running the code
-The code supports multiple args to be specified, depending on:
+The code supports multiple arguments to be specified, depending on:
 
-- The task to be performed: either train, test or watch.
-- The goal: either classification or segmentation.
-- The target objects we want to work with: either all objects or only the movable objects.
-- The load profile: either toy, low, medium, high.
+- The **task** to be performed: either train, test or watch.
+- The **goal**: either classification or segmentation.
+- The target **objects** we want to work with: either all objects or only the movable objects.
+- The **load** profile: either toy, low, medium, high.
 
-All these args are specified in the file *settings.py* and can be freely cjanged to meet your needs.
+So run the code from the previously created virtual environment with the following command:
 
+python main.py --task *{train, test, watch}* --goal *{classification, segmentation}* --load *{toy, low, medium, high}* --objects *{all, movable}*
 
-python main.py --task *my_task* --goal *my_goal* --load *my_load* --objects *my_objects*
+The load profiles include the following settings:
 
-Load profiles created for convenience
-List them
+| Load profile | Num points per object/room (class/seg) | Epochs | Dimensions per object
+|:-------------:|:-------------------------------------:|:------:|:----------------------:|
+| Toy        | 10                                       | 1      | 3
+| Low        | 128                                      | 3      | 3
+| Medium     | 512                                      | 10     | 3
+| High       | 1024                                     | 40     | 3 
+
+(Note: The *toy* load profile is mainly intended to quickly test buggy behaviours during code development)
+
+All these args are specified in the file *settings.py* and can be freely changed to meet your needs. 
+
 
 ## Related Work
 1. Benjamín Gutíerrez-Becker and Christian Wachinger. _Deep Multi-Structural Shape Analysis:Application to Neuroanatomy_. 2018

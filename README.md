@@ -419,6 +419,7 @@ The first one is to calculate the metrics to every individual class of the sampl
 
 The second one is called doing the **Micro** of the metric and consists on considering all the samples of all the classes at the same time. Doing so, if we had the imbalanced dataset that we described before, calculating the metric like this would expose the bad performance of the model in this imbalanced dataset.
 
+An alternative of these two methods is **Weighted Average**. It consists of calculating the metrics similarly as the micro but considering the support (the support of the class is the number of samples of this class divided by the number of total samples of the dataset) of each class to the dataset.
 
 ## Obstacles
 

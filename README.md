@@ -366,7 +366,7 @@ Estimated Total Size (MB): 9561.66
 ##### $F_1$ Score
 First of all we need to define what precision and recall are:
 
-$$precision = \frac{TP}{TP+FP}$$
+$$\text{precision} = \frac{\text{TP}}{\text{TP}+\text{FP}}$$
 
 $$recall=\frac{TP}{TP+FN}$$
 

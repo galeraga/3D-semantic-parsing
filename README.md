@@ -156,15 +156,20 @@ The original S3DIS dataset comes with some non-movable classes (structural and c
 
 ![image](https://user-images.githubusercontent.com/104381341/178322532-8e1e77e2-0ad8-4673-a685-bda9f3718932.png)
 
-
 ### Sliding windows
 
 To train room segmentation, we divide each room into sections of specific dimensions, and output only the points inside said section separately from the others. 
 
+![image](https://user-images.githubusercontent.com/104381341/178322824-590e4aa2-8962-4298-babe-0069f76de9b1.png)
+
 The window width (X) and depth(Y) are specified as hyperparameters. They can be defined separately, but it makes sense that they would be the same value since objects in a room are commonly rotated on the X-Y plane.
 The window height can be specified as a hyperparameter and the model is ready in case windowing in Z is necessary, but as the selected classes for segmentation are movable objects, and these are usually laid on the floor, the most logical solution is to consider all points inside a window defined by only their X-Y coordinates, and to just take all the points height-wise. The height parameter is thus ignored in the current script. This configuration would lead to the windows having a pillar-shape, from the floor to the ceiling of each room.
 
+![image](https://user-images.githubusercontent.com/104381341/178322875-9338303c-0135-4395-9938-2106fde64911.png)
+
 Said sections or windows can overlap with and overlap factor going from 0%(no overlapping) to 99%(almost complete overlapping, choosing 100% overlap would lead to an infinite loop always outputting the same window).
+
+![image](https://user-images.githubusercontent.com/104381341/178322944-865dc454-cac9-44d2-b501-0d1550f533b1.png)
 
 Having defined the parameters, we take each of the defined windows and select only the points of the room point cloud whose coordinates fall inside said windows. 
 

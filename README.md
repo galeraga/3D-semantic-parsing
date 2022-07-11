@@ -89,6 +89,14 @@ More **advanced statistics** can be found after a slightly deeper analysis:
 | <sub> Object classes dict: {0:ceiling, 1:clutter, 2:door, 3:floor, 4:wall, 5:beam, 6:board, 7:bookcase, 8:chair, 9:table, 10:column, 11:sofa, 12:window, 12:window, 13:stairs } </sub>|
 | <sub> Room types dict: {0:WC, 1:conferenceRoom, 2:copyRoom, 3:hallway, 4:office, 5:pantry, 6:auditorium, 7:storage, 8:lounge, 9:lobby, 10:openSpace}</sub>|
 
+Some illustrative rough figures, from aproximately **273M** total points:
+
+
+| Object           | Ceiling | Door | Floor | Wall | Beam | Board | Bookcase | Chair | Table | Column | Sofa | Window | Stairs | Clutter
+|:----------------:|:-------:|:----:|:-----:|:----:|:----:|:----:|:---------:|:-----:|:-----:|:------:|:----:|:------:|:----- :|:-------|
+| Total Points (M) | 53      | 13   | 45    | 76   | 5    |  3   |    17     |   9   |  9    |  5     | 1    |  7     |  0.6   |  28 
+
+
 
 The original **folder structure** of the S3DIS dataset is the following one:
 
@@ -110,7 +118,12 @@ Comprehensive information about the original S3DIS dataset can be found at: http
 From this original S3DIS dataset:
 
 - A custom ground truth file (called s3dis_summary.csv) has been created to speed up the process to get to the point cloud files, avoiding recurrent operating system folder traversals.  
-- Two custom datasets have been created to feed the data loaders, depending on the desired goal (S3DISDataset4Classification and S3DISDataset4Segmentation). 
+- Two custom datasets have been created to feed the dataloaders, depending on the desired goal (S3DISDataset4Classification and S3DISDataset4Segmentation). 
+- Since dataloaders expect the same amount of input points and rooms/objects might differ considerably, a user-defined threshold can be set to limit the number of points to sample per room/object when datasets are created. 
+- The available areas have been splitted and assigned to the following tasks:
+  - Training: Areas 1, 2, 3 and 4
+  - Validation: Area 5
+  - Test: Area 6
 
 ### The custom ground truth file
 
@@ -208,8 +221,9 @@ Taking into account the previous information, the final folder structure for the
 ├── s3dis_summary.csv (the ground truth file)
 ├── Area_N
 │   ├── space_X
-│   │   ├── space_x.txt (the non-annotated file with the point cloud for this space. It only contains 6 cols per row: XYZRGB)
-│   │   ├── space_x_annotated.txt (the annotated file with the point cloud for this space. It contains 7 cols per row: XYZRGB+*Object ID*)
+│   │   ├── space_x.txt (the original non-annotated file with the point cloud for this space. It only contains 6 cols per row: XYZRGB)
+│   │   ├── space_x_annotated.txt (the annotated file with the point cloud for this space (including clutter) It contains 7 cols per row: XYZRGB+*Object ID*)
+│   │   ├── space_x_annotated_clutter_free.txt (the annotated file for this space (excluding clutter). It contains 7 cols per row: XYZRGB+*Object ID*)
 │   │   ├── Annotations
 │   │   │   ├── object_1.txt (the file with the point cloud for object_1 that can be found in Space_X. It contains 6 cols per row: XYZRGB)
 |   |   |   ├── ...
@@ -217,6 +231,7 @@ Taking into account the previous information, the final folder structure for the
 ├── sliding_windows (sliced portions of all the the space_x_annotated.txt files)
 │   └── w1_d1_h3_o0 
 ├── checkpoints 
+├── cameras (to store required JSON files to visualize segmentation with Open3D)
 ├── runs (for TensorBoard logging)
 └── tnet_outputs (output images of T-Net features)
 ```  

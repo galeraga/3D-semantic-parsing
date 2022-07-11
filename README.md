@@ -462,9 +462,9 @@ The code supports multiple arguments to be parsed, depending on:
 - The **load** profile: either toy, low, medium, high.
 
 So run the code from the previously created virtual environment with the following command:
-
+```
 python main.py --task *{train, test, watch}* --goal *{classification, segmentation}* --load *{toy, low, medium, high}* --objects *{all, movable}*
-
+```
 The load profiles include the following settings by default:
 
 | Load profile | Num points per object/room (class/seg) | Epochs | Dimensions per object

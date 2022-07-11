@@ -415,9 +415,9 @@ Considering the green rectangle the correct ones and the red rectangle the predi
 
 Having imbalanced datasets can add some distortion to the metrics. In order to take them under, two ways of calculating the metrics can be done:
 
-The first one is to calculate the metrics to every individual class of the sample and then average them, this is called the *Macro* of the metric. The problem of doing it in this way, is that if we have an imbalanced dataset with a class that contains a lot of samples, the metric result of this class will be treated as the metric result of the other classes, where we don't have as many of samples. For example, if class B has considerably more samples than class A, but class A has a much better accuracy, then the accuracy of class A will compensate the bad performance of the accuracy of class B, where we will find lots of samples incorrectly classified.
+The first one is to calculate the metrics to every individual class of the sample and then average them, this is called the **Macro** of the metric. The problem of doing it in this way, is that if we have an imbalanced dataset with a class that contains a lot of samples, the metric result of this class will be treated as the metric result of the other classes, where we don't have as many of samples. For example, if class B has considerably more samples than class A, but class A has a much better accuracy, then the accuracy of class A will compensate the bad performance of the accuracy of class B, where we will find lots of samples incorrectly classified.
 
-The second one is called doing the *Micro* of the metric and consists on considering all the samples of all the classes at the same time. Doing so, if we had the imbalanced dataset that we described before, calculating the metric like this would expose the bad performance of the model in this imbalanced dataset.
+The second one is called doing the **Micro** of the metric and consists on considering all the samples of all the classes at the same time. Doing so, if we had the imbalanced dataset that we described before, calculating the metric like this would expose the bad performance of the model in this imbalanced dataset.
 
 
 ## Obstacles

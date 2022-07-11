@@ -477,6 +477,7 @@ Segmentation:
 - About dataset preparation and discard:
    - Not implementing the discard of non-movable classes leads to the model learning only structural classes (i-e walls, specially if very few points are used) if the original dataset is kept or, if the structural points are transformed into "clutter" points, to the model learning to identify clutter but not the rest of the classes. The strategy of discarding all non-movable points is then correct.
    - Changing the "window filling" parameter from 90% to 1% diminishes accuracy. The explanation is that if we take windows that might only have a small part of an object, the model finds it harder to identify those objects than if we already give them windows that contain the majority of an object. The same way a person would find it harder to separate a table leg from a chair leg if we only had that information, than to separate half a chair from half a table. There is probably a sweet spot in this parameter, related to window size.
+   - However, the script also discards windows that might contain a full object even if the window is not completely filled. For example narrow objects like boards and bookcases or objects that might be against a wall. When we visualize the results and compare them to the ground truth we see that those objects where not even considered, the window system discarded them. 
 
 - About RGB information:
    - RGB information is only useful when the model is in a "sweet spot". In cases where weighted IoU is over 0.45, RGB increases the value by 10%. Else it can hinder training. This prevails when the model has a high number of points, so the hypothesis that there is too much to learn (rgb on top of everything else) from too little information (number of points) does not apply.
@@ -487,9 +488,49 @@ Segmentation:
    - 
     
 - About overlap:
-   -As expected, overlap of 50% achieves the best results. Although it slightly increases the time of dataset preparation (done only once) and the time of training (sinze there are more input windows), it also allows to have best results even with a few points.
+   -As expected, overlap of 50% achieves the best results. Although it slightly increases the time of dataset preparation (done only once) and the time of training (since there are more input windows), it also allows to have best results even with a few points.
    
-- About
+- About number of epochs:
+   -
+   
+- General results:
+   - We get the best cost/results with:
+      -128 points
+      -50% overlap
+      -RGB (although this applies only to this optimal spot, for the rest of the combination RGB hinders training)
+      -90% Window filling discard criteria
+      -Window size =1
+      
+ -  The model is only able to correctly identify mainly tables and chairs. This is possibly due to the window discard strategy. This needs to be worked on.
+ 
+ 
+ Confusion Matrix
++----------+-------+----------+--------+--------+------+
+|  Object  | board | bookcase | chair  | table  | sofa |
++----------+-------+----------+--------+--------+------+
+|  board   |  1558 |    63    |  5726  | 13070  |  6   |
+| bookcase |  575  |    75    | 24807  | 24268  |  59  |
+|  chair   |  378  |   295    | 167682 | 52964  | 988  |
+|  table   |  511  |   213    | 71347  | 339137 | 610  |
+|   sofa   |  174  |    0     | 12829  |  7062  | 3923 |
++----------+-------+----------+--------+--------+------+
+
+
+Scores (per object)
++-----------+--------+----------+--------+--------+--------+
+|   Scores  | board  | bookcase | chair  | table  |  sofa  |
++-----------+--------+----------+--------+--------+--------+
+| Precision | 0.4875 |  0.1161  | 0.5938 | 0.7769 | 0.7023 |
+|   Recall  | 0.0763 |  0.0015  | 0.7543 | 0.8235 | 0.1635 |
+|  F1 Score | 0.1319 |  0.0030  | 0.6645 | 0.7996 | 0.2653 |
++-----------+--------+----------+--------+--------+--------+     
+      Scores (averages)
++-------+--------+--------+----------+
+| Score | Macro  | Micro  | Weighted |
++-------+--------+--------+----------+
+|  IoU  | 0.2777 | 0.5426 |  0.5356  |
++-------+--------+--------+----------+
+
 
 
 ## How to run the code

@@ -323,6 +323,7 @@ def process_single_epoch(model, dataloader, optimizer, epoch, task):
     
     # For classification only, display the tnet output
     if goal == "classification":
+        print(targets)
         visualization.tnet_compare(points, targets, preds, tnet_out, objects_dict, logger)
     
     return (epoch_y_true, epoch_y_preds, epoch_loss, epoch_acc, f1_scores)

@@ -19,6 +19,10 @@ def tnet_compare(sample, labels, preds, tnet_out, objects_dict, logger, save=Tru
     tnet_out(numpy array):
         An array with the points of our pointCloud multiplicated by the output of the T-Net.
         In other words the points displayed in a canonic way.
+    objects_dict(dict):
+        Is the dictionaire that permits the function to pass the label predicted by the model.
+    logger(TensorBoard):
+        We have to pass the logger in order to have it in Tensorboard.
     save (Bool) Default = False:
         If True saves the image.
     Returns:
@@ -27,8 +31,13 @@ def tnet_compare(sample, labels, preds, tnet_out, objects_dict, logger, save=Tru
     '''
     # Take a single sample for visualization ([batch, num_points, dims])
     sample = torch.tensor_split(sample, (1,), dim = 0)[0].squeeze(dim = 0)
-    label = int(labels[0])
-    pred = preds[0]
+    label_num = int(labels[0])
+    pred_num = preds[0]
+
+    reverse_dic = {v: k for k, v in objects_dict.items()}
+
+    label = reverse_dic[label_num]
+    pred = reverse_dic[pred_num]
 
     # Height and width, DO NOT CHANGE.
     fig = plt.figure(figsize=[12,6]) 
@@ -41,12 +50,12 @@ def tnet_compare(sample, labels, preds, tnet_out, objects_dict, logger, save=Tru
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     ax.set_zlim3d(-1, 1)
-    ax.title.set_text(f'Input point cloud')
+    ax.title.set_text('Input point cloud. Object: {}'.format(label))
 
     # Plot transformation
     ax = fig.add_subplot(1, 2, 2, projection='3d')
     sc = ax.scatter(tnet_out[0,0,:], tnet_out[0,1,:], tnet_out[0,2,:], c=tnet_out[0,0,:] ,s=50, marker='o', cmap="viridis", alpha=0.7)
-    ax.title.set_text(f'Point cloud in our canonical form')
+    ax.title.set_text('Point cloud in our canonical form. Object prediction: {}'.format(pred))
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     if save == True:
@@ -57,10 +66,10 @@ def tnet_compare(sample, labels, preds, tnet_out, objects_dict, logger, save=Tru
     else:
         print('To save the fig change save=True')
     
-    plt.clf()
-    
+    #plt.clf()
     # TODO: Log figure into TensorBoard
-
+    logger.writer.add_figure("Tnet-out-{}-{}.png".format(object_name, time_stamp), fig, global_step=None, close=True, walltime=None)
+    plt.clf()
 
 #------------------------------------------------------------------------------
 # VISUALIZE SEGMENTATION

@@ -5,70 +5,17 @@ from dataset import *
 #------------------------------------------------------------------------------
 # T-NET OUTPUT VISUALIZATION
 #------------------------------------------------------------------------------
-def infer(model,
-          points,
-          shuffle_points=False,
-          plot_tNet_out=True,
-          return_indices_maxpool=False):
-    
-    '''
-    This function allows to return the prediction of the class given a pointcloud.
-    Parameters
-    ----------
-    model(model of the network):
-        The model that we will pass.
-    points(np array):
-        The pointcloud that we want to infer saved in a .txt
-    shuffle_points(bool, Default = False):
-        Not implemented.
-        This allows to make a permutation between the points.
-    plot_tNet_out(bool, Default = True):
-        Not implemented.
-        Plots the tNet
-    return_indices_maxpool(bool, Defalut = False):
-        If True returns also the indices of the maxpool operation
-    Returns
-    -------
-    preds(numpy array):
-        An array with the predictions of our pointCloud. Each number represents the class.
-    tnet_out(numpy array):
-        An array with the points of our pointCloud multiplicated by the output of the T-Net.
-        In other words the points displayed in a canonic way. 
-    '''
-    if type(points)==tuple:
-        print('Type is tuple')
-    
-    else:
-        points = points.to(hparams["device"])
-    
-    # We ran out of memory in GCP GPU, so all tensors have to be on the same device
-    #if torch.cuda.is_available():
-    #    points = points.cuda()
-    #    model.cuda()
-
-    points = points.unsqueeze(dim=0)
-    model = model.eval()
-    preds, feature_transform, tnet_out, ix = model(points)
-    preds = preds.data.max(1)[1]
-
-    points = points.cpu().numpy().squeeze()
-    preds = preds.cpu().numpy()
-
-    if return_indices_maxpool:
-        return preds, tnet_out, ix
-
-    return preds, tnet_out
-
-
-def tnet_compare(sample, preds, tnet_out, save=False):
+def tnet_compare(sample, labels, preds, tnet_out, objects_dict, logger, save=True):
     '''
     Comparing this function compares a SINGLE pointCloud with the same PointCloud multiplied by the T-net.
     Parameters:
     -----------
-    sample(Torch tensor):
-        The sample is the object of the dataset that we want to visualize.
-    preds(numpy array):
-        An array with the predictions of our pointCloud. Each number represents the class.
+    sample(Torch tensor)[batch, num_points, dims]:
+        The sample is the object of the dataset that we want to visualize 
+    labels(list) [batch_size]:
+        An list with the predictions of our PointCloud. Each number represents the class 
+    preds(list) [batch_size]:
+        An list with the predictions of our PointCloud. Each number represents the class 
     tnet_out(numpy array):
         An array with the points of our pointCloud multiplicated by the output of the T-Net.
         In other words the points displayed in a canonic way.
@@ -78,85 +25,45 @@ def tnet_compare(sample, preds, tnet_out, save=False):
     --------
     VOID.
     '''
-    # Plot 7 samples
-    fig = plt.figure(figsize=[12,6]) # height and width, DO NOT CHANGE.
+    # Take a single sample for visualization ([batch, num_points, dims])
+    sample = torch.tensor_split(sample, (1,), dim = 0)[0].squeeze(dim = 0)
+    label = int(labels[0])
+    pred = preds[0]
+
+    # Height and width, DO NOT CHANGE.
+    fig = plt.figure(figsize=[12,6]) 
 
     ax = fig.add_subplot(1, 2, 1, projection='3d')
 
-    # plot input sample
-    #pc = sample[0].numpy()
+    # Plot input sample
     pc = sample.numpy()
-    label = sample[1]
     sc = ax.scatter(pc[:,0], pc[:,1], pc[:,2], c=pc[:,0] ,s=50, marker='o', cmap="viridis", alpha=0.7)
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     ax.set_zlim3d(-1, 1)
     ax.title.set_text(f'Input point cloud')
 
-    # plot transformation
+    # Plot transformation
     ax = fig.add_subplot(1, 2, 2, projection='3d')
-    # preds, tnet_out = infer(model,sample) de moment no necessitem aquesta linea.
-    points=tnet_out
-    sc = ax.scatter(points[0,0,:], points[0,1,:], points[0,2,:], c=points[0,0,:] ,s=50, marker='o', cmap="viridis", alpha=0.7)
+    sc = ax.scatter(tnet_out[0,0,:], tnet_out[0,1,:], tnet_out[0,2,:], c=tnet_out[0,0,:] ,s=50, marker='o', cmap="viridis", alpha=0.7)
     ax.title.set_text(f'Point cloud in our canonical form')
     ax.set_xlabel('x')
     ax.set_ylabel('y')
     if save == True:
-        plt.savefig(tnet_outputs_folder + "/Tnet-out-{}.png".format(label),dpi=100)
+        object_name = ''.join([k for k,v in objects_dict.items() if v == label])
+        output_name = "Tnet-out-{}-".format(object_name) 
+        output_name += datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + ".png"
+        plt.savefig(os.path.join(tnet_outputs_folder, output_name), dpi = 100)
     else:
         print('To save the fig change save=True')
-    return fig
+    
+    # TODO: Log figure into TensorBoard
 
 
-def tnet_compare_infer(model, sample, save=False):
-    '''
-    Comparing this function compares a SINGLE pointCloud with the same PointCloud multiplied by the T-net.
-    This function is used when you don't have the tnet_out and preds.
-    Parameters:
-    -----------
-    model(model of the network):
-        The model used to infer.
-    sample(Torch tensor):
-        The sample is the object of the dataset that we want to visualize.
-    save (Bool) Default = False:
-        If True saves the image.
-    Returns:
-    --------
-    VOID.
-    '''
-    # Plot 7 samples
-    fig = plt.figure(figsize=[12,6]) # height and width, DO NOT CHANGE.
-
-    ax = fig.add_subplot(1, 2, 1, projection='3d')
-
-    # plot input sample
-    #pc = sample[0].numpy()
-    pc = sample.numpy()
-    label = sample[1]
-    sc = ax.scatter(pc[:,0], pc[:,1], pc[:,2], c=pc[:,0] ,s=50, marker='o', cmap="viridis", alpha=0.7)
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    ax.set_zlim3d(-1, 1)
-    ax.title.set_text(f'Input point cloud - Target: {label}')
-
-    # plot transformation
-    ax = fig.add_subplot(1, 2, 2, projection='3d')
-    preds, tnet_out = infer(model,sample)
-    points=tnet_out
-    sc = ax.scatter(points[0,0,:], points[0,1,:], points[0,2,:], c=points[0,0,:] ,s=50, marker='o', cmap="viridis", alpha=0.7)
-    ax.title.set_text(f'Output of "Input Transform" Detected: {preds}')
-    ax.set_xlabel('x')
-    ax.set_ylabel('y')
-    if save == True:
-        plt.savefig(tnet_outputs_folder + "/Tnet-out-{}.png".format(label),dpi=100)
-    else:
-        print('To save the fig change save=True')
-    return fig
 
 #------------------------------------------------------------------------------
 # VISUALIZE SEGMENTATION
 #------------------------------------------------------------------------------
-
 def render_segmentation(dict_to_use = {},
                         str_area_and_office = "",
                         dict_model_segmented_points = {},

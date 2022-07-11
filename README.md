@@ -8,7 +8,10 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
   * [The custom ground truth file](#the-custom-ground-truth-file)
     + [S3DISDataset4Classification](#s3disdataset4classification)
     + [S3DISDataset4Segmentation](#s3disdataset4segmentation)
-  * [Sliding windows](#sliding-windows)
+  * [Discarding non-movable classes for segmentation](#discarding-non-movable-classes-for-segmentation)
+  * [Sliding windows for segmentation](#sliding-windows)
+    + [Discarding inadequate windows](#discarding-inadequate-windows)
+  * [Number of input points for both segmentation and classification](#number-of-input-points-for-both-segmentation-and-classification)
   * [The final folder structure](#the-final-folder-structure)
 - [The model](#the-model)
   * [TransformationNet](#transformationnet)
@@ -473,15 +476,21 @@ Segmentation:
 
 - About dataset preparation and discard:
    - Not implementing the discard of non-movable classes leads to the model learning only structural classes (i-e walls, specially if very few points are used) if the original dataset is kept or, if the structural points are transformed into "clutter" points, to the model learning to identify clutter but not the rest of the classes. The strategy of discarding all non-movable points is then correct.
+   - Changing the "window filling" parameter from 90% to 1% diminishes accuracy. The explanation is that if we take windows that might only have a small part of an object, the model finds it harder to identify those objects than if we already give them windows that contain the majority of an object. The same way a person would find it harder to separate a table leg from a chair leg if we only had that information, than to separate half a chair from half a table. There is probably a sweet spot in this parameter, related to window size.
 
 - About RGB information:
    - RGB information is only useful when the model is in a "sweet spot". In cases where weighted IoU is over 0.45, RGB increases the value by 10%. Else it can hinder training. This prevails when the model has a high number of points, so the hypothesis that there is too much to learn (rgb on top of everything else) from too little information (number of points) does not apply.
 
 -About window size:
-   - Increasing window size from 1 to 2 leads to poor results, even when the number of points is 
-   - Depending on both window size and overlap, the number of points considered the optimal point varies.
+   - Increasing window size from 1 to 2 leads to poor results, even when the number of points is adapted so that the "density" is equivalent. 
+   - Depending on both window size and overlap, the number of points considered the optimal point varies. For window size 1 with 50% overlap, 128 already leads to almost the best results. For window size 1 with 0% overlap, the number is 512. This makes sense since with 0.5 overlap we are increasing the number of input windows by two, so it's sensible to think that we might need less points per window.
+   - 
     
-- About 
+- About overlap:
+   -As expected, overlap of 50% achieves the best results. Although it slightly increases the time of dataset preparation (done only once) and the time of training (sinze there are more input windows), it also allows to have best results even with a few points.
+   
+- About
+
 
 ## How to run the code
 ### Download the S3DIS dataset

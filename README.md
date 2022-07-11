@@ -154,6 +154,9 @@ So the S3DISDataset4Segmentation will use the contents of the sliding windows fo
 
 The original S3DIS dataset comes with some non-movable classes (structural and clutter defined above), one possible strategy is to train the model withouth any of those points. The hypothesis is that removing this information will allow the model to focus on the target classes and prevent it from focusing on classes that are not of interest. 
 
+![image](https://user-images.githubusercontent.com/104381341/178322532-8e1e77e2-0ad8-4673-a685-bda9f3718932.png)
+
+
 ### Sliding windows
 
 To train room segmentation, we divide each room into sections of specific dimensions, and output only the points inside said section separately from the others. 

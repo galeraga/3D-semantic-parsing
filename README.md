@@ -194,7 +194,7 @@ In the first case, the script will discard any window that is completely empty.
 
 For the second case, if one of the resulting windows has at least one point, we have put in place a strategy that allows us to select a desirable percentage of "window filling". If we wanted the window to be at least 80% filled, the script will create the window, find the coordinates of the points that are further to the left, further to the right further to the front and further to the back of said window, and find the distances betweem them (left-right, front-back). If one of those distances is smaller than 80% of the window size, the window wil be discarded, considered not filled enough. The default is 90% filled. This variable will be studied
 
-###Number of input points for both segmentation and classification
+### Number of input points for both segmentation and classification
 
 For the pointnet to work, the dimensions of all the inputs must be the same. However both the object point clouds to be inputted into the classification model and the window point clouds previously prepared to be used with the segmentation model have a different number of points. Hence, prior to entering the data in the model, these point clouds must be modified to fit this variable. At the same time, this is one of the effects that will be studied as a hyperparameter.
 

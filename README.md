@@ -517,9 +517,9 @@ Segmentation:
       -Window size =1
       
    - The model is only able to correctly identify mainly tables and chairs. This is possibly due to the window discard strategy. This needs to be worked on.
-   - Visualization of this parameter combination leads to an image where everything is detected as a table. However this is probably due to the fact that when labels are doubled because of overlap, the chosen one is always the last label. This would lead to confusion even if the statistical results are ok.
+   - Visualization of this parameter combination leads to an image where everything is detected as a table. The source of this discrepancy is unknown, however our hypothesis is that it'sprobably due to the fact that when labels are doubled because of overlap, the chosen one is always the last label. This would lead to confusion even if the statistical results are ok. Also, we are only plotting one room, results might be better with other rooms.
 
-Confusion Matrix
+Validation Confusion Matrix
 
 |   Object  | board  | bookcase | chair  | table  |  sofa  |
 |:---------:|:------:|:--------:|:------:|:------:|:------:|
@@ -530,7 +530,7 @@ Confusion Matrix
 |   sofa   |  174  |    0     | 12829  |  7062  | 3923 |
 
 
-Scores (per object)
+Validation Scores (per object)
 
 |   Scores  | board  | bookcase | chair  | table  |  sofa  |
 |:---------:|:------:|:--------:|:------:|:------:|:------:|
@@ -538,13 +538,23 @@ Scores (per object)
 |   Recall  | 0.0763 |  0.0015  | 0.7543 | 0.8235 | 0.1635 |
 
 
-Scores (averages)
+Validation Scores (averages)
       
 
 | Score | Macro  | Micro  | Weighted |
 |:------:|:--------:|:-------:|:----------:|
 |  IoU  | 0.2777 | 0.5426 |  0.5356  |
 
+
+Test Scores :
+
+   - Similar results are obtained with lower overlap but higher number of points and smaller windows:
+      -512 points
+      -25% overlap
+      -No RGB (although this applies only to this optimal spot, for the rest of the combination RGB hinders training)
+      -90% Window filling discard criteria
+      -Window size =0.25
+   - However in this case visualization is much better, and chairs and windows are correctly detected. As commented above, the fact that with similar results for IoU we get different visualization results (in this case better than in the previous selection of parameters), could be explained by the choice of room to visualize.
 
 
 

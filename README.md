@@ -30,6 +30,9 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
       - [IoU Score (Intersection over Union):](#iou-score--intersection-over-union--)
 - [Obstacles](#obstacles)
 - [Main Conclusions](#main-conclusions)
+- [How to run the code](#how-to-run-the-code)
+ * [Create a conda virtual environment](#create-a-conda-virtual-environment)
+ * [Running the code](#running-the-code)
 - [Related Work](#related-work)
 - [Contributors](#contributors)
 - [Acknowledgments](#acknowledgments)
@@ -416,6 +419,17 @@ Segmentation:
 - When very few points are used (i.e., 100 points per space), only walls are learned to be detected
 - When very few points are used it's not convenient to use RGB data (revision)
 
+## How to run the code
+### Create a conda virtual environment
+
+conda create -n project_name python=3.8.1
+conda activate t2
+
+### Running the code
+
+python main.py
+
+
 ## Related Work
 1. Benjamín Gutíerrez-Becker and Christian Wachinger. _Deep Multi-Structural Shape Analysis:Application to Neuroanatomy_. 2018
 2. 
@@ -426,6 +440,6 @@ Javier Galera
 Clara Oliver
 
 ## Acknowledgments
-This is section1 
+We'd like to thank the unconditional support of our advisor Mariona Carós,
 
 

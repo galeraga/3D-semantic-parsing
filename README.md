@@ -1,28 +1,71 @@
 # 3D-semantic-parsing
 Repo to host the UPC AIDL spring 2022 post-graduate project
 
+## Table of Contents
+- [Abstract](#abstract)
+- [Main goals](#main-goals)
+- [The dataset](#the-dataset)
+  * [The custom ground truth file](#the-custom-ground-truth-file)
+    + [S3DISDataset4Classification](#s3disdataset4classification)
+    + [S3DISDataset4Segmentation](#s3disdataset4segmentation)
+  * [Discarding non-movable classes for segmentation](#discarding-non-movable-classes-for-segmentation)
+  * [Sliding windows for segmentation](#sliding-windows)
+    + [Discarding inadequate windows](#discarding-inadequate-windows)
+  * [Number of input points for both segmentation and classification](#number-of-input-points-for-both-segmentation-and-classification)
+  * [The final folder structure](#the-final-folder-structure)
+- [The model](#the-model)
+  * [TransformationNet](#transformationnet)
+    + [Mathematical introduction](#mathematical-introduction)
+    + [Topology of the network](#topology-of-the-network)
+    + [Visualization of the Outputs](#visualization-of-the-outputs)
+    + [Goal](#goal)
+  * [BasePointNet](#basepointnet)
+  * [ClassificationPointNet](#classificationpointnet)
+  * [SegmentationPointNet](#segmentationpointnet)
+  * [The data flow and model size](#the-data-flow-and-model-size)
+    + [For classification](#for-classification)
+    + [For segmentation](#for-segmentation)
+- [The metrics](#metrics)
+  * [For Classification](#for-classification)
+    - [F1 Score](#f1-score)
+    - [Area Under the Curve (AUC)](#area-under-the-curve--auc-)
+  * [For Segmentation](#for-segmentation)
+      - [IoU Score (Intersection over Union):](#iou-score--intersection-over-union--)
+- [Obstacles](#obstacles)
+- [Main Conclusions](#main-conclusions)
+- [How to run the code](#how-to-run-the-code)
+  * [Download the S3DIS dataset](#download-the-s3dis-dataset)
+  * [Create a conda virtual environment](#create-a-conda-virtual-environment)
+  * [Running the code](#running-the-code)
+- [Related Work](#related-work)
+- [Contributors](#contributors)
+- [Acknowledgments](#acknowledgments)
+- [Annex](#annex)
+
 ## Abstract
-A point cloud is a type of 3D geometric data structure, based on unordered set of vectors.
-Each point is a vector of its (x, y, z) coordinate plus extra feature channels such as color, normal, etc.
+A point cloud is a type of 3D geometric data structure, based on an unordered set of points.
+Each point is a vector of its (x, y, z) coordinates plus extra feature channels such as color, normal, etc.
 
-PointNet: Respects invariance of input points and no voxel grids are needed
-
-PointNet provides a unified deep learning architecture for the following application recognition tasks, based on point cloud inputs:
+PointNet provides a unified deep learning architecture for the following recognition tasks, based on point cloud inputs:
 1) Shape classification 
 2) Shape part segmentation
 3) Scene semantic parsing
 
-This project'll be focus on implementing only **object classification** and **scene semantic parsing** (no shape part segementation is carried out). As a dataset, the **S3DIS dataset** is going to be used, where every point includes both its spatial coordinates and its color info (xyzrgb).
+This project'll be focus on implementing only **object classification** and **scene semantic parsing** (no shape part segmentation is carried out). As a dataset, the **S3DIS dataset** is going to be used, where every point includes both its spatial coordinates and its color info (xyzrgb).
+
 
 ## Main goals
-The main goal is to implement a PointNet architecture in Pytorch that uses the S3DIS dataset in order to perform object classification and indoor scene semantic segmentation. 
+The general stategy is to implement a PointNet architecture in Pytorch that uses the S3DIS dataset in order to perform object classification and indoor scene semantic segmentation. We will focus only on the 5 movable classes presented in the dataset. 
 
-The following considerations will be of particular interest:
-- How color impacts object detection and semantic segmentation
-- Goal 2
-- Goal 3
-- Goal 4
-- Goal 5
+-Classification of movable elements given its own point cloud 
+-Semantic segmentation of each object given a room point cloud.
+-See impact of considering several hyperparameters and dataset preparation strategies on accuracy. For this point the following considerations will be of particular interest:
+    - Find the impact that considering the rest of the non-movable "clutter" classes as well as using one or other "window discard" strategies will have on the results.
+    - How color impacts object detection and semantic segmentation
+    - How the size of the sliding windows impacts the semantic segmentation
+    - How the overlap of these windows can improve/hinder the training
+    - The optimal number of points in the input and epoch for training
+    
 
 ## The dataset
 The **3D Semantic Parsing of Large-Scale Indoor Spaces (S3DIS)** dataset is going to be used in order to work with the PointNet architecture. 
@@ -33,11 +76,11 @@ The **basic dataset statistics** are:
   - Building 1: Area_1, Area_3, Area_6 
   - Building 2: Area_2, Area_4 
   - Building 3: Area_5 
-- There're **11 different room types** (WCs, conference rooms, copy rooms, hallways, offices, pantries, auditoriums, storage rooms, lounges, lobbies and open spaces) for a grand total of  **272 rooms** (or spaces) diitributed among all areas.  
+- There are **11 different room types** (WCs, conference rooms, copy rooms, hallways, offices, pantries, auditoriums, storage rooms, lounges, lobbies and open spaces) for a grand total of  **272 rooms** (or spaces) distributed among all areas.  
 - Every room can have up to **14 different object types**. These objects can be classified as:
   - **movable** (boards, bookcases, chairs, tables and sofas)  
   - **structural** (ceilings, doors, floors, walls, beams, columns, windows and stairs). 
-  - **clutter** (if an object doesn't belong to any of the previous catagories)
+  - **clutter** (if an object doesn't belong to any of the previous categories)
 
 More **advanced statistics** can be found after a slightly deeper analysis:
 
@@ -67,8 +110,8 @@ The original **folder structure** of the S3DIS dataset is the following one:
 │   │   │   ├── object_Y.txt (the file with the point cloud for object_Y that can be found in Space_X. It contains 6 cols per row: XYZRGB)
 ```  
 
-- `object_Y.txt` is a file containing the point cloud of this particular object that belongs to Space_X (e.g., objects *chair_1.txt, chair_2.txt* or *table_1.txt* from an space/room called *office_1*). This point cloud file has 6 columns (non-normalized XYXRGB values).
-- `space_x.txt` is a non-annotated point cloud file containing the sum of of all the point cloud object files (object_1, object_2, ...) located within the `Annotations` folder (e.g., the space file called *Area_1\office_1\office_1.txt* contains the sum of the object files *chair_1.txt, chair_2.txt* and the rest of all the object files located inside the `Annotations` directory). As a consequence, the space/room point cloud file has only 6 columns too (non-normalized XYZRGB values).
+- `object_Y.txt` is a file containing the point cloud of this particular object that belongs to Space_X (e.g., objects *chair_1.txt, chair_2.txt* or *table_1.txt* from a space/room called *office_1*). This point cloud file has 6 columns (non-normalized XYZRGB values).
+- `space_x.txt` is a non-annotated point cloud file containing the sum of all the point cloud object files (object_1, object_2, ...) located within the `Annotations` folder (e.g., the space file called *Area_1\office_1\office_1.txt* contains the sum of the object files *chair_1.txt, chair_2.txt* and the rest of all the object files located inside the `Annotations` directory). As a consequence, the space/room point cloud file has only 6 columns too (non-normalized XYZRGB values).
 
 Comprehensive information about the original S3DIS dataset can be found at: http://buildingparser.stanford.edu/dataset.html 
 
@@ -112,11 +155,64 @@ This is the dataset used in conjunction with the **classification** network of t
 
 #### S3DISDataset4Segmentation
 
-This is the dataset used for **semantic segmentation**. Since semantic segmentation needs every point in the cloud to be labeled, a new file is generated for every space/room with the suitable object labels. To do so, all files located in the `Annotations` folder are concatenated (along with the proper label) to create a single file per space/room with all the object points that belong to this space already labeled. This file is called `space_x_annotated.txt` (e.g., *office_1_annotated.txt*) and contains 7 cols (instead of 6): XYZRGB+*Object ID*. 
+This is the dataset used for **semantic segmentation**. Since semantic segmentation needs every point in the cloud to be labeled, a new file is generated for every space/room with the suitable object labels. To do so, all files located in the `Annotations` folder are concatenated (along with the proper label) to create a single file per space/room with all the object points that belong to this space already labeled. This file is called `space_x_annotated.txt` (e.g., *office_1_annotated.txt*) and contains 7 cols (instead of 6): XYZRGB+*Object ID*.
 
-Since every `space_x_annotated.txt` might have millions of points, point clouds for rooms are "sliced" into smaller blocks (called *sliding windows*) to improve model training performance. 
+Since every `space_x_annotated.txt` might have millions of points, point clouds for rooms are "sliced" into smaller blocks (called *sliding windows*) to improve model training performance. The slicing is a pre-process carried out only once per defined sliding window settings. The slices will be saved as Pytorch files (\*.pt) inside the *sliding_windows* folder.
 
+So:
+
+- **Input data**: The room slices.
+
+- **Labels**: The label for the object data is directly extracted from the custom ground truth file *Object ID* col.
+- 
 So the S3DISDataset4Segmentation will use the contents of the sliding windows folder to get both the **input data** and **labels**
+
+### Discarding non-movable classes for segmentation
+
+The original S3DIS dataset comes with some non-movable classes (structural and clutter defined above), one possible strategy is to train the model withouth any of those points. The hypothesis is that removing this information will allow the model to focus on the target classes and prevent it from focusing on classes that are not of interest. 
+
+![image](https://user-images.githubusercontent.com/104381341/178322532-8e1e77e2-0ad8-4673-a685-bda9f3718932.png)
+
+### Sliding windows for segmentation
+
+To train room segmentation, we divide each room into sections of specific dimensions, and output only the points inside said section separately from the others. 
+
+![image](https://user-images.githubusercontent.com/104381341/178322824-590e4aa2-8962-4298-babe-0069f76de9b1.png)
+
+The window width (X) and depth(Y) are specified as hyperparameters. They can be defined separately, but it makes sense that they would be the same value since objects in a room are commonly rotated on the X-Y plane.
+The window height can be specified as a hyperparameter and the model is ready in case windowing in Z is necessary, but as the selected classes for segmentation are movable objects, and these are usually laid on the floor, the most logical solution is to consider all points inside a window defined by only their X-Y coordinates, and to just take all the points height-wise. The height parameter is thus ignored in the current script. This configuration would lead to the windows having a pillar-shape, from the floor to the ceiling of each room.
+
+![image](https://user-images.githubusercontent.com/104381341/178322875-9338303c-0135-4395-9938-2106fde64911.png)
+
+Said sections or windows can overlap with and overlap factor going from 0%(no overlapping) to 99%(almost complete overlapping, choosing 100% overlap would lead to an infinite loop always outputting the same window). The efect of this variable will be considered in the study
+
+![image](https://user-images.githubusercontent.com/104381341/178322944-865dc454-cac9-44d2-b501-0d1550f533b1.png)
+
+Having defined the parameters, we take each of the defined windows and select only the points of the room point cloud whose coordinates fall inside said windows. 
+
+Because the window point clouds will be the inputs to our segmentation model, they must be independent from one another and from the room coordinates. We must then create a new reference system for every window, where the coordinates of each point refer to the origin point of each window (winX=0 winY=0) instead of to the origin of the original room point cloud. 
+
+Additionally, so the training is easier, we will normalize every window so that the point coordinates range only from 0-1.
+
+Each window will have information on the relative coordinates of each point in it, their color, and the absolute coordinates those points had before the transformation. We also store the window identifier and the associated label. This allows us to have the spatial information if we would wish to visualize the whole room results afterwards. Keep in mind that in cases where the overlap is higher than 0, some points will be in several windows at the same time, and will potentially have different predictions in each. This will have to be taken into account in case the implementation of a room prediction visualizer using overlap were desired.
+
+The structure of each individual window file will be: 
+
+| Rel. Coord.   |   RGB         | Abs. Coord   | Window ID  | Object Label |
+|:-------------:|:-------------:|:------------:|:----------:|:------------:|
+|   [3 x int]   |    [3 x int]  |   [3 x int]  | integer    |    [0-5]     | 
+
+#### Discarding inadequate windows
+
+Since the rooms are of an irregular shape, during the window sweep we might run into both empty and partially filled windows.
+
+In the first case, the script will discard any window that is completely empty.
+
+For the second case, if one of the resulting windows has at least one point, we have put in place a strategy that allows us to select a desirable percentage of "window filling". If we wanted the window to be at least 80% filled, the script will create the window, find the coordinates of the points that are further to the left, further to the right further to the front and further to the back of said window, and find the distances betweem them (left-right, front-back). If one of those distances is smaller than 80% of the window size, the window wil be discarded, considered not filled enough. The default is 90% filled. This variable will be studied
+
+### Number of input points for both segmentation and classification
+
+For the pointnet to work, the dimensions of all the inputs must be the same. However both the object point clouds to be inputted into the classification model and the window point clouds previously prepared to be used with the segmentation model have a different number of points. Hence, prior to entering the data in the model, these point clouds must be modified to fit this variable. At the same time, this is one of the effects that will be studied as a hyperparameter.
 
 ### The final folder structure 
 
@@ -149,6 +245,35 @@ red squared section of the pictures below from the original paper.
 ### TransformationNet
 
 <img width="980" alt="image" src="https://user-images.githubusercontent.com/76537012/174836557-f1a113cd-8953-4e54-bfff-da6a03be40e2.png">
+
+
+#### Mathematical introduction
+
+The T-Net is a network that estimates a affine transformation matrix. Given two affine spaces $A_1$ and $A_2$, an affine transformation, also called affinity, is a morphism between $A_1$ and $A_2$ such that the induced map $f_P: E_1 \rightarrow E_2$ with the point $P \in A_1$  is a linear map.
+
+An affinity doesn't necessarily preserve neither the distances nor the angles, but it preserves, by definition, the collinearity and the parallelism. In other words, all points belonging to a line will be aligned in, what we call canonical space, after this transformation. All the parallel lines will be preserved too. In fact, it is very likely that this transformation changes the distances and the angles of our point cloud as we will see in the examples.
+
+The output of this network will be a matrix that will be multiplied with the point cloud.
+
+
+#### Topology of the network
+
+We will present the structure of the first T-Net that appears in the network. In this case, because the number of coordinates of our point cloud is only 3, the output of the network will be a $3 \times 3$ matrix:
+
+![tnet](https://user-images.githubusercontent.com/97680577/178104139-0f1cba1f-3e0a-4f07-a082-d0967653034f.png)
+
+
+#### Visualization of the Outputs
+
+#### Goal
+
+When we are dealing with point clouds, it is normal that our data undergoes some geometric transformations. The purpose of the T-Net is to align all the point cloud in a canonical way, so it is invariant to these transformations. After doing that, feature extraction can be done.
+
+When the affine transformation matrix is used again, it is not used directly in the point cloud, but in the features that had been extracted before. So in this case we are in a high dimensional space, and it is possible that we have some optimization problems. In order to avoid those, it is added a regularization term in the softmax training loss so the transformation matrix is close to the orthogonal matrix.
+
+$$L_{reg} = ||I-AA^T||_{F}^2 $$
+
+Where A is the transformation matrix predicted by the T-Net.
 
 ### BasePointNet
 
@@ -291,18 +416,201 @@ Estimated Total Size (MB): 9561.66
 ==========================================================================================
 ```
 
+### Metrics
+
+#### For Classification
+
+##### $F_1$ Score
+First of all we need to define what precision and recall are:
+
+$$precision = \frac{TP}{TP+FP}$$
+
+$$recall=\frac{TP}{TP+FN}$$
+
+We can define the $F_1$ Score as the harmonic mean of the precision and the recall:
+
+$$F_1=2\frac{precision\times recall}{precision+recall}=\frac{TP}{TP+\frac{1}{2}(FP+FN)}$$
+
+
+##### Area Under the Curve (AUC)
+The ROC curve is the curve that represents the relation between True Positive Rate and False Positive Rate:
+$$TPR=\frac{TP}{TP+FN}=recall$$
+$$FPR=\frac{FP}{FP+TN}=1-precision$$
+
+The AUC metric stands for the integral of this curve between 0 and 1.
+
+![AUC](https://user-images.githubusercontent.com/97680577/178116164-b8a46799-99c5-4d8d-8a1b-44a7c9ed912f.png)
+
+The AUC metric tells you how capable is a moder to distinguish between classes. A model that have a measure near to 1 means that it has a good separability. In the following example we will see a model whose ROC curve has an area of 1.
+
+![1_HmVIhSKznoW8tFsCLeQjRw](https://user-images.githubusercontent.com/97680577/178118715-d8130218-05aa-4aa2-94e4-08f4463c2953.png)
+
+In other words, a threashold that distinguish between two classes can easily be found, creating no FN nor FP.
+
+![1_Uu-t4pOotRQFoyrfqEvIEg](https://user-images.githubusercontent.com/97680577/178118753-a3064e6d-2215-4113-b2cf-452957551b3b.png)
+
+Nevertheless a model whose separability is not that good, might have a ROC curve like the following one:
+
+![1_-tPXUvvNIZDbqXP0qqYNuQ](https://user-images.githubusercontent.com/97680577/178118821-b6bad0de-4d02-41be-a8d6-d408ccc449ce.png)
+
+So if we visualise the threshold it might be like this:
+
+![1_yF8hvKR9eNfqqej2JnVKzg](https://user-images.githubusercontent.com/97680577/178118843-f6c30a95-9c60-4887-aef0-7ee05915d5a2.png)
+
+#### For Segmentation
+
+##### IoU Score (Intersection over Union):
+When we are dealing with a Segmentation problem, not only we need to have in consideration the pixels that we labeled wrongly (false positives) but we need to consider the pixels belonging to the class that we didn't label (false negatives). 
+
+
+$$IoU = \frac{|A\cap B|}{|A \cup B|} = \frac{TP}{TP+FN+FP} $$
+
+![IoU](https://user-images.githubusercontent.com/97680577/178110909-c405e44c-74a9-404f-a355-dad7cedea66e.png)
+
+Considering the green rectangle the correct ones and the red rectangle the prediction.
+
+#### Micro, Macro and Weighted metrics
+
+Having imbalanced datasets can add some distortion to the metrics. In order to take them under, two ways of calculating the metrics can be done:
+
+The first one is to calculate the metrics to every individual class of the sample and then average them, this is called the **Macro** of the metric. The problem of doing it in this way, is that if we have an imbalanced dataset with a class that contains a lot of samples, the metric result of this class will be treated as the metric result of the other classes, where we don't have as many of samples. For example, if class B has considerably more samples than class A, but class A has a much better accuracy, then the accuracy of class A will compensate the bad performance of the accuracy of class B, where we will find lots of samples incorrectly classified.
+
+The second one is called doing the **Micro** of the metric and consists on considering all the samples of all the classes at the same time. Doing so, if we had the imbalanced dataset that we described before, calculating the metric like this would expose the bad performance of the model in this imbalanced dataset.
+
+An alternative of these two methods is **Weighted Average**. It consists of calculating the metrics similarly as the micro but considering the support (the support of the class is the number of samples of this class divided by the number of total samples of the dataset) of each class to the dataset.
+
+## Obstacles
+
 ## Main Conclusions
+
+Classification:
+
+- Very few points (128) already lead to good results
 
 Segmentation:
 
-- When very few points are used (i.e., 100 points per space), only walls are learned to be detected
+- About dataset preparation and discard:
+   - Not implementing the discard of non-movable classes leads to the model learning only structural classes (i-e walls, specially if very few points are used) if the original dataset is kept or, if the structural points are transformed into "clutter" points, to the model learning to identify clutter but not the rest of the classes. The strategy of discarding all non-movable points is then correct.
+   - Changing the "window filling" parameter from 90% to 1% diminishes accuracy. The explanation is that if we take windows that might only have a small part of an object, the model finds it harder to identify those objects than if we already give them windows that contain the majority of an object. The same way a person would find it harder to separate a table leg from a chair leg if we only had that information, than to separate half a chair from half a table. There is probably a sweet spot in this parameter, related to window size.
+   - However, the script also discards windows that might contain a full object even if the window is not completely filled. For example narrow objects like boards and bookcases or objects that might be against a wall. When we visualize the results and compare them to the ground truth we see that those objects where not even considered, the window system discarded them. 
+
+- About RGB information:
+   - RGB information is only useful when the model is in a "sweet spot". In cases where weighted IoU is over 0.45, RGB increases the value by 10%. Else it can hinder training. This prevails when the model has a high number of points, so the hypothesis that there is too much to learn (rgb on top of everything else) from too little information (number of points) does not apply.
+
+- About window size:
+   - Increasing window size from 1 to 2 leads to poor results, even when the number of points is adapted so that the "density" is equivalent. 
+   - Depending on both window size and overlap, the number of points considered the optimal point varies. For window size 1 with 50% overlap, 128 already leads to almost the best results. For window size 1 with 0% overlap, the number is 512. This makes sense since with 0.5 overlap we are increasing the number of input windows by two, so it's sensible to think that we might need less points per window.
+   - 
+    
+- About overlap:
+   -As expected, overlap of 50% achieves the best results. Although it slightly increases the time of dataset preparation (done only once) and the time of training (since there are more input windows), it also allows to have best results even with a few points.
+   
+- About number of epochs:
+   -
+   
+- General results:
+   - We get the best cost/results with:
+      -128 points
+      -50% overlap
+      -RGB (although this applies only to this optimal spot, for the rest of the combination RGB hinders training)
+      -90% Window filling discard criteria
+      -Window size =1
+      
+   - The model is only able to correctly identify mainly tables and chairs. This is possibly due to the window discard strategy. This needs to be worked on.
+ 
+ 
+ Confusion Matrix
++----------+-------+----------+--------+--------+------+
+|  Object  | board | bookcase | chair  | table  | sofa |
++----------+-------+----------+--------+--------+------+
+|  board   |  1558 |    63    |  5726  | 13070  |  6   |
+| bookcase |  575  |    75    | 24807  | 24268  |  59  |
+|  chair   |  378  |   295    | 167682 | 52964  | 988  |
+|  table   |  511  |   213    | 71347  | 339137 | 610  |
+|   sofa   |  174  |    0     | 12829  |  7062  | 3923 |
++----------+-------+----------+--------+--------+------+
+
+
+Scores (per object)
++-----------+--------+----------+--------+--------+--------+
+|   Scores  | board  | bookcase | chair  | table  |  sofa  |
++-----------+--------+----------+--------+--------+--------+
+| Precision | 0.4875 |  0.1161  | 0.5938 | 0.7769 | 0.7023 |
+|   Recall  | 0.0763 |  0.0015  | 0.7543 | 0.8235 | 0.1635 |
+|  F1 Score | 0.1319 |  0.0030  | 0.6645 | 0.7996 | 0.2653 |
++-----------+--------+----------+--------+--------+--------+     
+      Scores (averages)
++-------+--------+--------+----------+
+| Score | Macro  | Micro  | Weighted |
++-------+--------+--------+----------+
+|  IoU  | 0.2777 | 0.5426 |  0.5356  |
++-------+--------+--------+----------+
+
+
+
+## How to run the code
+### Download the S3DIS dataset
+
+1.- Fork this repo.
+2.- Go to the  http://buildingparser.stanford.edu/dataset.html and download the aligned version of the S3DIS dataset.
+3.- Once downloaded, edit your forked *settings.py* file and set the 'pc_data_path' key of the *eparams* dict to the folder you downloaded tha dataset (e.g, /datasets/S3DIS/aligned)
+
+### Create a conda virtual environment
+
+Install conda (or miniconda) and follow the usual directions to create and switch to a new conda virtual environment (replace *project_name* with the name you want to give to your virtual env):
+
+```
+conda create -n project_name python=3.8.1
+conda activate project_name
+pip install -r requirements.txt
+```
+
+### Running the code
+
+The code supports multiple arguments to be parsed, depending on:
+
+- The **task** to be performed: either train, test or watch.
+- The **goal**: either classification or segmentation.
+- The target **objects** we want to work with: either all objects or only the movable objects.
+- The **load** profile: either toy, low, medium, high.
+
+So run the code from the previously created virtual environment with the following command:
+```
+python main.py --task *{train, validation, test, watch}* --goal *{classification, segmentation}* --load *{toy, low, medium, high}* --objects *{all, movable}*
+```
+The load profiles include the following settings by default:
+
+| Load profile | Num points per object/room (class/seg) | Epochs | Dimensions per object
+|:-------------:|:-------------------------------------:|:------:|:----------------------:|
+| Toy        | 10                                       | 1      | 3
+| Low        | 128                                      | 3      | 3
+| Medium     | 512                                      | 10     | 3
+| High       | 1024                                     | 40     | 3 
+
+(Note: The *toy* load profile is mainly intended to quickly test buggy behaviours during code development)
+
+All these args are specified in the file *settings.py* and can be freely changed to meet your needs. 
+
 
 ## Related Work
+1. Benjamín Gutíerrez-Becker and Christian Wachinger. _Deep Multi-Structural Shape Analysis:Application to Neuroanatomy_. 2018
+2. 
 
 ## Contributors
-This is section1 
+
+Marc Casals i Salvador
+
+Lluís Culí
+
+Javier Galera
+
+Clara Oliver
 
 ## Acknowledgments
-This is section1 
+We'd like to thank the unconditional support of our advisor Mariona Carós,
+
+## Annex
+
+To save some tables that support our conclusions
 
 

@@ -51,14 +51,15 @@ def tnet_compare(sample, labels, preds, tnet_out, objects_dict, logger, save=Tru
     ax.set_ylabel('y')
     if save == True:
         object_name = ''.join([k for k,v in objects_dict.items() if v == label])
-        output_name = "Tnet-out-{}-".format(object_name) 
-        output_name += datetime.datetime.now().strftime('%Y%m%d-%H%M%S') + ".png"
+        time_stamp = datetime.datetime.now().strftime('%Y%m%d-%H%M%S')
+        output_name = "Tnet-out-{}-{}.png".format(object_name, time_stamp)     
         plt.savefig(os.path.join(tnet_outputs_folder, output_name), dpi = 100)
     else:
         print('To save the fig change save=True')
     
+    plt.clf()
+    
     # TODO: Log figure into TensorBoard
-
 
 
 #------------------------------------------------------------------------------

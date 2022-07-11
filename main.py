@@ -432,6 +432,7 @@ def run_model(model, dataloaders, task):
     msg += str(hparams["dimensions_per_object"]) + " dimensions per object"
     
     #logger.writer.add_figure(msg, sns.heatmap(df_cm, annot=True).get_figure())
+    logger.writer.add_figure(msg, sns.heatmap(df_cm, annot=True).get_figure())
 
     
 #------------------------------------------------------------------------------

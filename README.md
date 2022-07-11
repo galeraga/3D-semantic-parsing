@@ -36,6 +36,7 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
 - [Related Work](#related-work)
 - [Contributors](#contributors)
 - [Acknowledgments](#acknowledgments)
+- [Annex](#annex)
 
 ## Abstract
 A point cloud is a type of 3D geometric data structure, based on an unordered set of points.
@@ -467,5 +468,9 @@ Clara Oliver
 
 ## Acknowledgments
 We'd like to thank the unconditional support of our advisor Mariona Carós,
+
+## Annex
+
+To save some tables that support our conclusions
 
 

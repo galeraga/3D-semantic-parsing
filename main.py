@@ -321,6 +321,10 @@ def process_single_epoch(model, dataloader, optimizer, epoch, task):
 
     f1_scores = compute_confusion_matrix(epoch_y_true, epoch_y_preds)
     
+    # For classification only, display the tnet output
+    if goal == "classification":
+        visualization.tnet_compare(points, targets, preds, tnet_out, objects_dict, logger)
+    
     return (epoch_y_true, epoch_y_preds, epoch_loss, epoch_acc, f1_scores)
 
 
@@ -417,8 +421,7 @@ def run_model(model, dataloaders, task):
     # Log confusion matrix in TensorBoard
     cf_matrix = confusion_matrix(total_y_true, total_y_preds)    
 
-    reversed_objects_dict = [i for i in objects_dict][::-1]
-    df_cm = pd.DataFrame(cf_matrix/np.sum(cf_matrix), index = reversed_objects_dict,
+    df_cm = pd.DataFrame(cf_matrix/np.sum(cf_matrix), index = [i for i in objects_dict],
                         columns = [i for i in objects_dict])
 
 
@@ -428,7 +431,7 @@ def run_model(model, dataloaders, task):
     msg += str(hparams["epochs"]) + " epochs"  + " " + chosen_params + " "
     msg += str(hparams["dimensions_per_object"]) + " dimensions per object"
     
-    logger.writer.add_figure(msg, sns.heatmap(df_cm, annot=True).get_figure())
+    #logger.writer.add_figure(msg, sns.heatmap(df_cm, annot=True).get_figure())
 
     
 #------------------------------------------------------------------------------

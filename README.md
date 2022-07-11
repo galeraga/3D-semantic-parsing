@@ -52,9 +52,9 @@ This project'll be focus on implementing only **object classification** and **sc
 
 
 ## Main goals
-The main goal is to implement a PointNet architecture in Pytorch that uses the S3DIS dataset in order to perform object classification and indoor scene semantic segmentation. 
+The general stategy is to implement a PointNet architecture in Pytorch that uses the S3DIS dataset in order to perform object classification and indoor scene semantic segmentation. We will focus only on the 5 movable classes presented in the dataset. 
 
--Classification of movable elements given its own point cloud (5 classes)
+-Classification of movable elements given its own point cloud 
 -Semantic segmentation of each object given a room point cloud.
 -See impact of considering several hyperparameters and dataset preparation strategies on accuracy. For this point the following considerations will be of particular interest:
     - How color impacts object detection and semantic segmentation
@@ -150,7 +150,10 @@ So:
 - 
 So the S3DISDataset4Segmentation will use the contents of the sliding windows folder to get both the **input data** and **labels**
 
-### 
+### Discarding non-movable classes
+
+The original S3DIS dataset comes with some non-movable classes (structural and clutter defined above), one possible strategy is to train the model withouth any of those points. The hypothesis is that removing this information will allow the model to focus on the target classes and prevent it from focusing on classes that are not of interest. 
+
 ### Sliding windows
 
 To train room segmentation, we divide each room into sections of specific dimensions, and output only the points inside said section separately from the others. 
@@ -168,8 +171,13 @@ Additionally, so the training is easier, we will normalize every window so that 
 
 Each window will have information on the relative coordinates of each point in it, their color, and the absolute coordinates those points had before the transformation. We also store the window identifier and the associated label. This allows us to have the spatial information if we would wish to visualize the whole room results afterwards. Keep in mind that in cases where the overlap is higher than 0, some points will be in several windows at the same time, and will potentially have different predictions in each. This will have to be taken into account in case the implementation of a room prediction visualizer using overlap were desired.
 
-###
-Since the rooms are of an irregular shape, during the window sweep we might run into both empty and partially filled windows. In these cases the script will discard any window which space is not filled up to at least 90% of it's boundaries, so as to train allways with filled windows. If overlap is low, this means that some points near the walls might not be taken into account, so objects that are typically against walls might not be fully represented.
+#### Discarding inadequate windows
+
+Since the rooms are of an irregular shape, during the window sweep we might run into both empty and partially filled windows.
+
+In the first case, the script will discard any window that is completely empty.
+
+For the second case, if one of the resulting windows has at least one point, we have put in place a strategy that allows us to select a desirable percentage of "window filling". If we wanted the window to be at least 80% filled, the script will create the window, find the coordinates that are further to the left, further to the right further to the front further to the back of said window, and find the distances betweem them (left-right, front-back). If one of those distances is smaller than 80% of the window size, the window wil be discarded, it's considered not filled enough. The default is 90%.
 
 ### The final folder structure 
 

@@ -423,32 +423,6 @@ We can define the $F_1$ Score as the harmonic mean of the precision and the reca
 
 $$F_1=2\frac{precision\times recall}{precision+recall}=\frac{TP}{TP+\frac{1}{2}(FP+FN)}$$
 
-
-##### Area Under the Curve (AUC)
-The ROC curve is the curve that represents the relation between True Positive Rate and False Positive Rate:
-$$TPR=\frac{TP}{TP+FN}=recall$$
-$$FPR=\frac{FP}{FP+TN}=1-precision$$
-
-The AUC metric stands for the integral of this curve between 0 and 1.
-
-![AUC](https://user-images.githubusercontent.com/97680577/178116164-b8a46799-99c5-4d8d-8a1b-44a7c9ed912f.png)
-
-The AUC metric tells you how capable is a moder to distinguish between classes. A model that have a measure near to 1 means that it has a good separability. In the following example we will see a model whose ROC curve has an area of 1.
-
-![1_HmVIhSKznoW8tFsCLeQjRw](https://user-images.githubusercontent.com/97680577/178118715-d8130218-05aa-4aa2-94e4-08f4463c2953.png)
-
-In other words, a threashold that distinguish between two classes can easily be found, creating no FN nor FP.
-
-![1_Uu-t4pOotRQFoyrfqEvIEg](https://user-images.githubusercontent.com/97680577/178118753-a3064e6d-2215-4113-b2cf-452957551b3b.png)
-
-Nevertheless a model whose separability is not that good, might have a ROC curve like the following one:
-
-![1_-tPXUvvNIZDbqXP0qqYNuQ](https://user-images.githubusercontent.com/97680577/178118821-b6bad0de-4d02-41be-a8d6-d408ccc449ce.png)
-
-So if we visualise the threshold it might be like this:
-
-![1_yF8hvKR9eNfqqej2JnVKzg](https://user-images.githubusercontent.com/97680577/178118843-f6c30a95-9c60-4887-aef0-7ee05915d5a2.png)
-
 #### For Segmentation
 
 ##### IoU Score (Intersection over Union):

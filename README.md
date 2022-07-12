@@ -587,6 +587,7 @@ but as we can see the results are not as good as we might expect:
 
 ![pred](https://user-images.githubusercontent.com/97680577/178548230-2db7c2bf-fe93-4af2-aef7-a50eab6d2d4e.png)
 
+
 ## Main Conclusions
 
 Classification:
@@ -600,6 +601,7 @@ Segmentation:
    - Changing the "window filling" parameter from 90% to 1% diminishes accuracy. The explanation is that if we take windows that might only have a small part of an object, the model finds it harder to identify those objects than if we already give them windows that contain the majority of an object. The same way a person would find it harder to separate a table leg from a chair leg if we only had that information, than to separate half a chair from half a table. There is probably a sweet spot in this parameter, related to window size.
    - However, the script also discards windows that might contain a full object even if the window is not completely filled. For example narrow objects like boards and bookcases or objects that might be against a wall. When we visualize the results and compare them to the ground truth we see that those objects where not even considered, the window system discarded them. 
 
+      ![image](https://user-images.githubusercontent.com/104381341/178340888-74d2c431-15ee-4946-8028-3fb76157aa7e.png)
 - About RGB information:
    - RGB information is only useful when the model is in a "sweet spot". In cases where weighted IoU is over 0.45, RGB increases the value by 10%. Else it can hinder training. This prevails when the model has a high number of points, so the hypothesis that there is too much to learn (RGB on top of everything else) from too little information (number of points) does not apply.
 
@@ -623,8 +625,57 @@ Segmentation:
      (Table X. IoU weighted scores per epoch per sampling rate over the test dataset)
 
 - About correlation between IoU scores and actual visual segmentation outputs:
-   - To be filled with some pictures
-     
+  - About correlation between IoU scores and actual visual segmentation outputs:
+
+Based on IoU we get the best cost/results with:
+          
+          -128 points
+          -50% overlap
+          -RGB (although this applies only to this optimal spot, for the rest of the combination RGB hinders training)
+          -90% Window filling discard criteria
+          -Window size =1
+        
+ Validation Confusion Matrix
+
+  |   Object  | board  | bookcase | chair  | table  |  sofa  |
+  |:---------:|:------:|:--------:|:------:|:------:|:------:|
+  |  board   |  1558 |    63    |  5726  | 13070  |  6   |
+  | bookcase |  575  |    75    | 24807  | 24268  |  59  |
+  |  chair   |  378  |   295    | 167682 | 52964  | 988  |
+  |  table   |  511  |   213    | 71347  | 339137 | 610  |
+  |   sofa   |  174  |    0     | 12829  |  7062  | 3923 |
+
+
+  Validation Scores (per object)
+
+  |   Scores  | board  | bookcase | chair  | table  |  sofa  |
+  |:---------:|:------:|:--------:|:------:|:------:|:------:|
+  | Precision | 0.4875 |  0.1161  | 0.5938 | 0.7769 | 0.7023 |
+  |   Recall  | 0.0763 |  0.0015  | 0.7543 | 0.8235 | 0.1635 |
+
+
+  Validation Scores (averages)
+
+
+  | Score | Macro  | Micro  | Weighted |
+  |:------:|:--------:|:-------:|:----------:|
+  |  IoU  | 0.2777 | 0.5426 |  0.5356  |
+            
+            
+            
+However this model is only able to correctly identify mainly tables and chairs. This is possibly due to the window discard strategy. This needs to be worked on. Additionally, even visualization of this parameter combination leads to an image where everything is detected as a table. 
+                  
+On the other side, similar IoU results are obtained with lower overlap but higher number of points and smaller windows:
+       -512 points
+       -25% overlap
+       -No RGB (although this applies only to this optimal spot, for the rest of the combination RGB hinders training)
+       -90% Window filling discard criteria
+       -Window size =0.25
+   
+In this case visualization is much better, and chairs and windows are correctly detected.The fact that with similar results for IoU we get different visualization results (in this case better than in the previous selection of parameters), could be explained by the choice of room to visualize.
+		
+The conclusion would be that IoU values alone might not be enought to validate the accuracy of a model, since visualization of similar accuracy predictions leads to very different results
+   
 - General results:
    - We get the best results/cost with:
       - 128 points
@@ -635,36 +686,8 @@ Segmentation:
       
    - The model seems to present a high bias for tables and chairs. This is possibly due to the window discard strategy. This needs to be worked on.
  
- 
-     Confusion Matrix
-
-      Object  | board | bookcase | chair  | table  | sofa 
-      |:--------:|------:|---------:|:------:|:------:|:----:|
-      |  board   |  1558 |    63    |  5726  | 13070  |  6   |
-      | bookcase |  575  |    75    | 24807  | 24268  |  59  |
-      |  chair   |  378  |   295    | 167682 | 52964  | 988  |
-      |  table   |  511  |   213    | 71347  | 339137 | 610  |
-      |   sofa   |  174  |    0     | 12829  |  7062  | 3923 |
-
-
-
-      Scores (per object)
-
-      Scores | board | bookcase | chair | table |sofa
-      |:--------:|------:|---------:|:------:|:------:|:----:|
-      | Precision | 0.4875 |  0.1161  | 0.5938 | 0.7769 | 0.7023 |
-      |   Recall  | 0.0763 |  0.0015  | 0.7543 | 0.8235 | 0.1635 |
-      |  F1 Score | 0.1319 |  0.0030  | 0.6645 | 0.7996 | 0.2653 |
-
-      Scores (averages)
-
-      Score | Macro  | Micro  | Weighted 
-     |:--------:|------:|---------:|:------:|
-     |  IoU  | 0.2777 | 0.5426 |  0.5356  |
-
-
-
-
+ Test Corrleation matrix here
+	
 ## How to run the code
 ### Download the S3DIS dataset
 

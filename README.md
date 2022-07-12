@@ -152,6 +152,74 @@ This is the dataset used in conjunction with the **classification** network of t
 - **Input data**: The object files (*chair_1.txt*, *table_2.txt*,...*object_Y.txt*) located inside the `Annotations` folder are going to be used as the input data for the classification network. 
 - **Labels**: The label for the object data is directly extracted from the custom ground truth file *Object ID* col.
 
+```
+--------------------------------------------------------------------------------
+S3DIS DATASET INFORMATION (S3DISDataset4ClassificationTrain)
+--------------------------------------------------------------------------------
+Summary file: s3dis_summary_clutter_free_movable.csv
+Data source folder: /Users/jgalera/datasets/S3DIS/aligned 
+Chosen areas: ['Area_1', 'Area_2', 'Area_3', 'Area_4'] 
+Dataset elements:
+           0                 1               2  3               4      5         6  7     8
+0     Area_1  conferenceRoom_1  conferenceRoom  1     board_1.txt  19727     board  0  Good
+1     Area_1  conferenceRoom_1  conferenceRoom  1     board_2.txt  33747     board  0  Good
+2     Area_1  conferenceRoom_1  conferenceRoom  1     board_3.txt  33359     board  0  Good
+3     Area_1  conferenceRoom_1  conferenceRoom  1  bookcase_1.txt  20437  bookcase  1  Good
+4     Area_1  conferenceRoom_1  conferenceRoom  1     chair_1.txt   6729     chair  2  Good
+...      ...               ...             ... ..             ...    ...       ... ..   ...
+1522  Area_4         storage_4         storage  7  bookcase_1.txt  20372  bookcase  1  Good
+1523  Area_4         storage_4         storage  7  bookcase_2.txt  15859  bookcase  1  Good
+1524  Area_4         storage_4         storage  7  bookcase_3.txt   6882  bookcase  1  Good
+1525  Area_4         storage_4         storage  7  bookcase_4.txt  16144  bookcase  1  Good
+1526  Area_4         storage_4         storage  7  bookcase_5.txt  43708  bookcase  1  Good
+
+[1527 rows x 9 columns]
+
+--------------------------------------------------------------------------------
+S3DIS DATASET INFORMATION (S3DISDataset4ClassificationVal)
+--------------------------------------------------------------------------------
+Summary file: s3dis_summary_clutter_free_movable.csv
+Data source folder: /Users/jgalera/datasets/S3DIS/aligned 
+Chosen areas: ['Area_5'] 
+Dataset elements:
+          0                 1               2  3               4      5         6  7     8
+0    Area_5  conferenceRoom_1  conferenceRoom  1     board_1.txt  23363     board  0  Good
+1    Area_5  conferenceRoom_1  conferenceRoom  1     chair_1.txt   4112     chair  2  Good
+2    Area_5  conferenceRoom_1  conferenceRoom  1     chair_2.txt   4002     chair  2  Good
+3    Area_5  conferenceRoom_1  conferenceRoom  1     chair_3.txt   2299     chair  2  Good
+4    Area_5  conferenceRoom_1  conferenceRoom  1     chair_4.txt   4548     chair  2  Good
+..      ...               ...             ... ..             ...    ...       ... ..   ...
+677  Area_5         storage_2         storage  7  bookcase_7.txt  22424  bookcase  1  Good
+678  Area_5         storage_4         storage  7     chair_1.txt   6068     chair  2  Good
+679  Area_5         storage_4         storage  7     chair_2.txt   4484     chair  2  Good
+680  Area_5         storage_4         storage  7     table_1.txt   8385     table  3  Good
+681  Area_5         storage_4         storage  7     table_2.txt   6469     table  3  Good
+
+[682 rows x 9 columns]
+
+--------------------------------------------------------------------------------
+S3DIS DATASET INFORMATION (S3DISDataset4ClassificationTest)
+--------------------------------------------------------------------------------
+Summary file: s3dis_summary_clutter_free_movable.csv
+Data source folder: /Users/jgalera/datasets/S3DIS/aligned 
+Chosen areas: ['Area_6'] 
+Dataset elements:
+          0                 1               2   3             4      5      6  7     8
+0    Area_6  conferenceRoom_1  conferenceRoom   1   board_1.txt  25892  board  0  Good
+1    Area_6  conferenceRoom_1  conferenceRoom   1   board_2.txt  19996  board  0  Good
+2    Area_6  conferenceRoom_1  conferenceRoom   1   chair_1.txt   6548  chair  2  Good
+3    Area_6  conferenceRoom_1  conferenceRoom   1  chair_10.txt   4603  chair  2  Good
+4    Area_6  conferenceRoom_1  conferenceRoom   1   chair_2.txt   5555  chair  2  Good
+..      ...               ...             ...  ..           ...    ...    ... ..   ...
+379  Area_6       openspace_1       openspace  10   table_1.txt  34368  table  3  Good
+380  Area_6       openspace_1       openspace  10   table_2.txt  35873  table  3  Good
+381  Area_6       openspace_1       openspace  10   table_3.txt  33109  table  3  Good
+382  Area_6          pantry_1          pantry   5   table_1.txt   5200  table  3  Good
+383  Area_6          pantry_1          pantry   5   table_2.txt  22381  table  3  Good
+
+[384 rows x 9 columns]
+```
+
 #### S3DISDataset4Segmentation
 
 This is the dataset used for **semantic segmentation**. Since semantic segmentation needs every point in the cloud to be labeled, a new file is generated for every space/room with the suitable object labels. To do so, all files located in the `Annotations` folder are concatenated (along with the proper label) to create a single file per space/room with all the object points that belong to this space already labeled. This file is called `space_x_annotated.txt` (e.g., *office_1_annotated.txt*) and contains 7 cols (instead of 6): XYZRGB+*Object ID*.

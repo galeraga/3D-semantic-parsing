@@ -214,7 +214,7 @@ if "toy" in args.load:
     
 
 if "low" in args.load:
-    hparams["num_points_per_object"] = 100
+    hparams["num_points_per_object"] = 512
     hparams["num_points_per_room"] = 512
     hparams["dimensions_per_object"] = 3
     hparams["epochs"] = 5
@@ -226,10 +226,10 @@ if "medium" in args.load:
     hparams["epochs"] = 20
     
 if "high" in args.load:
-    hparams["num_points_per_object"] = 2048
-    hparams["num_points_per_room"] = 4096
+    hparams["num_points_per_object"] = 1024
+    hparams["num_points_per_room"] = 1024   
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 20
+    hparams["epochs"] = 250
    
 # Adapt params depending on the target objects we're going to work
 if "movable" in args.objects:

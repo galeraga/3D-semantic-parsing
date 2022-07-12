@@ -45,7 +45,7 @@ def tnet_compare(sample, labels, preds, tnet_out, objects_dict, logger, save=Tru
     ax = fig.add_subplot(1, 2, 1, projection='3d')
 
     # Plot input sample
-    pc = sample.numpy()
+    pc = sample.cpu().numpy()
     sc = ax.scatter(pc[:,0], pc[:,1], pc[:,2], c=pc[:,0] ,s=50, marker='o', cmap="viridis", alpha=0.7)
     ax.set_xlabel('x')
     ax.set_ylabel('y')

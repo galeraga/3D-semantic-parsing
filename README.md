@@ -160,6 +160,44 @@ Since every `space_x_annotated.txt` might have millions of points, point clouds 
 
 So the S3DISDataset4Segmentation will use the contents of the sliding windows folder to get both the **input data** and **labels**
 
+```
+----------------------------------------------------------------------------------------------------
+S3DIS DATASET INFORMATION (S3DISDataset4SegmentationTrain)
+----------------------------------------------------------------------------------------------------
+Summary file: s3dis_summary_clutter_free_movable.csv
+Data source folder: /Users/jgalera/datasets/S3DIS/aligned 
+Chosen areas: ['Area_1', 'Area_2', 'Area_3', 'Area_4'] 
+Total points (from sliding windows): 5925067 
+Total points (after sampling sliding windows at 768 points/room): 7715 
+Total dataset elements: 472 (from a grand total of 883)
+From Area_1 : 118 (['Area_1_conferenceRoom_1_win0.pt', 'Area_1_conferenceRoom_1_win1.pt', 'Area_1_conferenceRoom_1_win2.pt']...['Area_1_office_9_win2.pt', 'Area_1_office_9_win3.pt', 'Area_1_office_9_win4.pt'])
+From Area_2 : 193 (['Area_2_auditorium_1_win0.pt', 'Area_2_auditorium_1_win1.pt', 'Area_2_auditorium_1_win10.pt']...['Area_2_office_5_win3.pt', 'Area_2_office_5_win4.pt', 'Area_2_office_5_win5.pt'])
+From Area_3 : 66 (['Area_3_conferenceRoom_1_win0.pt', 'Area_3_conferenceRoom_1_win1.pt', 'Area_3_conferenceRoom_1_win2.pt']...['Area_3_office_9_win0.pt', 'Area_3_storage_1_win0.pt', 'Area_3_storage_1_win1.pt'])
+From Area_4 : 95 (['Area_4_conferenceRoom_1_win0.pt', 'Area_4_conferenceRoom_1_win1.pt', 'Area_4_conferenceRoom_1_win2.pt']...['Area_4_office_9_win4.pt', 'Area_4_office_9_win5.pt', 'Area_4_storage_1_win0.pt'])
+
+----------------------------------------------------------------------------------------------------
+S3DIS DATASET INFORMATION (S3DISDataset4SegmentationVal)
+----------------------------------------------------------------------------------------------------
+Summary file: s3dis_summary_clutter_free_movable.csv
+Data source folder: /Users/jgalera/datasets/S3DIS/aligned 
+Chosen areas: ['Area_5'] 
+Total points (from sliding windows): 4496525 
+Total points (after sampling sliding windows at 768 points/room): 5855 
+Total dataset elements: 261 (from a grand total of 883)
+From Area_5 : 261 (['Area_5_conferenceRoom_1_win0.pt', 'Area_5_conferenceRoom_1_win1.pt', 'Area_5_conferenceRoom_1_win2.pt']...['Area_5_office_9_win2.pt', 'Area_5_office_9_win3.pt', 'Area_5_storage_2_win0.pt'])
+
+----------------------------------------------------------------------------------------------------
+S3DIS DATASET INFORMATION (S3DISDataset4SegmentationTest)
+----------------------------------------------------------------------------------------------------
+Summary file: s3dis_summary_clutter_free_movable.csv
+Data source folder: /Users/jgalera/datasets/S3DIS/aligned 
+Chosen areas: ['Area_6'] 
+Total points (from sliding windows): 1803057 
+Total points (after sampling sliding windows at 768 points/room): 2348 
+Total dataset elements: 150 (from a grand total of 883)
+From Area_6 : 150 (['Area_6_conferenceRoom_1_win0.pt', 'Area_6_conferenceRoom_1_win1.pt', 'Area_6_conferenceRoom_1_win2.pt']...['Area_6_office_9_win6.pt', 'Area_6_openspace_1_win0.pt', 'Area_6_openspace_1_win1.pt'])
+```
+
 #### Discarding non-movable classes for segmentation
 
 The original S3DIS dataset comes with some non-movable classes (structural and clutter defined above).

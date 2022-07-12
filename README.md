@@ -587,7 +587,7 @@ but as we can see the results are not as good as we might expect:
 
 ![pred](https://user-images.githubusercontent.com/97680577/178548230-2db7c2bf-fe93-4af2-aef7-a50eab6d2d4e.png)
 
-If we check the [documentation](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.jaccard_score.html) we can see that it explains that this problem can happen.
+If we check the [Scikit documentation](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.jaccard_score.html) we can see that it explains that this problem can happen.
 
 ## Main Conclusions
 

@@ -580,13 +580,13 @@ Segmentation:
    -As expected, overlap of 50% achieves the best results. Although it slightly increases the time of dataset preparation (done only once) and the time of training (since there are more input windows), it also allows to have best results even with a few points.
    
 - About number of epochs:
-   - More epochs (as expected) achieve better accuracy metrics for the same sampling rate. However, the overall model performance seems to depend intrinsically of the sampling rate (and/or its relationship with the size of the sliding windows) 
+   - More epochs achieve better accuracy metrics for the same sampling rate (as expected). However, the overall model performance seems to depend intrinsically of the sampling rate (and/or its relationship with the size of the sliding windows) 
    
-      Epoch | 256     | 512     | 768    | 1024   | 2048
+     Epoch | 256     | 512     | 768    | 1024   | 2048
      |:----:|:-------:|:-------:|:------:|:------:|:----|
-     |    3  | 0.2727  | 0.2959  | 0.2746 | 0.2778 |    |     
-        10  | 0.3562  | 0.2437  | 0.5540 | 0.3249 | 0.3464 
-        20  | 0.5498  | 0.5154  | 0.5626 | 0.5290 | 0.4617
+     |3  | 0.2727  | 0.2959  | 0.2746 | 0.2778 | 0.3056
+     10  | 0.3562  | 0.2437  | 0.5540 | 0.3249 | 0.3464
+     20  | 0.5498  | 0.5154  | 0.5626 | 0.5290 | 0.4617
 
      (Table X. IoU weighted scores per epoch per sampling rate over the test dataset)
      

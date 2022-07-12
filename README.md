@@ -568,7 +568,24 @@ Here we have a room with multiple classes:
 
 but if we check the confussion matrix we get:
 
+| Object   | board | bookcase | chair | table | sofa |
+|----------|-------|----------|-------|-------|------|
+| board    | 12685 | 0        | 0     | 0     | 0    |
+| bookcase | 0     | 0        | 0     | 0     | 0    |
+| chair    | 0     | 0        | 1087  | 0     | 0    |
+| table    | 0     | 0        | 0     | 0     | 0    |
+| sofa     | 0     | 0        | 0     | 0     | 0    |
 
+and the metrics are:
+
+| Score | Macro | Micro | Weighted |
+|-------|-------|-------|----------|
+| F1    | 1     | 1     | 1        |
+| IoU   | 1     | 1     | 1        |
+
+but as we can see the results are not as good as we might expect:
+
+![pred](https://user-images.githubusercontent.com/97680577/178548230-2db7c2bf-fe93-4af2-aef7-a50eab6d2d4e.png)
 
 ## Main Conclusions
 

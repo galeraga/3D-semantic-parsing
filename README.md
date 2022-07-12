@@ -320,6 +320,7 @@ For the PointNet to work, the dimensions of all the inputs must be the same. How
 Taking into account all the above information, the final folder structure for the model implemenation is the following one:
 ```
 ├── s3dis_summary.csv (the ground truth file)
+├── s3dis_summary_clutter_free_movable.csv (the ground truth file containing info only for movable objects)
 ├── Area_N
 │   ├── space_X
 │   │   ├── space_x.txt (the original non-annotated file with the point cloud for this space. It only contains 6 cols per row: XYZRGB)

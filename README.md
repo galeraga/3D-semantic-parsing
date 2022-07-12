@@ -29,12 +29,12 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
   * [F1 for classification](#f1-for-classification)
   * [IoU for segmentation](#iou-for-segmentation)
 - [Obstacles](#obstacles)
-- [Main Conclusions](#main-conclusions)
+- [Main conclusions](#main-conclusions)
 - [How to run the code](#how-to-run-the-code)
   * [Download the S3DIS dataset](#download-the-s3dis-dataset)
   * [Create a conda virtual environment](#create-a-conda-virtual-environment)
   * [Running the code](#running-the-code)
-- [Related Work](#related-work)
+- [Related work](#related-work)
 - [Contributors](#contributors)
 - [Acknowledgments](#acknowledgments)
 - [Annex](#annex)
@@ -483,45 +483,45 @@ Segmentation:
         10  | 0.3562  | 0.2437  | 0.5540 | 0.3249 | 0.3464 
         20  | 0.5498  | 0.5154  | 0.5626 | 0.5290 | 0.4617
 
-     (Table X. IoU weighted scores per sampling rate)
+     (Table X. IoU weighted scores per epoch per sampling rate)
      
 - General results:
-   - We get the best cost/results with:
-      -128 points
-      -50% overlap
-      -RGB (although this applies only to this optimal spot, for the rest of the combination RGB hinders training)
-      -90% Window filling discard criteria
-      -Window size =1
+   - We get the best results/cost with:
+      - 128 points
+      - 50% overlap
+      - RGB (although this applies only to this optimal spot, for the rest of the combination RGB hinders training)
+      - 90% window filling discard criteria
+      - Window size =1
       
-   - The model is only able to correctly identify mainly tables and chairs. This is possibly due to the window discard strategy. This needs to be worked on.
+   - The model seems to present a high bias for tables and chairs. This is possibly due to the window discard strategy. This needs to be worked on.
  
  
- Confusion Matrix
-+----------+-------+----------+--------+--------+------+
-|  Object  | board | bookcase | chair  | table  | sofa |
-+----------+-------+----------+--------+--------+------+
-|  board   |  1558 |    63    |  5726  | 13070  |  6   |
-| bookcase |  575  |    75    | 24807  | 24268  |  59  |
-|  chair   |  378  |   295    | 167682 | 52964  | 988  |
-|  table   |  511  |   213    | 71347  | 339137 | 610  |
-|   sofa   |  174  |    0     | 12829  |  7062  | 3923 |
-+----------+-------+----------+--------+--------+------+
+     Confusion Matrix
+
+      Object  | board | bookcase | chair  | table  | sofa 
+      |:--------:|------:|---------:|:------:|:------:|:----:|
+      |  board   |  1558 |    63    |  5726  | 13070  |  6   |
+      | bookcase |  575  |    75    | 24807  | 24268  |  59  |
+      |  chair   |  378  |   295    | 167682 | 52964  | 988  |
+      |  table   |  511  |   213    | 71347  | 339137 | 610  |
+      |   sofa   |  174  |    0     | 12829  |  7062  | 3923 |
 
 
-Scores (per object)
-+-----------+--------+----------+--------+--------+--------+
-|   Scores  | board  | bookcase | chair  | table  |  sofa  |
-+-----------+--------+----------+--------+--------+--------+
-| Precision | 0.4875 |  0.1161  | 0.5938 | 0.7769 | 0.7023 |
-|   Recall  | 0.0763 |  0.0015  | 0.7543 | 0.8235 | 0.1635 |
-|  F1 Score | 0.1319 |  0.0030  | 0.6645 | 0.7996 | 0.2653 |
-+-----------+--------+----------+--------+--------+--------+     
+
+      Scores (per object)
+
+      Scores | board | bookcase | chair | table |sofa
+      |:--------:|------:|---------:|:------:|:------:|:----:|
+      | Precision | 0.4875 |  0.1161  | 0.5938 | 0.7769 | 0.7023 |
+      |   Recall  | 0.0763 |  0.0015  | 0.7543 | 0.8235 | 0.1635 |
+      |  F1 Score | 0.1319 |  0.0030  | 0.6645 | 0.7996 | 0.2653 |
+
       Scores (averages)
-+-------+--------+--------+----------+
-| Score | Macro  | Micro  | Weighted |
-+-------+--------+--------+----------+
-|  IoU  | 0.2777 | 0.5426 |  0.5356  |
-+-------+--------+--------+----------+
+
+      Score | Macro  | Micro  | Weighted 
+     |:--------:|------:|---------:|:------:|
+     |  IoU  | 0.2777 | 0.5426 |  0.5356  |
+
 
 
 

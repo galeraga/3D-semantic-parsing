@@ -555,17 +555,25 @@ Having imbalanced datasets can add some distortion to the metrics. In order to m
 
 - **Weighted Average**: Calculate the metrics similarly as the micro but considering the support (the support of the class is the number of samples of this class divided by the number of total samples of the dataset) of each class to the dataset.
 
-### Problems with the metrics
-Choosing the right metric for a specific Deep Learning task is not trivial. In our case, we chose the **IoU** metric for segmentation, but it might have some problems:
-As it is a metric that is calculated from the **Confusion Matrix,** if the model doesn't map a point to a specific class it doesn't count as an incorrect prediction so
-we can have high IoU metrics that don't perform well.
 
-For example:
-Here we have a room with multiple classes:
+## Main Conclusions
+
+Classification:
+
+- A low sampling rate (128 points/object) leads to good accuracy metrics.
+
+Segmentation:
+
+- About dataset preparation and discard:
+   - Not implementing the discard of non-movable classes leads to the model learning only structural classes (i.e. walls, specially if very few points are used) if the original dataset is kept or, if the structural points are transformed into "clutter" points, to the model learning to identify clutter but not the rest of the classes. The strategy of discarding all non-movable points is then correct.
+   - Changing the "window filling" parameter from 90% to 1% diminishes accuracy. The explanation is that if we take windows that might only have a small part of an object, the model finds it harder to identify those objects than if we already give them windows that contain the majority of an object. The same way a person would find it harder to separate a table leg from a chair leg if we only had that information, than to separate half a chair from half a table. There is probably a sweet spot in this parameter, related to window size.
+   - However, the script also discards windows that might contain a full object even if the window is not completely filled. For example narrow objects like boards and bookcases or objects that might be against a wall. When we visualize the results and compare them to the ground truth we see that those objects where not even considered, the window system discarded them. This can lead to some false good results:
+
+For example in this Ground Truth we can see four classes:
 
 ![ground_truth](https://user-images.githubusercontent.com/97680577/178546549-0e6a0917-fcb0-4963-8088-4f69472d508d.PNG)
 
-but if we check the confussion matrix we get:
+but if we do the confussion matrix it results in:
 
 | Object   | board | bookcase | chair | table | sofa |
 |----------|-------|----------|-------|-------|------|
@@ -582,24 +590,11 @@ and the metrics are:
 | F1    | 1     | 1     | 1        |
 | IoU   | 1     | 1     | 1        |
 
-but as we can see the results are not as good as we might expect:
+so as we can see the metrics here are not a good representation of how the segmentation is going:
 
 ![pred](https://user-images.githubusercontent.com/97680577/178548230-2db7c2bf-fe93-4af2-aef7-a50eab6d2d4e.png)
 
-If we check the [Scikit documentation](https://scikit-learn.org/stable/modules/generated/sklearn.metrics.jaccard_score.html) we can see that it explains that this problem can happen.
 
-## Main Conclusions
-
-Classification:
-
-- A low sampling rate (128 points/object) leads to good accuracy metrics.
-
-Segmentation:
-
-- About dataset preparation and discard:
-   - Not implementing the discard of non-movable classes leads to the model learning only structural classes (i.e. walls, specially if very few points are used) if the original dataset is kept or, if the structural points are transformed into "clutter" points, to the model learning to identify clutter but not the rest of the classes. The strategy of discarding all non-movable points is then correct.
-   - Changing the "window filling" parameter from 90% to 1% diminishes accuracy. The explanation is that if we take windows that might only have a small part of an object, the model finds it harder to identify those objects than if we already give them windows that contain the majority of an object. The same way a person would find it harder to separate a table leg from a chair leg if we only had that information, than to separate half a chair from half a table. There is probably a sweet spot in this parameter, related to window size.
-   - However, the script also discards windows that might contain a full object even if the window is not completely filled. For example narrow objects like boards and bookcases or objects that might be against a wall. When we visualize the results and compare them to the ground truth we see that those objects where not even considered, the window system discarded them. 
 
 - About RGB information:
    - RGB information is only useful when the model is in a "sweet spot". In cases where weighted IoU is over 0.45, RGB increases the value by 10%. Else it can hinder training. This prevails when the model has a high number of points, so the hypothesis that there is too much to learn (RGB on top of everything else) from too little information (number of points) does not apply.

@@ -653,10 +653,10 @@ pip install -r requirements.txt
 
 The code supports multiple arguments to be parsed, depending on:
 
-- The **task** to be performed: either train, test or watch.
+- The **task** to be performed: either train, validation, test or watch.
 - The **goal**: either classification or segmentation.
 - The target **objects** we want to work with: either all objects or only the movable objects.
-- The **load** profile: either toy, low, medium, high.
+- The **load** profile: either toy, low, medium or high.
 
 So run the code from the previously created virtual environment with the following command:
 ```

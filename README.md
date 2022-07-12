@@ -671,6 +671,33 @@ Segmentation:
 	- 90% Window filling discard criteria
 	- Window size =0.25
 
+	Confusion Matrix
+	| Object   | board | bookcase | chair | table | sofa |
+	|----------|-------|----------|-------|-------|------|
+	| board    | 0     | 0        | 0     | 87    | 0    |
+	| bookcase | 0     | 0        | 48    | 4950  | 0    |
+	| chair    | 0     | 0        | 10932 | 2804  | 0    |
+	| table    | 0     | 0        | 3555  | 23701 | 0    |
+	| sofa     | 0     | 0        | 0     | 0     | 0    |
+
+
+	Scores (per object)
+	Scores | board | bookcase | chair | table |sofa
+	|:--------:|------:|---------:|:------:|:------:|:----:|
+	| Precision | 0.0000 |  0.0000  | 0.5651 | 0.7514 | 0.0000 |
+	|   Recall  | 0.0000 |  0.0000  | 0.7959 | 0.8696 | 0.0000 |
+	|  F1 Score | 0.0000 |  0.0000  | 0.6609 | 0.8062 | 0.0000 |
+
+
+	Scores (averages)
+	| Score | Macro | Micro | Weighted |
+	|-------|-------|-------|----------|
+	| F1    | 0.3668 | 0.6806 | 0.6102 |
+	| IoU   | 0.2922 | 0.5158 | 0.4949  |
+
+
+
+
 In this case visualization is much better, and chairs and windows are correctly detected.The fact that with similar results for IoU we get different visualization results (in this case better than in the previous selection of parameters), could be explained by the window discard strategy. Since different windows are selected when we select different window sizes and overlaps, different windows are discarded so in the end, we are comparing different ground truth data and the IoU is not comparable
 														 
 

@@ -11,7 +11,7 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
     + [Discarding non-movable classes for segmentation](#discarding-non-movable-classes-for-segmentation)
     + [Sliding windows for segmentation](#sliding-windows)
     + [Discarding inadequate windows](#discarding-inadequate-windows)
-    + [Number of input points for both segmentation and classification](#number-of-input-points-for-both-segmentation-and-classification)
+    + [Sampling rate](#sampling-rate)
   * [The final folder structure](#the-final-folder-structure)
 - [The model](#the-model)
   * [TransformationNet](#transformationnet)

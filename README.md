@@ -8,10 +8,10 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
   * [The custom ground truth file](#the-custom-ground-truth-file)
     + [S3DISDataset4Classification](#s3disdataset4classification)
     + [S3DISDataset4Segmentation](#s3disdataset4segmentation)
-  * [Discarding non-movable classes for segmentation](#discarding-non-movable-classes-for-segmentation)
-  * [Sliding windows for segmentation](#sliding-windows)
+    + [Discarding non-movable classes for segmentation](#discarding-non-movable-classes-for-segmentation)
+    + [Sliding windows for segmentation](#sliding-windows)
     + [Discarding inadequate windows](#discarding-inadequate-windows)
-  * [Number of input points for both segmentation and classification](#number-of-input-points-for-both-segmentation-and-classification)
+    + [Number of input points for both segmentation and classification](#number-of-input-points-for-both-segmentation-and-classification)
   * [The final folder structure](#the-final-folder-structure)
 - [The model](#the-model)
   * [TransformationNet](#transformationnet)
@@ -26,11 +26,8 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
     + [For classification](#for-classification)
     + [For segmentation](#for-segmentation)
 - [The metrics](#metrics)
-  * [For Classification](#for-classification)
-    - [F1 Score](#f1-score)
-    - [Area Under the Curve (AUC)](#area-under-the-curve--auc-)
-  * [For Segmentation](#for-segmentation)
-      - [IoU Score (Intersection over Union):](#iou-score--intersection-over-union--)
+  * [F1 for classification](#f1-for-classification)
+  * [IoU for segmentation](#iou-for-segmentation)
 - [Obstacles](#obstacles)
 - [Main Conclusions](#main-conclusions)
 - [How to run the code](#how-to-run-the-code)
@@ -122,7 +119,7 @@ From this original S3DIS dataset:
 
 - A custom ground truth file (called s3dis_summary.csv) has been created to speed up the process to get to the point cloud files, avoiding recurrent operating system folder traversals.  
 - Two custom datasets have been created to feed the dataloaders, depending on the desired goal (S3DISDataset4Classification and S3DISDataset4Segmentation). 
-- Since dataloaders expect the same amount of input points and rooms/objects might differ considerably, a user-defined threshold can be set to limit the number of points to sample per room/object when datasets are created. 
+- Since dataloaders expect the same amount of input points but rooms/objects might differ considerably, a user-defined threshold can be set to limit the number of points to sample per room/object when datasets are created. 
 - The available areas have been splitted and assigned to the following tasks:
   - Training: Areas 1, 2, 3 and 4
   - Validation: Area 5
@@ -164,13 +161,15 @@ Since every `space_x_annotated.txt` might have millions of points, point clouds 
 
 So the S3DISDataset4Segmentation will use the contents of the sliding windows folder to get both the **input data** and **labels**
 
-### Discarding non-movable classes for segmentation
+#### Discarding non-movable classes for segmentation
 
-The original S3DIS dataset comes with some non-movable classes (structural and clutter defined above), one possible strategy is to train the model withouth any of those points. The hypothesis is that removing this information will allow the model to focus on the target classes and prevent it from focusing on classes that are not of interest. 
+The original S3DIS dataset comes with some non-movable classes (structural and clutter defined above).
+
+In order to make the model learn faster and better, only the movable objects have been taking into account for semantic segmentation. The hypothesis is that removing this information will allow the model to focus on the target classes and prevent it from focusing on classes that are not of interest. 
 
 ![image](https://user-images.githubusercontent.com/104381341/178322532-8e1e77e2-0ad8-4673-a685-bda9f3718932.png)
 
-### Sliding windows for segmentation
+#### Sliding windows for segmentation
 
 To train room segmentation, we divide each room into sections of specific dimensions, and output only the points inside said section separately from the others. 
 
@@ -207,7 +206,7 @@ In the first case, the script will discard any window that is completely empty.
 
 For the second case, if one of the resulting windows has at least one point, we have put in place a strategy that allows us to select a desirable percentage of "window filling". If we wanted the window to be at least 80% filled, the script will create the window, find the coordinates of the points that are further to the left, further to the right further to the front and further to the back of said window, and find the distances betweem them (left-right, front-back). If one of those distances is smaller than 80% of the window size, the window wil be discarded, considered not filled enough. The default is 90% filled. This variable will be studied
 
-### Number of input points for both segmentation and classification
+#### Number of input points for both segmentation and classification
 
 For the pointnet to work, the dimensions of all the inputs must be the same. However both the object point clouds to be inputted into the classification model and the window point clouds previously prepared to be used with the segmentation model have a different number of points. Hence, prior to entering the data in the model, these point clouds must be modified to fit this variable. At the same time, this is one of the effects that will be studied as a hyperparameter.
 
@@ -260,7 +259,7 @@ We will present the structure of the first T-Net that appears in the network. In
 ![tnet](https://user-images.githubusercontent.com/97680577/178104139-0f1cba1f-3e0a-4f07-a082-d0967653034f.png)
 
 
-#### Visualization of the Outputs
+#### Visualization of the outputs
 
 #### Goal
 
@@ -415,9 +414,8 @@ Estimated Total Size (MB): 9561.66
 
 ### Metrics
 
-#### For Classification
+#### F1 for classification
 
-##### $F_1$ Score
 First of all we need to define what precision and recall are:
 
 $$precision = \frac{TP}{TP+FP}$$
@@ -428,11 +426,9 @@ We can define the $F_1$ Score as the harmonic mean of the precision and the reca
 
 $$F_1=2\frac{precision\times recall}{precision+recall}=\frac{TP}{TP+\frac{1}{2}(FP+FN)}$$
 
-#### For Segmentation
+#### IoU for segmentation
 
-##### IoU Score (Intersection over Union):
-When we are dealing with a Segmentation problem, not only we need to have in consideration the pixels that we labeled wrongly (false positives) but we need to consider the pixels belonging to the class that we didn't label (false negatives). 
-
+When we are dealing with a segmentation problem, we don't only need to take into account the points that we labeled wrongly (false positives) but also the points belonging to the class that we didn't properly labeled (false negatives). 
 
 $$IoU = \frac{|A\cap B|}{|A \cup B|} = \frac{TP}{TP+FN+FP} $$
 
@@ -442,13 +438,15 @@ Considering the green rectangle the correct ones and the red rectangle the predi
 
 #### Micro, Macro and Weighted metrics
 
-Having imbalanced datasets can add some distortion to the metrics. In order to take them under, two ways of calculating the metrics can be done:
+For both F1 and IoU metrics, micro, macro and weighted ponderations have been calculated.
 
-The first one is to calculate the metrics to every individual class of the sample and then average them, this is called the **Macro** of the metric. The problem of doing it in this way, is that if we have an imbalanced dataset with a class that contains a lot of samples, the metric result of this class will be treated as the metric result of the other classes, where we don't have as many of samples. For example, if class B has considerably more samples than class A, but class A has a much better accuracy, then the accuracy of class A will compensate the bad performance of the accuracy of class B, where we will find lots of samples incorrectly classified.
+Having imbalanced datasets can add some distortion to the metrics. In order to minimize it, several ponderation methods can be used:
 
-The second one is called doing the **Micro** of the metric and consists on considering all the samples of all the classes at the same time. Doing so, if we had the imbalanced dataset that we described before, calculating the metric like this would expose the bad performance of the model in this imbalanced dataset.
+- **Macro**: Calculate the metrics for every individual class of the sample and then average them. The problem of doing it in this way, is that if we have an imbalanced dataset with a class that contains a lot of samples, the metric result of this class will be treated as the metric result of the other classes, where we don't have as many of samples. For example, if class B has considerably more samples than class A, but class A has a much better accuracy, then the accuracy of class A will compensate the bad performance of the accuracy of class B, where we will find lots of samples incorrectly classified.
 
-An alternative of these two methods is **Weighted Average**. It consists of calculating the metrics similarly as the micro but considering the support (the support of the class is the number of samples of this class divided by the number of total samples of the dataset) of each class to the dataset.
+- **Micro**: Consider all the samples of all the classes at the same time. By doing so, if we had the imbalanced dataset that we described before, calculating the metric like this would expose the bad performance of the model in this imbalanced dataset.
+
+- **Weighted Average**: Calculate the metrics similarly as the micro but considering the support (the support of the class is the number of samples of this class divided by the number of total samples of the dataset) of each class to the dataset.
 
 ## Obstacles
 

@@ -556,6 +556,20 @@ Having imbalanced datasets can add some distortion to the metrics. In order to m
 
 - **Weighted Average**: Calculate the metrics similarly as the micro but considering the support (the support of the class is the number of samples of this class divided by the number of total samples of the dataset) of each class to the dataset.
 
+### Problems with the metrics
+Choosing the right metric for a specific Deep Learning task is not trivial. In our case, we chose the **IoU** metric for segmentation, but it might have some problems:
+As it is a metric that is calculated from the **Confusion Matrix,** if the model doesn't map a point to a specific class it doesn't count as an incorrect prediction so
+we can have high IoU metrics that don't perform well.
+
+For example:
+Here we have a room with multiple classes:
+
+![ground_truth](https://user-images.githubusercontent.com/97680577/178546549-0e6a0917-fcb0-4963-8088-4f69472d508d.PNG)
+
+but if we check the confussion matrix we get:
+
+
+
 ## Main Conclusions
 
 Classification:

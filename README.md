@@ -55,16 +55,21 @@ This project'll be focus on implementing only **object classification** and **sc
 
 
 ## Main goals
-The general stategy is to implement a PointNet architecture in Pytorch that uses the S3DIS dataset in order to perform object classification and indoor scene semantic segmentation. We will focus only on the 5 movable classes presented in the dataset. 
+The general stategy is to implement a PointNet architecture in Pytorch that uses the S3DIS dataset in order to perform object classification and indoor scene semantic segmentation. 
 
--Classification of movable elements given its own point cloud 
--Semantic segmentation of each object given a room point cloud.
--See impact of considering several hyperparameters and dataset preparation strategies on accuracy. For this point the following considerations will be of particular interest:
-    - Find the impact that considering the rest of the non-movable "clutter" classes as well as using one or other "window discard" strategies will have on the results.
-    - How color impacts object detection and semantic segmentation
-    - How the size of the sliding windows impacts the semantic segmentation
-    - How the overlap of these windows can improve/hinder the training
-    - The optimal number of points in the input and epoch for training
+We will mainly focus on the 5 movable objects presented in the dataset (board, bookcase, chair, table and sofa) to carry out the following tasks:
+
+- **Classification** of movable elements given its own point cloud. 
+- **Semantic segmentation** of each object given a room point cloud.
+- Study the **impact on accuracy metrics** of:
+   - The inclusion of ***clutter*** objects 
+   - The inclusion of **color**
+   - The size of the ***sliding windows***
+   - **Discarding strategies** during *sliding windows* creation 
+   - *Sliding windows* **overlapping**
+   - The **sampling rate** (number of points taken into account per object/room) during dataset creation
+   - The amount of epochs
+- Study **correlation** between metrics and actual semantic segmenatation outcomes.
     
 
 ## The dataset

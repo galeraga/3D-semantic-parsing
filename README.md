@@ -665,6 +665,18 @@ Segmentation:
      |  IoU  | 0.2777 | 0.5426 |  0.5356  |
 
 
+On the other side, similar IoU results are obtained with lower overlap but higher number of points and smaller windows:
+       -512 points
+       -25% overlap
+       -No RGB 
+       -90% Window filling discard criteria
+       -Window size =0.25
+   
+In this case visualization is much better, and chairs and windows are correctly detected.The fact that with similar results for IoU we get different visualization results (in this case better than in the previous selection of parameters), could be explained by the window discard strategy. Since different windows are selected when we select different window sizes and overlaps, different windows are discarded so in the end, we are comparing different ground truth data and the IoU is not comparable
+														 
+
+
+   
 
 
 ## How to run the code

@@ -497,7 +497,7 @@ Segmentation:
        ![image](https://user-images.githubusercontent.com/104381341/178340888-74d2c431-15ee-4946-8028-3fb76157aa7e.png)
 
 - About RGB information:
-   - RGB information is only useful when the model is in a "sweet spot". In cases where weighted IoU is over 0.45, RGB increases the value by 10%. Else it can hinder training. This prevails when the model has a high number of points, so the hypothesis that there is too much to learn (rgb on top of everything else) from too little information (number of points) does not apply.
+   - RGB results are inconclusive. A priori it looks like it hinders training (worst metrics) when more information should improve it. The hypothesis is that the color was introduced in the model before the T-Net instead of afterwards, leading to issues when colors where used. 
 
 - About window size:
    - Increasing window size from 1 to 2 leads to poor results, even when the number of points is adapted so that the "density" is equivalent. 
@@ -507,56 +507,54 @@ Segmentation:
    - As expected, overlap of 50% achieves the best results. Although it slightly increases the time of dataset preparation (done only once) and the time of training (since there are more input windows), it also allows to have best results even with a few points.
 
 - About number of epochs:
+- About correlation between IoU scores and actual visual segmentation outputs:
+
+Based on IoU we get the best cost/results with:
+          
+          -128 points
+          -50% overlap
+          -RGB (although this applies only to this optimal spot, for the rest of the combination RGB hinders training)
+          -90% Window filling discard criteria
+          -Window size =1
+        
+ Validation Confusion Matrix
+
+  |   Object  | board  | bookcase | chair  | table  |  sofa  |
+  |:---------:|:------:|:--------:|:------:|:------:|:------:|
+  |  board   |  1558 |    63    |  5726  | 13070  |  6   |
+  | bookcase |  575  |    75    | 24807  | 24268  |  59  |
+  |  chair   |  378  |   295    | 167682 | 52964  | 988  |
+  |  table   |  511  |   213    | 71347  | 339137 | 610  |
+  |   sofa   |  174  |    0     | 12829  |  7062  | 3923 |
+
+
+  Validation Scores (per object)
+
+  |   Scores  | board  | bookcase | chair  | table  |  sofa  |
+  |:---------:|:------:|:--------:|:------:|:------:|:------:|
+  | Precision | 0.4875 |  0.1161  | 0.5938 | 0.7769 | 0.7023 |
+  |   Recall  | 0.0763 |  0.0015  | 0.7543 | 0.8235 | 0.1635 |
+
+
+  Validation Scores (averages)
+
+
+  | Score | Macro  | Micro  | Weighted |
+  |:------:|:--------:|:-------:|:----------:|
+  |  IoU  | 0.2777 | 0.5426 |  0.5356  |
+            
+          
+However this model is only able to correctly identify mainly tables and chairs. This is possibly due to the window discard strategy. This needs to be worked on. Additionally, even visualization of this parameter combination leads to an image where everything is detected as a table. 
+                  
+On the other side, similar IoU results are obtained with lower overlap but higher number of points and smaller windows:
+       -512 points
+       -25% overlap
+       -No RGB (although this applies only to this optimal spot, for the rest of the combination RGB hinders training)
+       -90% Window filling discard criteria
+       -Window size =0.25
    
-- General results:
-   - Based on IoU we get the best cost/results with:
-      -128 points
-      -50% overlap
-      -RGB (although this applies only to this optimal spot, for the rest of the combination RGB hinders training)
-      -90% Window filling discard criteria
-      -Window size =1
-      
-   - The model is only able to correctly identify mainly tables and chairs. This is possibly due to the window discard strategy. This needs to be worked on.
-   - Visualization of this parameter combination leads to an image where everything is detected as a table. The source of this discrepancy is unknown, however our hypothesis is that it'sprobably due to the fact that when labels are doubled because of overlap, the chosen one is always the last label. This would lead to confusion even if the statistical results are ok. Also, we are only plotting one room, results might be better with other rooms.
-
-Validation Confusion Matrix
-
-|   Object  | board  | bookcase | chair  | table  |  sofa  |
-|:---------:|:------:|:--------:|:------:|:------:|:------:|
-|  board   |  1558 |    63    |  5726  | 13070  |  6   |
-| bookcase |  575  |    75    | 24807  | 24268  |  59  |
-|  chair   |  378  |   295    | 167682 | 52964  | 988  |
-|  table   |  511  |   213    | 71347  | 339137 | 610  |
-|   sofa   |  174  |    0     | 12829  |  7062  | 3923 |
-
-
-Validation Scores (per object)
-
-|   Scores  | board  | bookcase | chair  | table  |  sofa  |
-|:---------:|:------:|:--------:|:------:|:------:|:------:|
-| Precision | 0.4875 |  0.1161  | 0.5938 | 0.7769 | 0.7023 |
-|   Recall  | 0.0763 |  0.0015  | 0.7543 | 0.8235 | 0.1635 |
-
-
-Validation Scores (averages)
-      
-
-| Score | Macro  | Micro  | Weighted |
-|:------:|:--------:|:-------:|:----------:|
-|  IoU  | 0.2777 | 0.5426 |  0.5356  |
-
-
-Test Scores :
-
-   - Similar results are obtained with lower overlap but higher number of points and smaller windows:
-      -512 points
-      -25% overlap
-      -No RGB (although this applies only to this optimal spot, for the rest of the combination RGB hinders training)
-      -90% Window filling discard criteria
-      -Window size =0.25
-   - However in this case visualization is much better, and chairs and windows are correctly detected. As commented above, the fact that with similar results for IoU we get different visualization results (in this case better than in the previous selection of parameters), could be explained by the choice of room to visualize.
-
-
+In this case visualization is much better, and chairs and windows are correctly detected.The fact that with similar results for IoU we get different visualization results (in this case better than in the previous selection of parameters), could be explained by the window discard strategy. Since different windows are selected when we select different window sizes and overlaps, different windows are discarded so in the end, we are actually comparing different point clouds and the IoU is not comparable. This needs to be worked on.
+     
 
 ## How to run the code
 ### Download the S3DIS dataset

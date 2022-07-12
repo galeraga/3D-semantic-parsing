@@ -73,7 +73,7 @@ class BasePointNet(nn.Module):
 
     def __init__(self, point_dimension):
         super(BasePointNet, self).__init__()
-        self.input_transform = TransformationNet(input_dim=point_dimension, output_dim=point_dimension)
+        self.input_transform = TransformationNet(input_dim=3, output_dim=3)
         self.feature_transform = TransformationNet(input_dim=64, output_dim=64)
         
         self.conv_1 = nn.Conv1d(point_dimension, 64, 1)
@@ -90,6 +90,12 @@ class BasePointNet(nn.Module):
         # x.shape([batch_size, num_points_per_object, dimensions_per_object])
         num_points = x.shape[1]
         
+        # We extract the color of the points:
+        color = x[:, :, 3:6]
+
+        # x without color:
+        x = x[:, :, :3]
+        
         # Input transformation
         # input_transform.shape([batch_size, dimensions_per_object, dimensions_per_object]) (t-net tensor)
         input_transform = self.input_transform(x) 
@@ -102,6 +108,14 @@ class BasePointNet(nn.Module):
         x = x.transpose(2, 1) 
         # tnet_out.shape(c)
         tnet_out=x.cpu().detach().numpy()
+
+        # Concatenate the color:
+        color = torch.permute(color, (0,2,1))
+
+        
+        x = torch.cat([x, color], dim=1)
+        print('Printegem la forma x', x.shape)
+
         # After relu x.shape(([batch_size, 64, num_points_per_object]))
         x = F.relu(self.bn_1(self.conv_1(x)))
         # After transposing x.shape(([batch_size, num_points_per_object, 64]))

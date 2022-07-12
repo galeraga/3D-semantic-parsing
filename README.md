@@ -553,8 +553,6 @@ Having imbalanced datasets can add some distortion to the metrics. In order to m
 
 - **Weighted Average**: Calculate the metrics similarly as the micro but considering the support (the support of the class is the number of samples of this class divided by the number of total samples of the dataset) of each class to the dataset.
 
-## Obstacles
-
 ## Main Conclusions
 
 Classification:
@@ -577,7 +575,7 @@ Segmentation:
    - 
     
 - About overlap:
-   -As expected, overlap of 50% achieves the best results. Although it slightly increases the time of dataset preparation (done only once) and the time of training (since there are more input windows), it also allows to have best results even with a few points.
+   - As expected, overlap of 50% achieves the best results. Although it slightly increases the time of dataset preparation (done only once) and the time of training (since there are more input windows), it also allows to have best results even with a few points.
    
 - About number of epochs:
    - More epochs achieve better accuracy metrics for the same sampling rate (as expected). However, the overall model performance seems to depend intrinsically of the sampling rate (and/or its relationship with the size of the sliding windows) 
@@ -589,6 +587,9 @@ Segmentation:
      20  | 0.5498  | 0.5154  | 0.5626 | 0.5290 | 0.4617
 
      (Table X. IoU weighted scores per epoch per sampling rate over the test dataset)
+
+- About correlation between IoU scores and actual visual segmentation outputs:
+   - To be filled with some pictures
      
 - General results:
    - We get the best results/cost with:
@@ -633,9 +634,9 @@ Segmentation:
 ## How to run the code
 ### Download the S3DIS dataset
 
-1.- Fork this repo.
-2.- Go to the  http://buildingparser.stanford.edu/dataset.html and download the aligned version of the S3DIS dataset.
-3.- Once downloaded, edit your forked *settings.py* file and set the 'pc_data_path' key of the *eparams* dict to the folder you downloaded tha dataset (e.g, /datasets/S3DIS/aligned)
+- Fork/clone this repo.
+- Go to the  http://buildingparser.stanford.edu/dataset.html and download the aligned version of the S3DIS dataset.
+- Once downloaded, edit your forked *settings.py* file and set the 'pc_data_path' key of the *eparams* dict to the folder you downloaded tha dataset (e.g, /datasets/S3DIS/aligned)
 
 ### Create a conda virtual environment
 

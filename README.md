@@ -482,7 +482,7 @@ Segmentation:
         10  | 0.3562  | 0.2437  | 0.5540 | 0.3249 | 0.3464 
         20  | 0.5498  | 0.5154  | 0.5626 | 0.5290 | 0.4617
 
-     (Table X. IoU weighted scores per epoch per sampling rate)
+     (Table X. IoU weighted scores per epoch per sampling rate over the test dataset)
      
 - General results:
    - We get the best results/cost with:

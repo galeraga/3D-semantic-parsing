@@ -109,16 +109,16 @@ The original **folder structure** of the S3DIS dataset is the following one:
 │   │   │   ├── object_Y.txt (the file with the point cloud for object_Y that can be found in Space_X. It contains 6 cols per row: XYZRGB)
 ```  
 
-- `object_Y.txt` is a file containing the point cloud of this particular object that belongs to Space_X (e.g., objects *chair_1.txt, chair_2.txt* or *table_1.txt* from a space/room called *office_1*). This point cloud file has 6 columns (non-normalized XYZRGB values).
-- `space_x.txt` is a non-annotated point cloud file containing the sum of all the point cloud object files (object_1, object_2, ...) located within the `Annotations` folder (e.g., the space file called *Area_1\office_1\office_1.txt* contains the sum of the object files *chair_1.txt, chair_2.txt* and the rest of all the object files located inside the `Annotations` directory). As a consequence, the space/room point cloud file has only 6 columns too (non-normalized XYZRGB values).
+- `object_Y.txt` is a file containing the point cloud of this particular object that belongs to Space_X (e.g., objects `chair_1.txt`, `chair_2.txt` or `table_1.txt` from a space/room called office_1). This point cloud file has 6 columns (non-normalized XYZRGB values).
+- `space_x.txt` is a non-annotated point cloud file containing the sum of all the point cloud object files (object_1, object_2, ...) located within the `Annotations` folder (e.g., the space file called `Area_1\office_1\office_1.txt` contains the sum of the object files `chair_1.txt`, `chair_2.txt` and the rest of all the object files located inside the `Annotations` directory). As a consequence, the space/room point cloud file has only 6 columns too (non-normalized XYZRGB values).
 
 Comprehensive information about the original S3DIS dataset can be found at: http://buildingparser.stanford.edu/dataset.html 
 
 From this original S3DIS dataset:
 
-- A custom ground truth file (called s3dis_summary.csv) has been created to speed up the process to get to the point cloud files, avoiding recurrent operating system folder traversals.  
+- A custom ground truth file (called `s3dis_summary.csv`) has been created to speed up the process to get to the point cloud files, avoiding recurrent operating system folder traversals.  
 - Two custom datasets have been created to feed the dataloaders, depending on the desired goal (S3DISDataset4Classification and S3DISDataset4Segmentation). 
-- Since dataloaders expect the same amount of input points but rooms/objects might differ considerably, a user-defined threshold can be set to limit the number of points to sample per room/object when datasets are created. This threshold is specified in the *hparams* dictionary from the *settings.py* file.
+- Since dataloaders expect the same amount of input points but rooms/objects might differ considerably, a user-defined threshold can be set to limit the number of points to sample per room/object when datasets are created. This threshold is specified in the *hparams* dictionary from the `settings.py` file.
 - The available areas have been splitted and assigned to the following tasks:
   - Training: Areas 1, 2, 3 and 4
   - Validation: Area 5
@@ -149,7 +149,7 @@ The information from this custom ground truth file is mainly used to get the pro
 
 This is the dataset used in conjunction with the **classification** network of the PointNet architecture. 
 
-- **Input data**: The object files (*chair_1.txt*, *table_2.txt*,...*object_Y.txt*) located inside the `Annotations` folder are going to be used as the input data for the classification network. 
+- **Input data**: The object files (`chair_1.txt`, `table_2.txt`,...`object_Y.txt`) located inside the `Annotations` folder are going to be used as the input data for the classification network. 
 - **Labels**: The label for the object data is directly extracted from the custom ground truth file *Object ID* col.
 
 ```
@@ -222,9 +222,9 @@ Dataset elements:
 
 #### S3DISDataset4Segmentation
 
-This is the dataset used for **semantic segmentation**. Since semantic segmentation needs every point in the cloud to be labeled, a new file is generated for every space/room with the suitable object labels. To do so, all files located in the `Annotations` folder are concatenated (along with the proper label) to create a single file per space/room with all the object points that belong to this space already labeled. This file is called `space_x_annotated.txt` (e.g., *office_1_annotated.txt*) and contains 7 cols (instead of 6): XYZRGB+*Object ID*.
+This is the dataset used for **semantic segmentation**. Since semantic segmentation needs every point in the cloud to be labeled, a new file is generated for every space/room with the suitable object labels. To do so, all files located in the `Annotations` folder are concatenated (along with the proper label) to create a single file per space/room with all the object points that belong to this space already labeled. This file is called `space_x_annotated.txt` (e.g., `office_1_annotated.txt`) and contains 7 cols (instead of 6): XYZRGB+*Object ID*.
 
-Since every `space_x_annotated.txt` might have millions of points, point clouds for rooms are "sliced" into smaller blocks (called *sliding windows*) to improve model training performance. The slicing is a pre-process carried out only once per defined sliding window settings. The slices will be saved as Pytorch files (\*.pt) inside the *sliding_windows* folder.
+Since every `space_x_annotated.txt` might have millions of points, point clouds for rooms are "sliced" into smaller blocks (called *sliding windows*) to improve model training performance. The slicing is a pre-process carried out only once per defined sliding window settings. The slices will be saved as Pytorch files (\*.pt) inside the `sliding_windows` folder.
 
 So the S3DISDataset4Segmentation will use the contents of the sliding windows folder to get both the **input data** and **labels**
 
@@ -276,7 +276,7 @@ In order to make the model learn faster and better, only the movable objects hav
 
 #### Sliding windows for segmentation
 
-To train room segmentation, we divide each room into sections of specific dimensions, and output only the points inside said section separately from the others. 
+To train, validate and test room segmentation, we divide each room into sections of specific dimensions, and output only the points inside said section separately from the others. 
 
 ![image](https://user-images.githubusercontent.com/104381341/178322824-590e4aa2-8962-4298-babe-0069f76de9b1.png)
 
@@ -317,7 +317,7 @@ For the PointNet to work, the dimensions of all the inputs must be the same. How
 
 ### The final folder structure 
 
-Taking into account the previous information, the final folder structure for the model implemenation is the following one:
+Taking into account all the above information, the final folder structure for the model implemenation is the following one:
 ```
 ├── s3dis_summary.csv (the ground truth file)
 ├── Area_N

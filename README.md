@@ -206,9 +206,9 @@ In the first case, the script will discard any window that is completely empty.
 
 For the second case, if one of the resulting windows has at least one point, we have put in place a strategy that allows us to select a desirable percentage of "window filling". If we wanted the window to be at least 80% filled, the script will create the window, find the coordinates of the points that are further to the left, further to the right further to the front and further to the back of said window, and find the distances betweem them (left-right, front-back). If one of those distances is smaller than 80% of the window size, the window wil be discarded, considered not filled enough. The default is 90% filled. This variable will be studied
 
-#### Number of input points for both segmentation and classification
+#### Sampling rate
 
-For the pointnet to work, the dimensions of all the inputs must be the same. However both the object point clouds to be inputted into the classification model and the window point clouds previously prepared to be used with the segmentation model have a different number of points. Hence, prior to entering the data in the model, these point clouds must be modified to fit this variable. At the same time, this is one of the effects that will be studied as a hyperparameter.
+For the PointNet to work, the dimensions of all the inputs must be the same. However both object point clouds for classification and sliding window point clouds for segmentation have different number of points. Hence, prior to entering the data in the model, these point clouds must be modified to fit this variable. At the same time, this is one of the effects that will be studied as a hyperparameter.
 
 ### The final folder structure 
 
@@ -454,17 +454,17 @@ Having imbalanced datasets can add some distortion to the metrics. In order to m
 
 Classification:
 
-- Very few points (128) already lead to good results
+- A low sampling rate (128 points/object) leads to good accuracy metrics.
 
 Segmentation:
 
 - About dataset preparation and discard:
-   - Not implementing the discard of non-movable classes leads to the model learning only structural classes (i-e walls, specially if very few points are used) if the original dataset is kept or, if the structural points are transformed into "clutter" points, to the model learning to identify clutter but not the rest of the classes. The strategy of discarding all non-movable points is then correct.
+   - Not implementing the discard of non-movable classes leads to the model learning only structural classes (i.e. walls, specially if very few points are used) if the original dataset is kept or, if the structural points are transformed into "clutter" points, to the model learning to identify clutter but not the rest of the classes. The strategy of discarding all non-movable points is then correct.
    - Changing the "window filling" parameter from 90% to 1% diminishes accuracy. The explanation is that if we take windows that might only have a small part of an object, the model finds it harder to identify those objects than if we already give them windows that contain the majority of an object. The same way a person would find it harder to separate a table leg from a chair leg if we only had that information, than to separate half a chair from half a table. There is probably a sweet spot in this parameter, related to window size.
    - However, the script also discards windows that might contain a full object even if the window is not completely filled. For example narrow objects like boards and bookcases or objects that might be against a wall. When we visualize the results and compare them to the ground truth we see that those objects where not even considered, the window system discarded them. 
 
 - About RGB information:
-   - RGB information is only useful when the model is in a "sweet spot". In cases where weighted IoU is over 0.45, RGB increases the value by 10%. Else it can hinder training. This prevails when the model has a high number of points, so the hypothesis that there is too much to learn (rgb on top of everything else) from too little information (number of points) does not apply.
+   - RGB information is only useful when the model is in a "sweet spot". In cases where weighted IoU is over 0.45, RGB increases the value by 10%. Else it can hinder training. This prevails when the model has a high number of points, so the hypothesis that there is too much to learn (RGB on top of everything else) from too little information (number of points) does not apply.
 
 - About window size:
    - Increasing window size from 1 to 2 leads to poor results, even when the number of points is adapted so that the "density" is equivalent. 
@@ -576,7 +576,7 @@ Javier Galera
 Clara Oliver
 
 ## Acknowledgments
-We'd like to thank the unconditional support of our advisor Mariona Carós,
+We'd like to thank the unconditional support of our advisor Mariona Carós, whose kind directions helped us to walk the path less abruptly.
 
 ## Annex
 

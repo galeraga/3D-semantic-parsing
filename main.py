@@ -736,15 +736,6 @@ if __name__ == "__main__":
     else:
         watch_segmentation(model, dataloaders)
     
-    # tnet_compare example here -----------------------
-    # Extracting tnet_out and preds:
-    #sample = (ds[0])[0]
-    #preds,tnet_out = infer(model, sample[0])
-    #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare(sample[0], preds, tnet_out), global_step=None, close=True, walltime=None)
-    # Using the _infer version that extracts the variables by itself:
-    #logger.writer.add_figure('Tnet-out-fig.png', tnet_compare_infer(model, sample[0]), global_step=None, close=True, walltime=None)
-    # ---------------------------------------------------
-
     # We need to close the writer and the logger:
     # Close TensorBoard logger and send runs to TensorBoard.dev
     logger.writer.flush()

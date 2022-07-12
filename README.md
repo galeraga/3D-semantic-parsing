@@ -283,7 +283,7 @@ To train, validate and test room segmentation, we divide each room into sections
 The window width (X) and depth(Y) are specified as hyperparameters. They can be defined separately, but it makes sense that they would be the same value since objects in a room are commonly rotated on the X-Y plane.
 The window height can be specified as a hyperparameter and the model is ready in case windowing in Z is necessary, but as the selected classes for segmentation are movable objects, and these are usually laid on the floor, the most logical solution is to consider all points inside a window defined by only their X-Y coordinates, and to just take all the points height-wise. The height parameter is thus ignored in the current script. This configuration would lead to the windows having a pillar-shape, from the floor to the ceiling of each room.
 
-![image](https://user-images.githubusercontent.com/104381341/178322875-9338303c-0135-4395-9938-2106fde64911.png)
+![image](https://user-images.githubusercontent.com/104381341/178575853-34dc54b6-9925-48a4-bc98-627e284715e7.png)
 
 Said sections or windows can overlap with and overlap factor going from 0%(no overlapping) to 99%(almost complete overlapping, choosing 100% overlap would lead to an infinite loop always outputting the same window). The efect of this variable will be considered in the study
 

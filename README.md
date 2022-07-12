@@ -28,7 +28,6 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
 - [The metrics](#metrics)
   * [F1 for classification](#f1-for-classification)
   * [IoU for segmentation](#iou-for-segmentation)
-- [Obstacles](#obstacles)
 - [Main conclusions](#main-conclusions)
 - [How to run the code](#how-to-run-the-code)
   * [Download the S3DIS dataset](#download-the-s3dis-dataset)

@@ -637,11 +637,11 @@ Segmentation:
 
 - Fork/clone this repo.
 - Go to the  http://buildingparser.stanford.edu/dataset.html and download the aligned version of the S3DIS dataset.
-- Once downloaded, edit your forked *settings.py* file and set the 'pc_data_path' key of the *eparams* dict to the folder you downloaded tha dataset (e.g, /datasets/S3DIS/aligned)
+- Once downloaded, edit your forked `settings.py` file and set the 'pc_data_path' key of the *eparams* dict to the folder you downloaded tha dataset (e.g, `/datasets/S3DIS/aligned`)
 
 ### Create a conda virtual environment
 
-Install conda (or miniconda) and follow the usual directions to create and switch to a new conda virtual environment (replace *project_name* with the name you want to give to your virtual env):
+Install conda (or miniconda) and follow the usual directions to create and switch to a new conda virtual environment (replace `project_name` with the name you want to give to your virtual env):
 
 ```
 conda create -n project_name python=3.8.1

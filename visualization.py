@@ -243,8 +243,8 @@ def render_segmentation(dict_to_use = {},
     # ----------------------------
     # GT camera point of view 1
     # ----------------------------
-    ctr = vis_gt.get_view_control()
-    ctr.convert_from_pinhole_camera_parameters(parameters_camera1)
+    #ctr = vis_gt.get_view_control()
+    #ctr.convert_from_pinhole_camera_parameters(parameters_camera1)
 
     #save image
     vis_gt.poll_events()
@@ -257,8 +257,8 @@ def render_segmentation(dict_to_use = {},
     # ----------------------------
     # GT camera point of view 2
     # ----------------------------
-    ctr = vis_gt.get_view_control()
-    ctr.convert_from_pinhole_camera_parameters(parameters_camera2)
+    #ctr = vis_gt.get_view_control()
+    #ctr.convert_from_pinhole_camera_parameters(parameters_camera2)
 
     #save image
     vis_gt.poll_events()
@@ -279,8 +279,8 @@ def render_segmentation(dict_to_use = {},
     # ---------------------
     # MODEL camera point of view 1
     # ---------------------
-    ctr = vis_model.get_view_control()
-    ctr.convert_from_pinhole_camera_parameters(parameters_camera1)
+    #ctr = vis_model.get_view_control()
+    #ctr.convert_from_pinhole_camera_parameters(parameters_camera1)
 
     #save image
     vis_model.poll_events()
@@ -293,8 +293,8 @@ def render_segmentation(dict_to_use = {},
     # ---------------------
     # MODEL camera point of view 2
     # ---------------------
-    ctr = vis_model.get_view_control()
-    ctr.convert_from_pinhole_camera_parameters(parameters_camera2)
+    #ctr = vis_model.get_view_control()
+    #ctr.convert_from_pinhole_camera_parameters(parameters_camera2)
 
     #save image
     vis_model.poll_events()

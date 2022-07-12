@@ -217,7 +217,7 @@ if "low" in args.load:
     hparams["num_points_per_object"] = 512
     hparams["num_points_per_room"] = 512
     hparams["dimensions_per_object"] = 3
-    hparams["epochs"] = 5
+    hparams["epochs"] = 100
    
 if "medium" in args.load:
     hparams["num_points_per_object"] = 1024
@@ -277,7 +277,7 @@ if not os.path.exists(path_to_current_sliding_windows_folder):
 #------------------------------------------------------------------------------
 # Target room for visualization when random mode is NOT selected
 # Rooms with more bookcases and boards (chairs-tables seem to be detected easily)
-target_room_for_visualization = "Area_6_office_10"
+target_room_for_visualization = "Area_6_office_5"
 
 # Get parameters from camera point of views for room of study
 parameters_camera1 = o3d.io.read_pinhole_camera_parameters(os.path.join(camera_folder, "camera1.json"))

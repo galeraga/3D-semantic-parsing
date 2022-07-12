@@ -320,7 +320,7 @@ def process_single_epoch(model, dataloader, optimizer, epoch, task):
     print("Accuracy:", round(np.mean(epoch_acc), 4))    
 
     f1_scores = compute_confusion_matrix(epoch_y_true, epoch_y_preds)
-    
+        
     # For classification only, display the tnet output
     if goal == "classification":
         print(targets)
@@ -412,11 +412,13 @@ def run_model(model, dataloaders, task):
         logger.writer.add_scalar(base_msg + " IoU Score (Weighted)", iou_weighted, epoch)
         
     # Print confusion matrix in console
+
     print(80 * "-")
     print("Overall Confusion Matrix")
     print("Task: {}".format(task.capitalize()))
     print("Checkpoint: {}".format(eparams["checkpoint_name"]))
     print(80 * "-")
+
     compute_confusion_matrix(total_y_true, total_y_preds)
 
     # Log confusion matrix in TensorBoard

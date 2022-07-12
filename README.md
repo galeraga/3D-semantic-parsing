@@ -567,13 +567,12 @@ Segmentation:
 - About dataset preparation and discard:
    - Not implementing the discard of non-movable classes leads to the model learning only structural classes (i.e. walls, specially if very few points are used) if the original dataset is kept or, if the structural points are transformed into "clutter" points, to the model learning to identify clutter but not the rest of the classes. The strategy of discarding all non-movable points is then correct.
    - Changing the "window filling" parameter from 90% to 1% diminishes accuracy. The explanation is that if we take windows that might only have a small part of an object, the model finds it harder to identify those objects than if we already give them windows that contain the majority of an object. The same way a person would find it harder to separate a table leg from a chair leg if we only had that information, than to separate half a chair from half a table. There is probably a sweet spot in this parameter, related to window size.
-   - However, the script also discards windows that might contain a full object even if the window is not completely filled. For example narrow objects like boards and bookcases or objects that might be against a wall. When we visualize the results and compare them to the ground truth we see that those objects where not even considered, the window system discarded them. This can lead to some false good results:
+   - However, the script also discards windows that might contain a full object, even if the window is not completely filled. For example, narrow objects like boards and bookcases or objects that might be against a wall. When we visualize the results and compare them to the ground truth we see that those objects were not even considered, the window system discarded them. This can lead to some false good results:
 
-For example in this Ground Truth we can see four classes:
-
+For example, in this Ground Truth we can see four classes:
 ![ground_truth](https://user-images.githubusercontent.com/97680577/178546549-0e6a0917-fcb0-4963-8088-4f69472d508d.PNG)
 
-but if we do the confussion matrix it results in:
+but if we do the confusion matrix, it results in:
 
 | Object   | board | bookcase | chair | table | sofa |
 |----------|-------|----------|-------|-------|------|
@@ -590,7 +589,7 @@ and the metrics are:
 | F1    | 1     | 1     | 1        |
 | IoU   | 1     | 1     | 1        |
 
-so as we can see the metrics here are not a good representation of how the segmentation is going:
+So, as we can see, the metrics here are not a good representation of how the segmentation is going:
 
 ![pred](https://user-images.githubusercontent.com/97680577/178548230-2db7c2bf-fe93-4af2-aef7-a50eab6d2d4e.png)
 

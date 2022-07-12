@@ -367,6 +367,8 @@ We will present the structure of the first T-Net that appears in the network. In
 
 #### Visualization of the outputs
 
+It's important to mention that the T-Net, like any Machine Learning model, performs as well as the network is trained. This means that if the model is not properly trained, it cannot be guaranteed that the model is invariant to rigid transformations. 
+
 #### Goal
 
 When we are dealing with point clouds, it is normal that our data undergoes some geometric transformations. The purpose of the T-Net is to align all the point cloud in a canonical way, so it is invariant to these transformations. After doing that, feature extraction can be done. It is important to remark that in this part of the network we are using the T-Net only to make the points invariant to other transformations, so if our dataset gives more information about the points (for example the color) it won't be added to the T-Net (so the input will have 3 channels). 

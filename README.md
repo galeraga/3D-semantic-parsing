@@ -673,7 +673,7 @@ The load profiles include the following settings by default:
 
 (Note: The *toy* load profile is mainly intended to quickly test buggy behaviours during code development)
 
-All these args are specified in the file *settings.py* and can be freely changed to meet your needs. 
+All these args are specified in the file `settings.py` and can be freely changed to meet your needs. 
 
 
 ## Related Work

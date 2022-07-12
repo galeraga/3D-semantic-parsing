@@ -118,7 +118,7 @@ From this original S3DIS dataset:
 
 - A custom ground truth file (called s3dis_summary.csv) has been created to speed up the process to get to the point cloud files, avoiding recurrent operating system folder traversals.  
 - Two custom datasets have been created to feed the dataloaders, depending on the desired goal (S3DISDataset4Classification and S3DISDataset4Segmentation). 
-- Since dataloaders expect the same amount of input points but rooms/objects might differ considerably, a user-defined threshold can be set to limit the number of points to sample per room/object when datasets are created. 
+- Since dataloaders expect the same amount of input points but rooms/objects might differ considerably, a user-defined threshold can be set to limit the number of points to sample per room/object when datasets are created. This threshold is specified in the *hparams* dictionary from the *settings.py* file.
 - The available areas have been splitted and assigned to the following tasks:
   - Training: Areas 1, 2, 3 and 4
   - Validation: Area 5

@@ -368,7 +368,7 @@ We will present the structure of the first T-Net that appears in the network. In
 
 #### Goal
 
-When we are dealing with point clouds, it is normal that our data undergoes some geometric transformations. The purpose of the T-Net is to align all the point cloud in a canonical way, so it is invariant to these transformations. After doing that, feature extraction can be done.
+When we are dealing with point clouds, it is normal that our data undergoes some geometric transformations. The purpose of the T-Net is to align all the point cloud in a canonical way, so it is invariant to these transformations. After doing that, feature extraction can be done. It is important to remark that in this part of the network we are using the T-Net only to make the points invariant to other transformations, so if our dataset gives more information about the points (for example the color) it won't be added to the T-Net (so the input will have 3 channels). 
 
 When the affine transformation matrix is used again, it is not used directly in the point cloud, but in the features that had been extracted before. So in this case we are in a high dimensional space, and it is possible that we have some optimization problems. In order to avoid those, it is added a regularization term in the softmax training loss so the transformation matrix is close to the orthogonal matrix.
 

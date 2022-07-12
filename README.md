@@ -214,6 +214,10 @@ For the second case, if one of the resulting windows has at least one point, we 
 
 For the pointnet to work, the dimensions of all the inputs must be the same. However both the object point clouds to be inputted into the classification model and the window point clouds previously prepared to be used with the segmentation model have a different number of points. Hence, prior to entering the data in the model, these point clouds must be modified to fit this variable. At the same time, this is one of the effects that will be studied as a hyperparameter.
 
+To adapt the input to the desired size the process is:
+- If point size in point cloud is under the desired size, we randomly duplicate some points until the desired size is achieved
+- If point size in point cloud is over the desired size, we randomly remove points until the desired size is achieved.
+
 ### The final folder structure 
 
 Taking into account the previous information, the final folder structure for the model implemenation is the following one:

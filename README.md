@@ -757,7 +757,6 @@ All these args are specified in the file `settings.py` and can be freely changed
 
 ## Related Work
 1. Benjamín Gutíerrez-Becker and Christian Wachinger. _Deep Multi-Structural Shape Analysis:Application to Neuroanatomy_. 2018
-2. 
 
 ## Contributors
 

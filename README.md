@@ -97,11 +97,6 @@ More **advanced statistics** can be found after a slightly deeper analysis:
 Some illustrative rough figures, from aproximately **273M** total points:
 
 | Object           | Ceiling | Door | Floor | Wall | Beam | Board | Bookcase | Chair | Table | Column | Sofa | Window | Stairs| Clutter
-																																		
-																																		 
-																																	 
-
-
 |:----------------:|:-------:|:----:|:-----:|:----:|:----:|:-----:|:--------:|:-----:|:-----:|:-----:|:-----:|:------:|:-----:|:-----:|
 | Total points(M)  | 53      | 13   | 43    | 76   |  5   | 3     | 17       |    9  | 9     | 5     | 1     | 7      |  0.6  | 28
 

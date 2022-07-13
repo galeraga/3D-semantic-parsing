@@ -675,7 +675,7 @@ However this model is only able to correctly identify mainly tables and chairs. 
 
 ![image](https://user-images.githubusercontent.com/104381341/178599510-45e5373c-f037-4634-a615-a9d67a9101c4.png)
                   
-On the other side, similar IoU results are obtained with lower overlap but higher number of points and smaller windows:
+On the other side, similar IoU results are obtained with lower overlap but higher number of points and smaller windows for a single room:
 
        -512 points
        -25% overlap

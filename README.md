@@ -548,37 +548,10 @@ We can define the $F_1$ Score as the harmonic mean of the precision and the reca
 
 $$F_1=2\frac{precision\times recall}{precision+recall}=\frac{TP}{TP+\frac{1}{2}(FP+FN)}$$
 
-
-								
-																										   
-							   
-									
-
-																	 
-
-																											 
+				 
 
 #### IoU for segmentation
-
-																																  
-
-																											 
-
-																																  
-
-																										
-
-																																  
-
-													   
-
-																																  
-
-					 
-
-										  
-																																																												  
-
+																				
 When we are dealing with a segmentation problem, we don't only need to take into account the points that we labeled wrongly (false positives) but also the points belonging to the class that we didn't properly labeled (false negatives). 
 
 $$IoU = \frac{|A\cap B|}{|A \cup B|} = \frac{TP}{TP+FN+FP} $$
@@ -610,8 +583,8 @@ Segmentation:
 
 - About dataset preparation and discard:
    - Not implementing the discard of non-movable classes leads to the model learning only structural classes (i.e. walls, specially if very few points are used) if the original dataset is kept or, if the structural points are transformed into "clutter" points, to the model learning to identify clutter but not the rest of the classes. The strategy of discarding all non-movable points is then correct.
-   - Changing the "window filling" parameter from 90% to 1% diminishes accuracy. The explanation is that if we take windows that might only have a small part of an object, the model finds it harder to identify those objects than if we already give them windows that contain the majority of an object. The same way a person would find it harder to separate a table leg from a chair leg if we only had that information, than to separate half a chair from half a table. There is probably a sweet spot in this parameter, related to window size.
-   - However, the script also discards windows that might contain a full object, even if the window is not completely filled. For example, narrow objects like boards and bookcases or objects that might be against a wall. When we visualize the results and compare them to the ground truth we see that those objects were not even considered, the window system discarded them. This can lead to some false good results:
+   - Changing the "window filling" parameter from 90% to 1% diminishes accuracy. The explanation is that if we take windows that might only have a small part of an object, the model finds it harder to identify those objects than if we already give them windows that contain the majority of an object. The same way, a person would find it harder to separate a table leg from a chair leg if we only had that information, than to separate half a chair from half a table. There is probably a sweet spot in this parameter, related to window size.
+   - However, the script also discards windows that might contain a full object, even if the window is not completely filled. For example, narrow objects like boards and bookcases or objects that might be against a wall. When we visualize the results and compare them to the ground truth we see that those objects were not even considered, the window system discarded them. This can make us think that the performance of the model is really good
 
 For example, in this Ground Truth we can see four classes:
 ![ground_truth](https://user-images.githubusercontent.com/97680577/178546549-0e6a0917-fcb0-4963-8088-4f69472d508d.PNG)
@@ -633,7 +606,7 @@ and the metrics are:
 | F1    | 1     | 1     | 1        |
 | IoU   | 1     | 1     | 1        |
 
-So, as we can see, the metrics here are not a good representation of how the segmentation is going:
+So, as we can see, the metrics here don't give a good information of how the segmentation is going comparing to the ground truth
 
 ![pred](https://user-images.githubusercontent.com/97680577/178548230-2db7c2bf-fe93-4af2-aef7-a50eab6d2d4e.png)
 

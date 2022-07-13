@@ -27,8 +27,11 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
     + [For segmentation](#for-segmentation)
   * [Metrics](#metrics)
     + [F1 for classification](#f1-for-classification)
+						   
+															   
     + [IoU for segmentation](#iou-for-segmentation)
     + [Micro, Macro and Weighted metrics](#micro--macro-and-weighted-metrics)
+						 
 - [Main Conclusions](#main-conclusions)
 - [How to run the code](#how-to-run-the-code)
   * [Download the S3DIS dataset](#download-the-s3dis-dataset)
@@ -37,6 +40,7 @@ Repo to host the UPC AIDL spring 2022 post-graduate project
 - [Related Work](#related-work)
 - [Contributors](#contributors)
 - [Acknowledgments](#acknowledgments)
+				 
 
 ## Abstract
 A point cloud is a type of 3D geometric data structure, based on an unordered set of points.
@@ -93,6 +97,11 @@ More **advanced statistics** can be found after a slightly deeper analysis:
 Some illustrative rough figures, from aproximately **273M** total points:
 
 | Object           | Ceiling | Door | Floor | Wall | Beam | Board | Bookcase | Chair | Table | Column | Sofa | Window | Stairs| Clutter
+																																		
+																																		 
+																																	 
+
+
 |:----------------:|:-------:|:----:|:-----:|:----:|:----:|:-----:|:--------:|:-----:|:-----:|:-----:|:-----:|:------:|:-----:|:-----:|
 | Total points(M)  | 53      | 13   | 43    | 76   |  5   | 3     | 17       |    9  | 9     | 5     | 1     | 7      |  0.6  | 28
 
@@ -283,7 +292,7 @@ To train, validate and test room segmentation, we divide each room into sections
 The window width (X) and depth(Y) are specified as hyperparameters. They can be defined separately, but it makes sense that they would be the same value since objects in a room are commonly rotated on the X-Y plane.
 The window height can be specified as a hyperparameter and the model is ready in case windowing in Z is necessary, but as the selected classes for segmentation are movable objects, and these are usually laid on the floor, the most logical solution is to consider all points inside a window defined by only their X-Y coordinates, and to just take all the points height-wise. The height parameter is thus ignored in the current script. This configuration would lead to the windows having a pillar-shape, from the floor to the ceiling of each room.
 
-![image](https://user-images.githubusercontent.com/104381341/178575853-34dc54b6-9925-48a4-bc98-627e284715e7.png)
+![image](https://user-images.githubusercontent.com/104381341/178322875-9338303c-0135-4395-9938-2106fde64911.png)
 
 Said sections or windows can overlap with and overlap factor going from 0%(no overlapping) to 99%(almost complete overlapping, choosing 100% overlap would lead to an infinite loop always outputting the same window). The efect of this variable will be considered in the study
 
@@ -313,7 +322,11 @@ For the second case, if one of the resulting windows has at least one point, we 
 
 #### Sampling rate
 
-For the PointNet to work, the dimensions of all the inputs must be the same. However both object point clouds for classification and sliding window point clouds for segmentation have different number of points. Hence, prior to entering the data in the model, these point clouds must be modified to fit this variable. At the same time, this is one of the effects that will be studied as a hyperparameter.
+For the PointNet to work, the dimensions of all the inputs must be the same. However both object point clouds and sliding window point clouds for segmentation have different number of points. Hence, prior to entering the data in the model, these point clouds must be modified to fit this variable. At the same time, this is one of the effects that will be studied as a hyperparameter.
+
+To adapt the input to the desired size the process is:
+- If point size in point cloud is under the desired size, we randomly duplicate some points until the desired size is achieved
+- If point size in point cloud is over the desired size, we randomly remove points until the desired size is achieved.
 
 ### The final folder structure 
 
@@ -524,6 +537,7 @@ Estimated Total Size (MB): 9561.66
 
 #### F1 for classification
 
+				 
 First of all we need to define what precision and recall are:
 
 $$precision = \frac{TP}{TP+FP}$$
@@ -534,7 +548,36 @@ We can define the $F_1$ Score as the harmonic mean of the precision and the reca
 
 $$F_1=2\frac{precision\times recall}{precision+recall}=\frac{TP}{TP+\frac{1}{2}(FP+FN)}$$
 
+
+								
+																										   
+							   
+									
+
+																	 
+
+																											 
+
 #### IoU for segmentation
+
+																																  
+
+																											 
+
+																																  
+
+																										
+
+																																  
+
+													   
+
+																																  
+
+					 
+
+										  
+																																																												  
 
 When we are dealing with a segmentation problem, we don't only need to take into account the points that we labeled wrongly (false positives) but also the points belonging to the class that we didn't properly labeled (false negatives). 
 
@@ -597,7 +640,7 @@ So, as we can see, the metrics here are not a good representation of how the seg
 
 
 - About RGB information:
-   - RGB information is only useful when the model is in a "sweet spot". In cases where weighted IoU is over 0.45, RGB increases the value by 10%. Else it can hinder training. This prevails when the model has a high number of points, so the hypothesis that there is too much to learn (RGB on top of everything else) from too little information (number of points) does not apply.
+   - RGB results are inconclusive. A priori it looks like it hinders training (worst metrics) when more information should improve it. The hypothesis is that the color was introduced in the model before the T-Net instead of afterwards, leading to issues when colors where used. 
 
 - About window size:
    - Increasing window size from 1 to 2 leads to poor results, even when the number of points is adapted so that the "density" is equivalent. 
@@ -605,8 +648,8 @@ So, as we can see, the metrics here are not a good representation of how the seg
    - 
     
 - About overlap:
-   - As expected, overlap of 50% achieves the best results. Although it slightly increases the time of dataset preparation (done only once) and the time of training (since there are more input windows), it also allows to have best results even with a few points.
-   
+    - As expected, overlap of 50% achieves the best results. Although it slightly increases the time of dataset preparation (done only once) and the time of training (since there are more input windows), it also allows to have best results even with a few points.
+
 - About number of epochs:
    - More epochs achieve better accuracy metrics for the same sampling rate (as expected). However, the overall model performance seems to depend intrinsically of the sampling rate (and/or its relationship with the size of the sliding windows) 
    
@@ -619,85 +662,86 @@ So, as we can see, the metrics here are not a good representation of how the seg
      (Table X. IoU weighted scores per epoch per sampling rate over the test dataset)
 
 - About correlation between IoU scores and actual visual segmentation outputs:
-   - To be filled with some pictures
+
+Based on IoU we get the best cost/results with:
+          
+          -128 points
+          -50% overlap
+          -RGB (although this applies only to this optimal spot, for the rest of the combination RGB hinders training)
+          -90% Window filling discard criteria
+          -Window size =1
+        
+ Validation Confusion Matrix
+
+  |   Object  | board  | bookcase | chair  | table  |  sofa  |
+  |:---------:|:------:|:--------:|:------:|:------:|:------:|
+  |  board   |  1558 |    63    |  5726  | 13070  |  6   |
+  | bookcase |  575  |    75    | 24807  | 24268  |  59  |
+  |  chair   |  378  |   295    | 167682 | 52964  | 988  |
+  |  table   |  511  |   213    | 71347  | 339137 | 610  |
+  |   sofa   |  174  |    0     | 12829  |  7062  | 3923 |
+
+
+  Validation Scores (per object)
+
+  |   Scores  | board  | bookcase | chair  | table  |  sofa  |
+  |:---------:|:------:|:--------:|:------:|:------:|:------:|
+  | Precision | 0.4875 |  0.1161  | 0.5938 | 0.7769 | 0.7023 |
+  |   Recall  | 0.0763 |  0.0015  | 0.7543 | 0.8235 | 0.1635 |
+																  
+
+  Validation Scores (averages)
+	
+
+  | Score | Macro  | Micro  | Weighted |
+  |:------:|:--------:|:-------:|:----------:|
+  |  IoU  | 0.2777 | 0.5426 |  0.5356  |
+            
+          
+However this model is only able to correctly identify mainly tables and chairs. This is possibly due to the window discard strategy. This needs to be worked on. Additionally, even visualization of this parameter combination leads to an image where everything is detected as a table. 
+
+![image](https://user-images.githubusercontent.com/104381341/178599510-45e5373c-f037-4634-a615-a9d67a9101c4.png)
+                  
+On the other side, similar IoU results are obtained with lower overlap but higher number of points and smaller windows:
+
+       -512 points
+       -25% overlap
+       -No RGB (although this applies only to this optimal spot, for the rest of the combination RGB hinders training)
+       -90% Window filling discard criteria
+       -Window size =0.25
+															 
+
+
+Confusion Matrix
+| Object   | board | bookcase | chair | table | sofa |
+|----------|-------|----------|-------|-------|------|
+| board    | 0     | 0        | 0     | 87    | 0    |
+| bookcase | 0     | 0        | 48    | 4950  | 0    |
+| chair    | 0     | 0        | 10932 | 2804  | 0    |
+| table    | 0     | 0        | 3555  | 23701 | 0    |
+| sofa     | 0     | 0        | 0     | 0     | 0    |
+
+
+Scores (per object)
+Scores | board | bookcase | chair | table |sofa
+|:--------:|------:|---------:|:------:|:------:|:----:|
+| Precision | 0.0000 |  0.0000  | 0.5651 | 0.7514 | 0.0000 |
+|   Recall  | 0.0000 |  0.0000  | 0.7959 | 0.8696 | 0.0000 |
+|  F1 Score | 0.0000 |  0.0000  | 0.6609 | 0.8062 | 0.0000 |
+
+
+Scores (averages)
+| Score | Macro | Micro | Weighted |
+|-------|-------|-------|----------|
+| F1    | 0.3668 | 0.6806 | 0.6102 |
+| IoU   | 0.2922 | 0.5158 | 0.4949  |
+
+
+![image](https://user-images.githubusercontent.com/104381341/178599577-b6bc1d1a-087c-4b79-a8ca-ca99d6385c9c.png)
+
+ 
+In this case visualization is much better, and chairs and windows are correctly detected.The fact that with similar results for IoU we get different visualization results (in this case better than in the previous selection of parameters), could be explained by the window discard strategy. Since different windows are selected when we select different window sizes and overlaps, different windows are discarded so in the end, we are actually comparing different point clouds and the IoU is not comparable. This needs to be worked on.
      
-- General results:
-  - We get the best results/cost with:
-      - 128 points
-      - 50% overlap
-      - RGB 
-      - 90% window filling discard criteria
-      - Window size =1
-      
-   - The model seems to present a high bias for tables and chairs. This is possibly due to the window discard strategy. This needs to be worked on.
- 
- 
-     Confusion Matrix
-
-      Object  | board | bookcase | chair  | table  | sofa 
-      |:--------:|------:|---------:|:------:|:------:|:----:|
-      |  board   |  1558 |    63    |  5726  | 13070  |  6   |
-      | bookcase |  575  |    75    | 24807  | 24268  |  59  |
-      |  chair   |  378  |   295    | 167682 | 52964  | 988  |
-      |  table   |  511  |   213    | 71347  | 339137 | 610  |
-      |   sofa   |  174  |    0     | 12829  |  7062  | 3923 |
-
-
-
-      Scores (per object)
-
-      Scores | board | bookcase | chair | table |sofa
-      |:--------:|------:|---------:|:------:|:------:|:----:|
-      | Precision | 0.4875 |  0.1161  | 0.5938 | 0.7769 | 0.7023 |
-      |   Recall  | 0.0763 |  0.0015  | 0.7543 | 0.8235 | 0.1635 |
-      |  F1 Score | 0.1319 |  0.0030  | 0.6645 | 0.7996 | 0.2653 |
-
-      Scores (averages)
-
-      Score | Macro  | Micro  | Weighted 
-     |:--------:|------:|---------:|:------:|
-     |  IoU  | 0.2777 | 0.5426 |  0.5356  |
-
-  - On the other side, similar IoU results are obtained with lower overlap but higher number of points and smaller windows:
-	- 512 points
-	- 25% overlap
-	- No RGB 
-	- 90% Window filling discard criteria
-	- Window size =0.25
-
-	Confusion Matrix
-	| Object   | board | bookcase | chair | table | sofa |
-	|----------|-------|----------|-------|-------|------|
-	| board    | 0     | 0        | 0     | 87    | 0    |
-	| bookcase | 0     | 0        | 48    | 4950  | 0    |
-	| chair    | 0     | 0        | 10932 | 2804  | 0    |
-	| table    | 0     | 0        | 3555  | 23701 | 0    |
-	| sofa     | 0     | 0        | 0     | 0     | 0    |
-
-
-	Scores (per object)
-	Scores | board | bookcase | chair | table |sofa
-	|:--------:|------:|---------:|:------:|:------:|:----:|
-	| Precision | 0.0000 |  0.0000  | 0.5651 | 0.7514 | 0.0000 |
-	|   Recall  | 0.0000 |  0.0000  | 0.7959 | 0.8696 | 0.0000 |
-	|  F1 Score | 0.0000 |  0.0000  | 0.6609 | 0.8062 | 0.0000 |
-
-
-	Scores (averages)
-	| Score | Macro | Micro | Weighted |
-	|-------|-------|-------|----------|
-	| F1    | 0.3668 | 0.6806 | 0.6102 |
-	| IoU   | 0.2922 | 0.5158 | 0.4949  |
-
-
-
-
-In this case visualization is much better, and chairs and windows are correctly detected.The fact that with similar results for IoU we get different visualization results (in this case better than in the previous selection of parameters), could be explained by the window discard strategy. Since different windows are selected when we select different window sizes and overlaps, different windows are discarded so in the end, we are comparing different ground truth data and the IoU is not comparable
-														 
-
-
-   
-
 
 ## How to run the code
 ### Download the S3DIS dataset
@@ -760,5 +804,8 @@ Clara Oliver
 ## Acknowledgments
 We'd like to thank the unconditional support of our advisor Mariona Carós, whose kind directions helped us to walk the path less abruptly.
 
+		
+
+												
 
 
